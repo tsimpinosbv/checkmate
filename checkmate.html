@@ -800,10 +800,10 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
   /* email via the admin's Google Apps Script web app (URL in config/notify.endpoint).
      The script checks the Firebase ID token and that the caller is an admin before sending. */
   const mailApi = {
-    send: async (endpoint, messages) => {
+    send: async (endpoint, messages, opts = {}) => {
       const u = await ready;
       const idToken = await u.getIdToken();
-      const res = await fetch(endpoint, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify({idToken, messages})});
+      const res = await fetch(endpoint, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify({idToken, messages, senderName:opts.senderName, replyTo:opts.replyTo})});
       let j = null; try{ j = await res.json(); }catch{}
       if(!j || !j.ok) throw new Error((j && j.error) || ("HTTP " + res.status));
       return j;
@@ -1506,7 +1506,12 @@ function notifyPanel(){
     <form class="pbody" id="notifyForm" style="display:flex;flex-direction:column;gap:10px">
       <label class="check"><input type="checkbox" id="nOn" ${notify.email?"checked":""}> Στέλνε email στα άτομα όταν αλλάζει κάτι στις αναθέσεις τους</label>
       <div class="note">Ένα email ανά άτομο, με όλες τις αλλαγές μαζί: νέα ανάθεση, αλλαγή ημερομηνίας, ώρας, γηπέδου, συνεργάτη ή αμοιβής, ακύρωση, πληρωμή. Μόνο για όσους έχουν συνδεδεμένο λογαριασμό, και μόνο για ορατές αναθέσεις.</div>
+      <div class="grid2">
+        <div class="f"><label for="nName">Όνομα αποστολέα</label><input id="nName" value="${esc(notify.senderName||"Check Mate")}" autocomplete="off"></div>
+        <div class="f"><label for="nReply">Απαντήσεις στο email</label><input id="nReply" type="email" value="${esc(notify.replyTo||"")}" placeholder="${esc(me?.email||"")}" autocomplete="off"></div>
+      </div>
       <div class="f"><label for="nUrl">Υπηρεσία αποστολής (Google Apps Script)</label><input id="nUrl" value="${esc(notify.endpoint||"")}" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"></div>
+      <div class="note">Τα email φεύγουν από τον λογαριασμό Gmail όπου είναι εγκατεστημένη η υπηρεσία${notify.account?`: <b>${esc(notify.account)}</b>`:""}. Για άλλον αποστολέα, εγκατέστησε την υπηρεσία σε εκείνον τον λογαριασμό και βάλε εδώ τη νέα διεύθυνση.</div>
       <div class="actions"><button class="btn small" type="submit">Αποθήκευση</button><button class="btn small" type="button" id="nTest">Δοκιμαστικό email σε εμένα</button></div>
     </form>
   </section>`;
@@ -1514,7 +1519,7 @@ function notifyPanel(){
 function bindNotify(){
   const f=$("notifyForm"); if(!f) return;
   f.onsubmit = async e => { e.preventDefault();
-    const n = {email:$("nOn").checked, endpoint:$("nUrl").value.trim()};
+    const n = {...notify, email:$("nOn").checked, endpoint:$("nUrl").value.trim(), senderName:$("nName").value.trim()||"Check Mate", replyTo:$("nReply").value.trim()};
     if(n.email && !/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(n.endpoint)){ toast("Βάλε πρώτα τη διεύθυνση της υπηρεσίας αποστολής"); return; }
     try{ await db.doc("config/notify").set(n); notify=n; toast(n.email?"Οι ειδοποιήσεις email ενεργοποιήθηκαν":"Οι ειδοποιήσεις email απενεργοποιήθηκαν"); }catch{ toast("Η αποθήκευση απέτυχε"); } };
   $("nTest").onclick = async () => {
@@ -1523,8 +1528,9 @@ function bindNotify(){
     if(!mail || !me?.email){ toast("Η αποστολή δεν είναι διαθέσιμη"); return; }
     $("nTest").disabled = true;
     try{
-      const r = await mail.send(ep, [{to:me.email, subject:"Check Mate: δοκιμαστικό email", html:mailHtml({name:me.name}, [{type:"test"}])}]);
-      toast(`Στάλθηκε στο ${me.email}`);
+      const r = await mail.send(ep, [{to:me.email, subject:"Check Mate: δοκιμαστικό email", html:mailHtml({name:me.name}, [{type:"test"}])}], senderOpts());
+      if(r.account && r.account!==notify.account && ep===notify.endpoint){ try{ await db.doc("config/notify").set({...notify, account:r.account}); }catch{} }
+      toast(`Στάλθηκε στο ${me.email}${r.account?" από "+r.account:""}`);
     }catch(err){ toast("Δεν στάλθηκε: " + (err?.message==="forbidden" ? "ο λογαριασμός σου δεν αναγνωρίστηκε ως διαχειριστής" : "έλεγξε τη διεύθυνση")); }
     finally{ if($("nTest")) $("nTest").disabled = false; }
   };
@@ -1575,6 +1581,7 @@ function mailHtml(p, evs){
     <p style="margin:16px 0"><a href="${app}" style="background:#f0821e;color:#fff;text-decoration:none;padding:10px 16px;border-radius:8px;font-weight:700;display:inline-block">Άνοιγμα Check Mate</a></p>
     <p style="font-size:12px;color:#8a94a6;margin:0">Αυτόματο μήνυμα από το Check Mate.</p></div>`;
 }
+const senderOpts = () => ({senderName: notify.senderName || "Check Mate", replyTo: notify.replyTo || ""});
 function subjectFor(evs){
   if(evs.length === 1){ const e = evs[0], i = e.item || {}; return `Check Mate: ${EV_TITLE[e.type]} – ${evMatch(i)}${i.date ? ", " + dayName(i.date) + " " + fmtDate(i.date).slice(0,5) : ""}`; }
   return `Check Mate: ${evs.length} αλλαγές στις αναθέσεις σου`;
@@ -1588,7 +1595,7 @@ async function flushNotes(){
     msgs.push({to:p.email, subject:subjectFor(evs), html:mailHtml(p, evs)});
   }
   if(!msgs.length || !mail) return;
-  try{ const r = await mail.send(notify.endpoint, msgs); toast(`Στάλθηκαν ${r.sent ?? msgs.length} email ειδοποίησης`); }
+  try{ const r = await mail.send(notify.endpoint, msgs, senderOpts()); toast(`Στάλθηκαν ${r.sent ?? msgs.length} email ειδοποίησης`); }
   catch(err){ console.warn("notify", err); toast("Τα email ειδοποίησης δεν στάλθηκαν"); }
 }
 document.addEventListener("visibilitychange", () => { if(document.visibilityState==="hidden" && outboxTimer) flushNotes(); });

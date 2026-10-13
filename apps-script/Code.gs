@@ -20,6 +20,8 @@ function doPost(e) {
     const body = JSON.parse(e.postData.contents);
     const admin = verifyAdmin_(body.idToken);
     if (!admin) return json_({ ok: false, error: "forbidden" });
+    const senderName = String(body.senderName || "Check Mate").slice(0, 80);
+    const replyTo = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(body.replyTo || "")) ? String(body.replyTo) : admin;
     let sent = 0;
     const list = (body.messages || []).slice(0, MAX_MESSAGES);
     for (const m of list) {
@@ -29,12 +31,12 @@ function doPost(e) {
         to: to,
         subject: String(m.subject || "Check Mate").slice(0, 200),
         htmlBody: String(m.html || ""),
-        name: "Check Mate",
-        replyTo: admin
+        name: senderName,
+        replyTo: replyTo
       });
       sent++;
     }
-    return json_({ ok: true, sent: sent, quota: MailApp.getRemainingDailyQuota() });
+    return json_({ ok: true, sent: sent, account: Session.getEffectiveUser().getEmail(), quota: MailApp.getRemainingDailyQuota() });
   } catch (err) {
     return json_({ ok: false, error: String(err && err.message || err) });
   }

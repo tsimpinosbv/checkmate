@@ -239,10 +239,10 @@
   /* email via the admin's Google Apps Script web app (URL in config/notify.endpoint).
      The script checks the Firebase ID token and that the caller is an admin before sending. */
   const mailApi = {
-    send: async (endpoint, messages) => {
+    send: async (endpoint, messages, opts = {}) => {
       const u = await ready;
       const idToken = await u.getIdToken();
-      const res = await fetch(endpoint, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify({idToken, messages})});
+      const res = await fetch(endpoint, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify({idToken, messages, senderName:opts.senderName, replyTo:opts.replyTo})});
       let j = null; try{ j = await res.json(); }catch{}
       if(!j || !j.ok) throw new Error((j && j.error) || ("HTTP " + res.status));
       return j;
