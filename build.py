@@ -19,6 +19,15 @@ out=f'''<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Check Mate Challenge</title>
+<meta name="theme-color" content="#14213a">
+<meta name="description" content="Αγώνες, αναθέσεις και πληρωμές Video Check.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Check Mate">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 {fonts}
 <style>
 /* mode bar (admin only) — the two modes bring their own styles inside their templates */
