@@ -199,7 +199,9 @@
       if(pendingSignup) await pendingSignup;   // wait for the name to be saved on sign-up
       done = true;
       if(document.getElementById("cm-auth")) rootEl().innerHTML = `<div id="boot">Φόρτωση…</div>`;
-      try{ await fs.doc(`profiles/${u.uid}`).set({name:u.displayName||"", email:u.email||"", seenAt:Date.now()}, {merge:true}); }catch{}
+      const joined = Date.parse(u.metadata && u.metadata.creationTime) || Date.now();
+      const via = (u.providerData||[]).map(p=>p.providerId==="google.com"?"google":"email")[0] || "email";
+      try{ await fs.doc(`profiles/${u.uid}`).set({name:u.displayName||"", email:u.email||"", joinedAt:joined, via, seenAt:Date.now()}, {merge:true}); }catch{}
       updateDock();
       resolve(u);
     });
@@ -214,6 +216,7 @@
 
   const userApi = {
     canEdit: () => isAdmin(),
+    idToken: async () => (await ready).getIdToken(),
     can: async () => true,
     me: async () => { const u = await ready; return {id:u.uid, name:u.displayName||"", email:u.email||""}; },
     profiles: async (ids) => {
@@ -233,6 +236,19 @@
     }
   };
 
+  /* email via the admin's Google Apps Script web app (URL in config/notify.endpoint).
+     The script checks the Firebase ID token and that the caller is an admin before sending. */
+  const mailApi = {
+    send: async (endpoint, messages) => {
+      const u = await ready;
+      const idToken = await u.getIdToken();
+      const res = await fetch(endpoint, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify({idToken, messages})});
+      let j = null; try{ j = await res.json(); }catch{}
+      if(!j || !j.ok) throw new Error((j && j.error) || ("HTTP " + res.status));
+      return j;
+    }
+  };
+
   window.claude = {
     use: async (name) => {
       if(!configured) return new Promise(() => {}); // stays on the setup message
@@ -240,6 +256,7 @@
       if(name === "db") return fs;
       if(name === "user") return userApi;
       if(name === "downloads") return downloadsApi;
+      if(name === "mail") return mailApi;
       return null;
     }
   };

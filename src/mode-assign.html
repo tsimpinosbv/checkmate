@@ -123,6 +123,10 @@ button.pay:hover{border-color:currentColor}
 .ph{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .pbody{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
 .avatar{width:28px;height:28px;border-radius:50%;flex:none}
+.ureg .who b{overflow-wrap:anywhere}
+.ureg .mail{font-size:13px;color:var(--ink);overflow-wrap:anywhere}
+.ph .count{font-size:13px;color:var(--muted);font-weight:500;margin-left:6px}
+.scroll{max-height:420px;overflow:auto}
 
 /* user cards */
 .cards{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
@@ -329,7 +333,7 @@ let db=null, user=null, me=null, isAdmin=false;
 /* =================================================================
    SUPERVISOR
    ================================================================= */
-let sched=[], roster=[], links={}, claims=[], fees={op:80,as:40};
+let sched=[], roster=[], links={}, claims=[], fees={op:80,as:40}, profilesAll={}, notify={email:false, endpoint:""}, mail=null;
 let ready={sched:false,roster:false,links:false};
 let tab = ls.get("cm.tab","sched");
 const st = {month:"", person:"", paid:"", vis:"", q:""};
@@ -344,6 +348,9 @@ function startAdmin(){
   db.collection("roster").limit(1000).onSnapshot(s=>{ roster=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); ready.roster=true; renderAdmin(); }, loadErr);
   db.collection("links").limit(1000).onSnapshot(s=>{ links={}; s.docs.forEach(d=>links[d.id]=d.data().uid); ready.links=true; renderAdmin(); }, loadErr);
   db.collection("claims").limit(1000).onSnapshot(s=>{ claims=s.docs.map(d=>({uid:d.id,...d.data()})); renderAdmin(); }, ()=>{});
+  db.collection("profiles").limit(2000).onSnapshot(s=>{ profilesAll={}; s.docs.forEach(d=>profilesAll[d.id]=d.data()); if(tab==="people") renderAdmin(); }, ()=>{});
+  db.doc("config/notify").onSnapshot(s=>{ notify={email:false, endpoint:"", ...(s.exists?s.data():{})}; if(tab==="people") renderAdmin(); }, ()=>{});
+  claude.use("mail").then(x=>mail=x).catch(()=>{});
   db.doc("config/fees").onSnapshot(s=>{ if(s.exists) fees={op:80,as:40,...s.data()}; }, ()=>{});
 }
 function loadErr(){ $("app").innerHTML = `<div class="panel"><div class="empty"><strong>Δεν φορτώθηκαν τα δεδομένα</strong><div>Ανανέωσε τη σελίδα.</div></div></div>`; }
@@ -466,10 +473,11 @@ async function renderPeople(pending){
       : `<div class="empty"><strong>Κανένα άτομο ακόμα</strong><div>Τα ονόματα προστίθενται αυτόματα από τις αναθέσεις και το Excel.</div></div>`}
     </section>
     <div style="display:flex;flex-direction:column;gap:18px">
+      ${registeredPanel(rmap)}
       <section class="panel">
         <div class="ph"><h2 class="sec">Αιτήματα σύνδεσης</h2></div>
         ${pending.length? pending.map(c=>`<div class="prow"><div class="who" style="flex-direction:row;gap:10px;align-items:center">
-            ${profs[c.uid]?`<img class="avatar" alt="" src="${esc(profs[c.uid].avatarUrl)}">`:""}
+            ${profs[c.uid]?.avatarUrl?`<img class="avatar" alt="" src="${esc(profs[c.uid].avatarUrl)}">`:""}
             <div class="who"><b>${esc(pname(c.uid))}</b><span class="note">δηλώνει: <b>${esc(rmap[c.rid]?.name||"—")}</b></span></div></div>
             <div class="actions"><button class="btn small primary" data-act="approve" data-uid="${c.uid}">Έγκριση</button><button class="btn small danger" data-act="reject" data-uid="${c.uid}">Απόρριψη</button></div></div>`).join("")
           : `<div class="pbody note">Όταν κάποιος ανοίξει τη σελίδα και επιλέξει το όνομά του, θα εμφανιστεί εδώ για έγκριση.</div>`}
@@ -483,6 +491,7 @@ async function renderPeople(pending){
           <div class="note">Μπαίνουν αυτόματα σε κάθε νέα ανάθεση και στην εισαγωγή από Excel. Η «Εφαρμογή» αλλάζει το ποσό σε όλες τις απλήρωτες αναθέσεις που έχουν άτομο· οι πληρωμένες δεν αλλάζουν.</div>
         </form>
       </section>
+      ${notifyPanel()}
       <section class="panel"><div class="pbody note"><div>
         <b style="color:var(--ink)">Πώς βλέπει κάποιος τις αναθέσεις του</b><br>
         1. Του στέλνεις τον σύνδεσμο της σελίδας.<br>
@@ -498,6 +507,7 @@ async function renderPeople(pending){
     try{ await db.collection("roster").add({name:n}); }catch{ toast("Η προσθήκη απέτυχε"); } };
   $("feesForm").onsubmit = async e => { e.preventDefault(); const f={op:+$("feeOp").value||0, as:+$("feeAs").value||0};
     try{ await db.doc("config/fees").set(f); fees=f; toast("Οι αμοιβές αποθηκεύτηκαν"); }catch{ toast("Η αποθήκευση απέτυχε"); } };
+  bindNotify();
   const needsFee = (m, f) => (m.op && !m.paid_op && +m.fee_op!==f.op) || (m.as && !m.paid_as && +m.fee_as!==f.as);
   $("applyFeesWrap").onclick = async e => {
     const id = e.target.closest("button")?.id; if(!id) return;
@@ -527,6 +537,120 @@ async function renderPeople(pending){
   };
 }
 
+/* ---------- registered users ---------- */
+const fmtTs = (ts, withTime) => ts ? new Date(ts).toLocaleString("el-GR", withTime ? {day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"} : {day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
+function registeredPanel(rmap){
+  const list = Object.entries(profilesAll).map(([uid,p])=>({uid,...p})).sort((a,b)=>(b.joinedAt||b.seenAt||0)-(a.joinedAt||a.seenAt||0));
+  const ridOf = uid => (Object.entries(links).find(([rid,u])=>u===uid)||[])[0];
+  const rows = list.map(p=>{
+    const rid = ridOf(p.uid), pend = claims.find(c=>c.uid===p.uid && c.status==="pending");
+    const tag = rid ? `<span class="tag on">✓ ${esc(rmap[rid]?.name||"συνδεδεμένος")}</span>`
+      : pend ? `<span class="tag wait">Αίτημα: ${esc(rmap[pend.rid]?.name||"—")}</span>`
+      : p.uid===me?.id ? `<span class="tag on">Εσύ · διαχειριστής</span>`
+      : `<span class="tag off">Δεν έχει δηλώσει όνομα</span>`;
+    return `<div class="prow ureg"><div class="who"><b>${esc(p.name||"Χωρίς όνομα")}</b><span class="mail">${esc(p.email||"—")}</span>
+      <span class="note">Εγγραφή ${fmtTs(p.joinedAt)}${p.via==="google"?" · Google":""} · τελευταία είσοδος ${fmtTs(p.seenAt,true)}</span></div>${tag}</div>`;
+  }).join("");
+  return `<section class="panel">
+    <div class="ph"><h2 class="sec">Εγγεγραμμένοι χρήστες<span class="count">${list.length}</span></h2></div>
+    ${list.length ? `<div class="scroll">${rows}</div>` : `<div class="pbody note">Δεν έχει κάνει κανείς εγγραφή ακόμα.</div>`}
+  </section>`;
+}
+
+/* ---------- email notifications ---------- */
+function notifyPanel(){
+  return `<section class="panel">
+    <div class="ph"><h2 class="sec">Ειδοποιήσεις email</h2></div>
+    <form class="pbody" id="notifyForm" style="display:flex;flex-direction:column;gap:10px">
+      <label class="check"><input type="checkbox" id="nOn" ${notify.email?"checked":""}> Στέλνε email στα άτομα όταν αλλάζει κάτι στις αναθέσεις τους</label>
+      <div class="note">Ένα email ανά άτομο, με όλες τις αλλαγές μαζί: νέα ανάθεση, αλλαγή ημερομηνίας, ώρας, γηπέδου, συνεργάτη ή αμοιβής, ακύρωση, πληρωμή. Μόνο για όσους έχουν συνδεδεμένο λογαριασμό, και μόνο για ορατές αναθέσεις.</div>
+      <div class="f"><label for="nUrl">Υπηρεσία αποστολής (Google Apps Script)</label><input id="nUrl" value="${esc(notify.endpoint||"")}" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"></div>
+      <div class="actions"><button class="btn small" type="submit">Αποθήκευση</button><button class="btn small" type="button" id="nTest">Δοκιμαστικό email σε εμένα</button></div>
+    </form>
+  </section>`;
+}
+function bindNotify(){
+  const f=$("notifyForm"); if(!f) return;
+  f.onsubmit = async e => { e.preventDefault();
+    const n = {email:$("nOn").checked, endpoint:$("nUrl").value.trim()};
+    if(n.email && !/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(n.endpoint)){ toast("Βάλε πρώτα τη διεύθυνση της υπηρεσίας αποστολής"); return; }
+    try{ await db.doc("config/notify").set(n); notify=n; toast(n.email?"Οι ειδοποιήσεις email ενεργοποιήθηκαν":"Οι ειδοποιήσεις email απενεργοποιήθηκαν"); }catch{ toast("Η αποθήκευση απέτυχε"); } };
+  $("nTest").onclick = async () => {
+    const ep = $("nUrl").value.trim();
+    if(!ep){ toast("Βάλε πρώτα τη διεύθυνση της υπηρεσίας αποστολής"); return; }
+    if(!mail || !me?.email){ toast("Η αποστολή δεν είναι διαθέσιμη"); return; }
+    $("nTest").disabled = true;
+    try{
+      const r = await mail.send(ep, [{to:me.email, subject:"Check Mate: δοκιμαστικό email", html:mailHtml({name:me.name}, [{type:"test"}])}]);
+      toast(`Στάλθηκε στο ${me.email}`);
+    }catch(err){ toast("Δεν στάλθηκε: " + (err?.message==="forbidden" ? "ο λογαριασμός σου δεν αναγνωρίστηκε ως διαχειριστής" : "έλεγξε τη διεύθυνση")); }
+    finally{ if($("nTest")) $("nTest").disabled = false; }
+  };
+}
+const NOTE_FIELDS = [["date","Ημερομηνία"],["time","Ώρα"],["home","Γηπεδούχος"],["away","Φιλοξενούμενη"],["comp","Διοργάνωση"],["venue","Γήπεδο"],["tv","Κάλυψη"],["vc","VAR"],["partner","Συνεργάτης"],["fee","Αμοιβή"],["notes","Σημειώσεις"]];
+let outbox = {}, outboxTimer = null, muteNotes = 0;
+function queueNote(uid, ev){
+  if(muteNotes || !uid || !notify.email || !notify.endpoint) return;
+  (outbox[uid] = outbox[uid] || []).push(ev);
+  clearTimeout(outboxTimer); outboxTimer = setTimeout(flushNotes, 4000);
+}
+function noteChanges(prev, m, oldSync, newSync){
+  for(const r of ["op","as"]){
+    const o = oldSync?.[r] || null, n = newSync?.[r] || null;
+    const oi = o && prev ? itemFor(prev, r) : null, ni = n && m ? itemFor(m, r) : null;
+    if(o && o !== n) queueNote(o, {type:"removed", item:oi});
+    if(n && n !== o) queueNote(n, {type:"added", item:ni});
+    if(n && n === o){
+      const ch = NOTE_FIELDS.filter(([k]) => String(oi[k] ?? "") !== String(ni[k] ?? "")).map(([k,l]) => ({k, l, from:oi[k], to:ni[k]}));
+      if(ch.length) queueNote(n, {type:"changed", item:ni, ch});
+      if(!!oi.paid !== !!ni.paid) queueNote(n, {type: ni.paid ? "paid" : "unpaid", item:ni});
+    }
+  }
+}
+const EV_TITLE = {added:"Νέα ανάθεση", removed:"Ακύρωση ανάθεσης", changed:"Αλλαγή στην ανάθεση", paid:"Πληρώθηκε", unpaid:"Η πληρωμή αναιρέθηκε", test:"Δοκιμαστικό μήνυμα"};
+const EV_COLOR = {added:"#1d8a52", removed:"#c43a2c", changed:"#2a7fd4", paid:"#1d8a52", unpaid:"#b4530b", test:"#2a7fd4"};
+const fmtVal = (k, v) => k==="date" ? (v ? `${dayName(v)} ${fmtDate(v)}` : "—") : k==="fee" ? eur(v) : (v || "—");
+function evMatch(i){ return `${i.home||""}${i.away?" – "+i.away:""}`; }
+function mailHtml(p, evs){
+  const h = s => esc(s);
+  const app = location.origin + location.pathname;
+  const blocks = evs.map(ev => {
+    if(ev.type==="test") return `<p style="margin:0 0 12px">Οι ειδοποιήσεις email του Check Mate λειτουργούν σωστά.</p>`;
+    const i = ev.item || {};
+    const when = `${i.dateText || (i.date ? dayName(i.date)+" "+fmtDate(i.date) : "")}${i.time||i.timeText ? " · "+(i.time||i.timeText) : ""}`;
+    const rows = [["Αγώνας", evMatch(i)], ["Διοργάνωση", i.comp], ["Ημερομηνία", when], ["Γήπεδο", i.venue], ["Θέση", ROLE[i.role]], ["Συνεργάτης", i.partner], ["Αμοιβή", eur(i.fee)], ["Κάλυψη / VAR", [i.tv,i.vc].filter(Boolean).join(" · ")], ["Σημειώσεις", i.notes]]
+      .filter(([,v]) => v).map(([k,v]) => `<tr><td style="padding:3px 12px 3px 0;color:#5d6b84;white-space:nowrap;vertical-align:top">${k}</td><td style="padding:3px 0">${h(v)}</td></tr>`).join("");
+    const diff = ev.ch ? `<div style="margin:8px 0 0;padding:8px 10px;background:#fdeedd;border-radius:8px"><b>Τι άλλαξε:</b><br>${ev.ch.map(c => `${c.l}: <s style="color:#8a94a6">${h(fmtVal(c.k,c.from))}</s> → <b>${h(fmtVal(c.k,c.to))}</b>`).join("<br>")}</div>` : "";
+    return `<div style="border:1px solid #d9dfea;border-left:4px solid ${EV_COLOR[ev.type]};border-radius:10px;padding:12px 14px;margin:0 0 12px">
+      <div style="font-weight:700;color:${EV_COLOR[ev.type]};margin-bottom:6px">${EV_TITLE[ev.type]}</div>
+      <table style="border-collapse:collapse;font-size:14px">${rows}</table>${diff}</div>`;
+  }).join("");
+  const first = (p?.name || "").split(" ")[0];
+  return `<div style="font-family:Arial,Helvetica,sans-serif;color:#14213a;max-width:560px">
+    <div style="font-size:22px;font-weight:800;margin-bottom:4px">CHECK <span style="color:#f0821e">MATE</span></div>
+    <p style="margin:0 0 14px">${first ? "Γεια σου " + h(first) + "," : "Γεια σου,"}${evs[0]?.type==="test" ? "" : " υπάρχουν αλλαγές στις αναθέσεις σου:"}</p>
+    ${blocks}
+    <p style="margin:16px 0"><a href="${app}" style="background:#f0821e;color:#fff;text-decoration:none;padding:10px 16px;border-radius:8px;font-weight:700;display:inline-block">Άνοιγμα Check Mate</a></p>
+    <p style="font-size:12px;color:#8a94a6;margin:0">Αυτόματο μήνυμα από το Check Mate.</p></div>`;
+}
+function subjectFor(evs){
+  if(evs.length === 1){ const e = evs[0], i = e.item || {}; return `Check Mate: ${EV_TITLE[e.type]} – ${evMatch(i)}${i.date ? ", " + dayName(i.date) + " " + fmtDate(i.date).slice(0,5) : ""}`; }
+  return `Check Mate: ${evs.length} αλλαγές στις αναθέσεις σου`;
+}
+async function flushNotes(){
+  clearTimeout(outboxTimer); outboxTimer = null;
+  const box = outbox; outbox = {};
+  const msgs = [];
+  for(const [uid, evs] of Object.entries(box)){
+    const p = profilesAll[uid]; if(!p?.email) continue;
+    msgs.push({to:p.email, subject:subjectFor(evs), html:mailHtml(p, evs)});
+  }
+  if(!msgs.length || !mail) return;
+  try{ const r = await mail.send(notify.endpoint, msgs); toast(`Στάλθηκαν ${r.sent ?? msgs.length} email ειδοποίησης`); }
+  catch(err){ console.warn("notify", err); toast("Τα email ειδοποίησης δεν στάλθηκαν"); }
+}
+document.addEventListener("visibilitychange", () => { if(document.visibilityState==="hidden" && outboxTimer) flushNotes(); });
+
 /* ---------- sync: copy each assignment into the assigned person's private list ---------- */
 function itemFor(m, r){
   const o = r==="op"?"as":"op";
@@ -542,10 +666,12 @@ async function syncAndSave(m, prev){
   }
   const {id, ...body} = m;
   await w(()=>db.doc(`sched/${m.id}`).set({...body, sync}));
+  noteChanges(prev, m, prev?.sync, sync);
 }
 async function deleteMatch(m){
   for(const r of ["op","as"]) if(m.sync?.[r]) await w(()=>db.doc(`mine/${m.sync[r]}/items/${m.id}_${r}`).delete());
   await w(()=>db.doc(`sched/${m.id}`).delete());
+  noteChanges(m, null, m.sync, null);
 }
 async function ensureRoster(names){
   const have = rosterByNorm();
@@ -553,7 +679,8 @@ async function ensureRoster(names){
 }
 async function resync(pred, label){
   const list = sched.filter(pred); let i=0;
-  for(const m of list){ await syncAndSave(m, m); i++; }
+  muteNotes++;   // linking/unlinking accounts or re-syncing is not a change to the assignments themselves
+  try{ for(const m of list){ await syncAndSave(m, m); i++; } } finally { muteNotes--; }
   if(label) toast(`${label} (${i} αναθέσεις)`);
 }
 
