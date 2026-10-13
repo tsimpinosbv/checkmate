@@ -1,13 +1,19 @@
 rules_version = '2';
 // Check Mate: who can read and write what (same permissions as capabilities.json).
-// Admin = a signed-in user whose UID has a document in the `admins` collection.
+// Admin = a signed-in user whose document users/<their email> has role: "admin"
+//         (or whose UID has a document in the `admins` collection).
 // User  = any other signed-in Google account.
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
     function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+    function myEmail() { return request.auth.token.email.lower(); }
+    function emailDoc() { return /databases/$(database)/documents/users/$(myEmail()); }
     function isAdmin() {
-      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      return signedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.email_verified == true && exists(emailDoc()) && get(emailDoc()).data.role == 'admin')
+      );
     }
 
     // Admins can read and write everything.
@@ -15,11 +21,12 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // Each user can check whether they are an admin; only admins add admins.
-    match /admins/{uid} { allow read: if isSelf(uid); }
+    // Admin list: users/<email> with role "admin". Each user can read their own entry; only admins change it.
+    match /users/{email} { allow read: if signedIn() && request.auth.token.email_verified == true && email == myEmail(); }
+    match /admins/{uid}  { allow read: if isSelf(uid); }
 
-    // Each user's name, shown to the admin when approving accounts.
-    match /users/{uid} { allow read, write: if isSelf(uid); }
+    // Each user's display name, shown to the admin when approving accounts.
+    match /profiles/{uid} { allow read, write: if isSelf(uid); }
 
     // Shared settings (which mode is active).
     match /config/{doc} { allow read: if signedIn(); }
@@ -29,8 +36,8 @@ service cloud.firestore {
     match /paid/{doc}    { allow read: if signedIn(); }
 
     // Mode 2 (assignments): users see the roster, manage their own claim, read their own assignments.
-    match /roster/{doc}             { allow read: if signedIn(); }
-    match /claims/{uid}             { allow read, write: if isSelf(uid); }
-    match /mine/{uid}/{rest=**}     { allow read: if isSelf(uid); }
+    match /roster/{doc}         { allow read: if signedIn(); }
+    match /claims/{uid}         { allow read, write: if isSelf(uid); }
+    match /mine/{uid}/{rest=**} { allow read: if isSelf(uid); }
   }
 }

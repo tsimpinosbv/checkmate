@@ -1,7 +1,7 @@
 /* Firebase backend for GitHub Pages.
    Provides the same claude.use("db" | "user" | "downloads") interface the app was written against,
    backed by Firebase Authentication (Google sign-in) and Cloud Firestore.
-   Admins are the users whose UID has a document in the `admins` collection (see README). */
+   Admins: users/<email> with role "admin" (or admins/<uid>) — see README and firestore.rules. */
 (function(){
   const cfg = window.FIREBASE_CONFIG || {};
   const configured = !!(cfg.apiKey && cfg.projectId && window.firebase);
@@ -53,14 +53,18 @@
       done = true;
       const boot = document.getElementById("cm-auth");
       if(boot) rootEl().innerHTML = `<div id="boot">Φόρτωση…</div>`;
-      try{ await fs.doc(`users/${u.uid}`).set({name:u.displayName||"", email:u.email||"", seenAt:Date.now()}, {merge:true}); }catch{}
+      try{ await fs.doc(`profiles/${u.uid}`).set({name:u.displayName||"", email:u.email||"", seenAt:Date.now()}, {merge:true}); }catch{}
       addSignOut();
       resolve(u);
     });
   });
 
   let adminP = null;
-  const isAdmin = () => adminP || (adminP = ready.then(u => fs.doc(`admins/${u.uid}`).get().then(s => s.exists).catch(() => false)));
+  const isAdmin = () => adminP || (adminP = ready.then(async u => {
+    try{ const s = await fs.doc(`admins/${u.uid}`).get(); if(s.exists) return true; }catch{}
+    try{ if(u.email && u.emailVerified){ const s = await fs.doc(`users/${u.email.toLowerCase()}`).get(); if(s.exists && s.data().role === "admin") return true; } }catch{}
+    return false;
+  }));
 
   const userApi = {
     canEdit: () => isAdmin(),
@@ -68,7 +72,7 @@
     me: async () => { const u = await ready; return {id:u.uid, name:u.displayName||"", email:u.email||""}; },
     profiles: async (ids) => {
       await ready; const out = {};
-      await Promise.all(ids.map(async id => { try{ const s = await fs.doc(`users/${id}`).get(); if(s.exists) out[id] = {id, ...s.data()}; }catch{} }));
+      await Promise.all(ids.map(async id => { try{ const s = await fs.doc(`profiles/${id}`).get(); if(s.exists) out[id] = {id, ...s.data()}; }catch{} }));
       return out;
     }
   };
