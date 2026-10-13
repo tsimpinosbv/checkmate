@@ -1,0 +1,17 @@
+{
+  "db": {
+    "rules": [
+      { "path": "",              "read": "admin",    "write": "admin" },
+      { "path": "config",        "read": "interact", "write": "admin" },
+      { "path": "matches",       "read": "interact", "write": "interact" },
+      { "path": "paid",          "read": "interact", "write": "admin" },
+      { "path": "roster",        "read": "interact", "write": "admin" },
+      { "path": "claims",        "read": "admin",    "write": "admin" },
+      { "path": "claims/{self}", "read": "interact", "write": "interact" },
+      { "path": "mine",          "read": "admin",    "write": "admin" },
+      { "path": "mine/{self}",   "read": "interact", "write": "admin" }
+    ]
+  },
+  "downloads": {},
+  "user": { "scopes": ["profile"] }
+}

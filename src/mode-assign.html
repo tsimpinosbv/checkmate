@@ -1,0 +1,756 @@
+<title>Check Mate Challenge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans+Extra+Condensed:wght@600;800&family=Commissioner:wght@400;500;600&family=Fira+Mono:wght@500&display=swap&subset=greek">
+<style>
+/* Supervisor: schedule table + people panel + import dialog. User: own assignment cards (read-only). */
+:root{
+  --ink:#14213a; --bg:#f3f5f9; --surface:#ffffff; --line:#d9dfea; --muted:#5d6b84;
+  --accent:#f0821e; --accent-ink:#ffffff; --blue:#2a7fd4; --blue-bg:#e4effb;
+  --good:#1d8a52; --good-bg:#e3f4ea; --warn:#b4530b; --warn-bg:#fdeedd; --bad:#c43a2c;
+  --sq:#e6eaf2;
+  --f-display:"Fira Sans Extra Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Commissioner",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"Fira Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --ink:#e8edf6; --bg:#0e1524; --surface:#162034; --line:#2a3650; --muted:#97a3ba;
+  --accent:#ff9a3d; --accent-ink:#1a1206; --blue:#5aa5f0; --blue-bg:#16283f;
+  --good:#5fd394; --good-bg:#16352a; --warn:#ffb070; --warn-bg:#3a2614; --bad:#ff7b6b; --sq:#1c2840; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --ink:#e8edf6; --bg:#0e1524; --surface:#162034; --line:#2a3650; --muted:#97a3ba;
+  --accent:#ff9a3d; --accent-ink:#1a1206; --blue:#5aa5f0; --blue-bg:#16283f;
+  --good:#5fd394; --good-bg:#16352a; --warn:#ffb070; --warn-bg:#3a2614; --bad:#ff7b6b; --sq:#1c2840; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:16px;padding-block:20px 60px;display:flex;flex-direction:column;gap:18px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+[hidden]{display:none!important}
+
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px}
+.mark{width:52px;height:52px;flex:none;display:block}
+.mark .m-bg{fill:var(--blue)} .mark .m-cam{fill:#fff} .mark .m-lens{fill:var(--blue)}
+.mark .m-ring{fill:none;stroke:#fff;stroke-width:2.5}
+.mark .m-chk{fill:none;stroke:var(--accent);stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
+.mark .m-chk-o{fill:none;stroke:var(--bg);stroke-width:9;stroke-linecap:round;stroke-linejoin:round}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(26px,5vw,34px);line-height:1;margin:0;letter-spacing:.01em;text-transform:uppercase}
+h1 span{color:var(--accent)}
+h2.sec{font-family:var(--f-display);font-weight:800;text-transform:uppercase;font-size:20px;margin:0;letter-spacing:.03em}
+.sub{color:var(--muted);font-size:13px;margin-top:3px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 14px;font-weight:600;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.small{padding:5px 10px;font-size:13px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btn.danger{color:var(--bad);border-color:transparent;background:none}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.tabs button{border:0;background:none;padding:10px 14px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabs .badge{background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:0 7px;font-size:12px;margin-left:4px}
+
+.board{display:grid;grid-template-columns:repeat(5,1fr);background:var(--ink);color:var(--bg);border-radius:12px;overflow:hidden}
+.board.four{grid-template-columns:repeat(4,1fr)}
+.cell{padding:14px 16px;border-right:1px solid color-mix(in srgb,var(--bg) 18%,transparent);min-width:0}
+.cell:last-child{border-right:0}
+.cell .k{font-size:11px;letter-spacing:.09em;text-transform:uppercase;opacity:.75}
+.cell .v{font-family:var(--f-mono);font-size:24px;font-variant-numeric:tabular-nums;margin-top:4px;white-space:nowrap}
+.cell .v.or{color:var(--accent)}
+@media (max-width:720px){.board,.board.four{grid-template-columns:repeat(2,1fr)}.cell{border-bottom:1px solid color-mix(in srgb,var(--bg) 18%,transparent)}.board:not(.four) .cell:first-child{grid-column:1/-1}}
+
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f label,.lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.f input,.f select,.f textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+.f.grow{flex:1 1 180px}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.row{display:grid;grid-template-columns:100px minmax(0,1fr) 240px 240px 40px;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--line)}
+.row.head{border-top:0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding-block:10px;background:var(--sq)}
+.comp-head{padding:8px 16px;background:var(--blue-bg);color:var(--blue);font-weight:600;font-size:13px;letter-spacing:.03em;border-top:1px solid var(--line)}
+.date{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:14px}
+.date small{display:block;color:var(--muted);font-size:12px}
+.match{min-width:0}
+.match b{font-weight:600;display:block;overflow-wrap:anywhere}
+.meta{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.slot{display:flex;flex-direction:column;gap:4px;min-width:0}
+.slot .nm{font-weight:600;font-size:14px;display:flex;gap:6px;align-items:center;overflow-wrap:anywhere}
+.slot .nm .dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--line)}
+.slot .nm .dot.on{background:var(--good)}
+.slot .ln{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.role{display:inline-flex;align-items:center;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.role.op{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.fee{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:13px}
+.pay{border:1px solid transparent;border-radius:999px;padding:3px 9px;font-size:12.5px;font-weight:600;display:inline-flex;gap:5px;align-items:center}
+.pay.yes{background:var(--good-bg);color:var(--good)}
+.pay.no{background:var(--warn-bg);color:var(--warn)}
+button.pay:hover{border-color:currentColor}
+.empty-slot{color:var(--muted);font-size:13px;font-style:italic}
+.more{border:0;background:none;width:34px;height:34px;border-radius:8px;color:var(--muted);font-size:18px}
+.more:hover{background:var(--sq);color:var(--ink)}
+@media (max-width:820px){
+  .row.head{display:none}
+  .row{grid-template-columns:minmax(0,1fr) auto;row-gap:10px}
+  .row>.c-date{grid-column:1/2}.row>.c-edit{grid-column:2/3;grid-row:1}
+  .row>.c-match,.row>.slot{grid-column:1/-1}
+}
+.empty{padding:40px 20px;text-align:center;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:10px}
+.empty .board-art{width:72px;height:72px;border-radius:6px;background:conic-gradient(var(--sq) 25%,var(--line) 0 50%,var(--sq) 0 75%,var(--line) 0) 0 0/25% 25%}
+.empty strong{color:var(--ink);font-size:16px}
+.note{font-size:13px;color:var(--muted)}
+.err{font-size:13px;color:var(--bad)}
+
+/* people */
+.people{display:grid;gap:18px;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}
+@media (max-width:820px){.people{grid-template-columns:1fr}}
+.prow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid var(--line);flex-wrap:wrap}
+.prow:first-child{border-top:0}
+.prow .who{display:flex;flex-direction:column;min-width:0}
+.prow .who b{overflow-wrap:anywhere}
+.tag{font-size:12px;font-weight:600;border-radius:999px;padding:2px 8px}
+.tag.on{background:var(--good-bg);color:var(--good)} .tag.off{background:var(--sq);color:var(--muted)} .tag.wait{background:var(--warn-bg);color:var(--warn)}
+.ph{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.pbody{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.avatar{width:28px;height:28px;border-radius:50%;flex:none}
+
+/* user cards */
+.cards{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;border-left:5px solid var(--blue)}
+.card.op{border-left-color:var(--accent)}
+.card.past{opacity:.85}
+.card .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.card .when{font-family:var(--f-mono);font-size:15px}
+.card .when small{color:var(--muted);font-size:12.5px}
+.card .teams{font-family:var(--f-display);font-weight:800;font-size:22px;line-height:1.1;text-transform:uppercase;overflow-wrap:anywhere}
+.card .venue{font-weight:600}
+.card dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:0;font-size:13.5px}
+.card dt{color:var(--muted)} .card dd{margin:0;overflow-wrap:anywhere}
+.card .bottom{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid var(--line);padding-top:8px}
+.next{font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.06em;text-transform:uppercase}
+
+/* dialogs */
+dialog{border:0;padding:0;border-radius:14px;background:var(--surface);color:var(--ink);width:min(600px,calc(100vw - 32px));max-height:calc(100dvh - 40px)}
+dialog.wide{width:min(980px,calc(100vw - 32px))}
+dialog::backdrop{background:rgba(8,12,22,.55)}
+.form{display:flex;flex-direction:column;gap:14px;padding:20px}
+.form h2{font-family:var(--f-display);font-weight:800;text-transform:uppercase;font-size:24px;margin:0;letter-spacing:.02em}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media (max-width:520px){.grid2,.grid3{grid-template-columns:1fr}}
+.form .f input,.form .f select,.form .f textarea{width:100%}
+.form textarea{resize:vertical;min-height:56px}
+.box{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.box .lbl{font-weight:700}
+.check{display:flex;gap:8px;align-items:center;font-weight:600;font-size:14px}
+.check input{width:18px;height:18px;accent-color:var(--good)}
+.foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding-top:6px;border-top:1px solid var(--line)}
+.confirm{display:flex;gap:8px;align-items:center;font-size:13px}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:22px;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:8px;align-items:center}
+.drop.over{border-color:var(--accent);background:var(--warn-bg)}
+.tbl{overflow:auto;max-height:46dvh;border:1px solid var(--line);border-radius:10px}
+.tbl table{border-collapse:collapse;width:100%;font-size:13px}
+.tbl th,.tbl td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;white-space:nowrap}
+.tbl th{position:sticky;top:0;background:var(--sq);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.st{font-weight:700;font-size:12px}
+.st.new{color:var(--good)} .st.upd{color:var(--blue)} .st.same{color:var(--muted)}
+.unk{color:var(--warn);font-weight:600}
+.progress{height:6px;background:var(--sq);border-radius:999px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent);width:0;transition:width .2s}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:10;max-width:calc(100vw - 32px)}
+@media (prefers-reduced-motion:no-preference){.toast{animation:up .2s ease-out}@keyframes up{from{transform:translate(-50%,8px);opacity:0}}}
+</style>
+
+<div class="wrap" lang="el">
+  <header>
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 52 52" aria-hidden="true">
+        <circle class="m-bg" cx="24" cy="26" r="23"/>
+        <rect class="m-cam" x="9" y="18" width="22" height="16" rx="3"/>
+        <path class="m-cam" d="M31 23 L39 19 V33 L31 29 Z"/>
+        <circle class="m-lens" cx="20" cy="26" r="5"/>
+        <circle class="m-ring" cx="20" cy="26" r="2"/>
+        <path class="m-chk-o" d="M33 40 L39 46 L49 32"/>
+        <path class="m-chk" d="M33 40 L39 46 L49 32"/>
+      </svg>
+      <div>
+        <h1>Check <span>Mate</span></h1>
+        <div class="sub" id="subtitle">Video Check · αναθέσεις αγώνων</div>
+      </div>
+    </div>
+    <div class="actions" id="adminActions" hidden>
+      <button class="btn" id="btnCsv" type="button">⬇ CSV</button>
+      <button class="btn" id="btnImport" type="button">⬆ Εισαγωγή Excel</button>
+      <button class="btn primary" id="btnAdd" type="button">+ Νέα ανάθεση</button>
+    </div>
+  </header>
+
+  <main id="app">
+    <div class="panel"><div class="empty"><div class="board-art"></div><strong>Φόρτωση…</strong></div></div>
+  </main>
+</div>
+
+<!-- assignment form (supervisor) -->
+<dialog id="dlg" lang="el">
+  <form class="form" id="frm" novalidate>
+    <h2 id="frmTitle">Νέα ανάθεση</h2>
+    <div class="grid2">
+      <div class="f"><label for="iDate">Ημερομηνία</label><input id="iDate" type="date" required></div>
+      <div class="f"><label for="iTime">Ώρα</label><input id="iTime" type="time"></div>
+    </div>
+    <label class="check"><input type="checkbox" id="iTbc"> Η ημερομηνία είναι της αγωνιστικής (προς επιβεβαίωση)</label>
+    <div class="f"><label for="iComp">Διοργάνωση</label><input id="iComp" list="dlComps" autocomplete="off" placeholder="π.χ. PLAY OFF VOLLEY LEAGUE"></div>
+    <div class="grid2">
+      <div class="f"><label for="iHome">Γηπεδούχος</label><input id="iHome" list="dlTeams" required autocomplete="off"></div>
+      <div class="f"><label for="iAway">Φιλοξενούμενη</label><input id="iAway" list="dlTeams" autocomplete="off"></div>
+    </div>
+    <div class="grid3">
+      <div class="f"><label for="iVenue">Γήπεδο</label><input id="iVenue" list="dlVenues" autocomplete="off"></div>
+      <div class="f"><label for="iTv">Κάλυψη</label><input id="iTv" list="dlTv" autocomplete="off" placeholder="ΕΡΤ / ΥΤ"></div>
+      <div class="f"><label for="iVc">VAR</label><input id="iVc" autocomplete="off" placeholder="VC17"></div>
+    </div>
+    <div class="grid2">
+      <div class="box"><span class="lbl">Χειριστής</span>
+        <div class="f"><label for="iOp">Άτομο</label><input id="iOp" list="dlPeople" autocomplete="off"></div>
+        <div class="f"><label for="iFeeOp">Αμοιβή (€)</label><input id="iFeeOp" type="number" min="0" step="0.5" inputmode="decimal"></div>
+        <label class="check"><input type="checkbox" id="iPaidOp"> Πληρώθηκε</label>
+      </div>
+      <div class="box"><span class="lbl">Βοηθός</span>
+        <div class="f"><label for="iAs">Άτομο</label><input id="iAs" list="dlPeople" autocomplete="off"></div>
+        <div class="f"><label for="iFeeAs">Αμοιβή (€)</label><input id="iFeeAs" type="number" min="0" step="0.5" inputmode="decimal"></div>
+        <label class="check"><input type="checkbox" id="iPaidAs"> Πληρώθηκε</label>
+      </div>
+    </div>
+    <div class="f"><label for="iNotes">Σημειώσεις (τις βλέπουν τα άτομα της ανάθεσης)</label><textarea id="iNotes" placeholder="Ώρα προσέλευσης, παραλαβή εξοπλισμού…"></textarea></div>
+    <div class="err" id="frmErr" hidden></div>
+    <div class="foot">
+      <div id="delWrap"></div>
+      <div class="actions">
+        <button class="btn" type="button" id="btnCancel">Άκυρο</button>
+        <button class="btn primary" type="submit" id="btnSave">Αποθήκευση</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<!-- import dialog -->
+<dialog id="dlgImp" class="wide" lang="el">
+  <div class="form">
+    <h2>Εισαγωγή από Excel</h2>
+    <div id="impStep1">
+      <label class="drop" id="drop">
+        <strong style="color:var(--ink)">Επίλεξε ή σύρε εδώ το αρχείο Excel</strong>
+        <span class="note">Στήλες: ΗΜΕΡΟΜΗΝΙΑ · ΩΡΑ · ΓΗΠΕΔΟ · ΑΓΩΝΑΣ · ΚΑΛΥΨΗ · VAR · ΣΥΝΕΡΓΑΤΕΣ (Χειριστής - Βοηθός). Οι γραμμές-τίτλοι (π.χ. «1Η ΑΓΩΝΙΣΤΙΚΗ») γίνονται η διοργάνωση. Αν ξαναφορτώσεις το αρχείο, ενημερώνονται μόνο οι αλλαγές.</span>
+        <input type="file" id="impFile" accept=".xlsx,.xls,.xlsm,.csv" style="max-width:100%">
+      </label>
+    </div>
+    <div id="impStep2" hidden style="display:flex;flex-direction:column;gap:12px">
+      <div class="note" id="impSummary"></div>
+      <div class="note">~ = η γραμμή δεν είχε δική της ημερομηνία· πήρε την ημερομηνία της αγωνιστικής. Ο 1ος στη στήλη «Συνεργάτες» γίνεται Χειριστής, ο 2ος Βοηθός.</div>
+      <div class="tbl"><table><thead><tr><th></th><th>Ημ/νία</th><th>Ώρα</th><th>Αγώνας</th><th>Γήπεδο</th><th>Κάλυψη</th><th>VAR</th><th>Χειριστής</th><th>Βοηθός</th></tr></thead><tbody id="impBody"></tbody></table></div>
+      <div class="grid2">
+        <div class="f"><label for="impFeeOp">Αμοιβή χειριστή για νέους αγώνες (€)</label><input id="impFeeOp" type="number" min="0" step="0.5"></div>
+        <div class="f"><label for="impFeeAs">Αμοιβή βοηθού για νέους αγώνες (€)</label><input id="impFeeAs" type="number" min="0" step="0.5"></div>
+      </div>
+      <div class="progress" id="impProg" hidden><i></i></div>
+    </div>
+    <div class="err" id="impErr" hidden></div>
+    <div class="foot">
+      <div></div>
+      <div class="actions">
+        <button class="btn" type="button" id="impCancel">Κλείσιμο</button>
+        <button class="btn primary" type="button" id="impGo" hidden>Εισαγωγή</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<datalist id="dlTeams"></datalist><datalist id="dlComps"></datalist><datalist id="dlVenues"></datalist><datalist id="dlPeople"></datalist><datalist id="dlTv"></datalist>
+
+<script>
+/*__PARSER__*/
+</script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const P = window.CMParse, norm = P.norm;
+const ROLE = {op:"Χειριστής", as:"Βοηθός"};
+const MONTHS_FULL = ["Ιανουάριος","Φεβρουάριος","Μάρτιος","Απρίλιος","Μάιος","Ιούνιος","Ιούλιος","Αύγουστος","Σεπτέμβριος","Οκτώβριος","Νοέμβριος","Δεκέμβριος"];
+const DAYS = ["Κυρ","Δευ","Τρι","Τετ","Πεμ","Παρ","Σαβ"];
+const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const eur = n => (Math.round((+n||0)*100)/100).toLocaleString("el-GR",{maximumFractionDigits:2}) + " €";
+const pad = n => String(n).padStart(2,"0");
+const today = () => { const t=new Date(); return `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`; };
+const fmtDate = d => { if(!d) return ""; const [y,m,dd]=d.split("-"); return `${dd}/${m}/${y}`; };
+const dayName = d => d ? DAYS[new Date(d+"T12:00").getDay()] : "";
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const uniq = a => [...new Set(a.filter(Boolean))].sort((x,y)=>x.localeCompare(y,"el"));
+const matchKey = m => m.comp ? ["C",norm(m.comp),norm(m.home),norm(m.away)].join("|") : [m.date, m.time||"", norm(m.home), norm(m.away)].join("|");
+const teams = m => esc(m.home) + (m.away ? " – " + esc(m.away) : "");
+const whenMain = m => esc(m.dateText || fmtDate(m.date));
+const whenSub = m => [m.dateText?"":dayName(m.date), m.time||m.timeText||"", m.dateTbc?"ημ. αγωνιστικής":""].filter(Boolean).map(esc).join(" · ");
+const ls = {get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch{return d}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3000); }
+async function w(fn){ for(let i=0;;i++){ try{ return await fn(); }catch(e){ if(i<5 && (e?.code==="resource_exhausted"||e?.code==="unavailable")){ await sleep(400*2**i); continue; } throw e; } } }
+
+let db=null, user=null, me=null, isAdmin=false;
+
+/* =================================================================
+   DATA LAYOUT
+   sched/{id}                 all assignments (supervisor only)
+   roster/{rid} {name}        names from the schedule (readable by users, to claim theirs)
+   links/{rid}  {uid}         name -> account (supervisor only)
+   claims/{uid} {rid,status}  a user's "this is me" request (own doc)
+   mine/{uid}/items/{id_role} what each user sees (written by supervisor, read by that user only)
+   settings/fees {op,as}
+   ================================================================= */
+
+(async () => {
+  db = await claude.use("db");
+  user = await claude.use("user");
+  if(!db){ $("app").innerHTML = `<div class="panel"><div class="empty"><strong>Η σελίδα χρειάζεται σύνδεση</strong><div>Άνοιξε τη σελίδα συνδεδεμένος στο claude.ai.</div></div></div>`; return; }
+  isAdmin = user ? !!(await user.canEdit()) : false;
+  me = user ? await user.me() : null;
+  if(isAdmin) startAdmin(); else startUser();
+})();
+
+/* =================================================================
+   SUPERVISOR
+   ================================================================= */
+let sched=[], roster=[], links={}, claims=[], fees={op:0,as:0};
+let ready={sched:false,roster:false,links:false};
+let tab = ls.get("cm.tab","sched");
+const st = {month:"", person:"", paid:"", q:""};
+
+function rosterByNorm(){ const m={}; roster.forEach(r=>m[norm(r.name)]=r); return m; }
+function uidForName(name){ if(!name) return null; const r=rosterByNorm()[norm(name)]; return r ? (links[r.id]||null) : null; }
+
+function startAdmin(){
+  $("adminActions").hidden = false;
+  $("subtitle").textContent = "Video Check · πίνακας επόπτη";
+  db.collection("sched").orderBy("date","asc").limit(2000).onSnapshot(s=>{ sched=s.docs.map(d=>({id:d.id,...d.data()})); ready.sched=true; renderAdmin(); }, loadErr);
+  db.collection("roster").limit(1000).onSnapshot(s=>{ roster=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); ready.roster=true; renderAdmin(); }, loadErr);
+  db.collection("links").limit(1000).onSnapshot(s=>{ links={}; s.docs.forEach(d=>links[d.id]=d.data().uid); ready.links=true; renderAdmin(); }, loadErr);
+  db.collection("claims").limit(1000).onSnapshot(s=>{ claims=s.docs.map(d=>({uid:d.id,...d.data()})); renderAdmin(); }, ()=>{});
+  db.doc("settings/fees").onSnapshot(s=>{ if(s.exists) fees={op:0,as:0,...s.data()}; }, ()=>{});
+}
+function loadErr(){ $("app").innerHTML = `<div class="panel"><div class="empty"><strong>Δεν φορτώθηκαν τα δεδομένα</strong><div>Ανανέωσε τη σελίδα.</div></div></div>`; }
+
+function slotsOf(list){ const s=[]; list.forEach(m=>["op","as"].forEach(r=>{ if(m[r]) s.push({m, role:r, name:m[r], fee:+m["fee_"+r]||0, paid:!!m["paid_"+r]}); })); return s; }
+function filteredSched(){
+  const q=st.q.trim().toLowerCase(), pn=st.person?norm(st.person):"";
+  return sched.filter(m =>
+    (!st.month || (m.date||"").slice(0,7)===st.month) &&
+    (!pn || norm(m.op)===pn || norm(m.as)===pn) &&
+    (!st.paid || ["op","as"].some(r=>m[r] && (!pn||norm(m[r])===pn) && (st.paid==="yes")===!!m["paid_"+r])) &&
+    (!q || [m.home,m.away,m.comp,m.venue,m.op,m.as,m.tv,m.vc].join(" ").toLowerCase().includes(q))
+  );
+}
+
+function renderAdmin(){
+  if(!(ready.sched&&ready.roster&&ready.links)) return;
+  const pending = claims.filter(c=>c.status==="pending");
+  const months = uniq(sched.map(m=>(m.date||"").slice(0,7)));
+  if(st.month && !months.includes(st.month)) st.month="";
+  const people = uniq([...roster.map(r=>r.name)]);
+  const fill = (id,arr)=>$(id).innerHTML=uniq(arr).map(v=>`<option value="${esc(v)}">`).join("");
+  fill("dlTeams", sched.flatMap(m=>[m.home,m.away])); fill("dlComps", sched.map(m=>m.comp)); fill("dlVenues", sched.map(m=>m.venue)); fill("dlTv", sched.map(m=>m.tv)); fill("dlPeople", people);
+
+  const focus = document.activeElement?.id;
+  $("app").innerHTML = `
+  <div style="display:flex;flex-direction:column;gap:18px">
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="sched" aria-selected="${tab==="sched"}">Πρόγραμμα</button>
+      <button role="tab" data-tab="people" aria-selected="${tab==="people"}">Άτομα${pending.length?`<span class="badge">${pending.length}</span>`:""}</button>
+    </nav>
+    <div id="tabBody"></div>
+  </div>`;
+  if(tab==="sched") renderSched(months, people); else renderPeople(pending);
+  if(focus && $(focus)){ const el=$(focus); el.focus(); if(el.setSelectionRange && el.type==="search") el.setSelectionRange(el.value.length, el.value.length); }
+}
+
+function renderSched(months, people){
+  const list = filteredSched();
+  const pn = st.person?norm(st.person):"";
+  const slots = slotsOf(list).filter(s=>!pn||norm(s.name)===pn);
+  const total=slots.reduce((a,s)=>a+s.fee,0), paid=slots.filter(s=>s.paid).reduce((a,s)=>a+s.fee,0);
+  const opt=(arr,cur,all)=>`<option value="">${all}</option>`+arr.map(([v,l])=>`<option value="${esc(v)}"${v===cur?" selected":""}>${esc(l)}</option>`).join("");
+  let html = `
+  <section class="board" aria-label="Σύνολα">
+    <div class="cell"><div class="k">Αγώνες</div><div class="v">${list.length}</div></div>
+    <div class="cell"><div class="k">Αναθέσεις</div><div class="v">${slots.length}</div></div>
+    <div class="cell"><div class="k">Σύνολο αμοιβών</div><div class="v">${eur(total)}</div></div>
+    <div class="cell"><div class="k">Πληρώθηκαν</div><div class="v">${eur(paid)}</div></div>
+    <div class="cell"><div class="k">Εκκρεμούν</div><div class="v or">${eur(total-paid)}</div></div>
+  </section>
+  <section class="filters" aria-label="Φίλτρα" style="margin-top:18px">
+    <div class="f"><label for="fMonth">Μήνας</label><select id="fMonth">${opt(months.slice().reverse().map(m=>[m,MONTHS_FULL[+m.slice(5)-1]+" "+m.slice(0,4)]),st.month,"Όλοι")}</select></div>
+    <div class="f"><label for="fPerson">Άτομο</label><select id="fPerson">${opt(people.map(p=>[p,p]),st.person,"Όλα")}</select></div>
+    <div class="f"><label for="fPaid">Πληρωμή</label><select id="fPaid">${opt([["no","Εκκρεμεί"],["yes","Πληρώθηκε"]],st.paid,"Όλα")}</select></div>
+    <div class="f grow"><label for="fSearch">Αναζήτηση</label><input id="fSearch" type="search" value="${esc(st.q)}" placeholder="Ομάδα, γήπεδο, VC…"></div>
+  </section>
+  <section class="panel" style="margin-top:18px">`;
+  if(!sched.length){
+    html += `<div class="empty"><div class="board-art"></div><strong>Δεν υπάρχουν αναθέσεις ακόμα</strong><div>Πρόσθεσε μία χειροκίνητα ή φέρε το πρόγραμμα από Excel.</div>
+      <div class="actions"><button class="btn" data-act="import">⬆ Εισαγωγή Excel</button><button class="btn primary" data-act="add">+ Νέα ανάθεση</button></div></div>`;
+  } else if(!list.length){
+    html += `<div class="empty"><strong>Καμία ανάθεση με αυτά τα φίλτρα</strong><button class="btn" data-act="clear">Καθαρισμός φίλτρων</button></div>`;
+  } else {
+    html += `<div class="row head"><div>Ημ/νία</div><div>Αγώνας</div><div>Χειριστής</div><div>Βοηθός</div><div></div></div>`;
+    let lastComp=null;
+    list.forEach(m=>{
+      if((m.comp||"")!==lastComp){ lastComp=m.comp||""; if(lastComp) html+=`<div class="comp-head">${esc(lastComp)}</div>`; }
+      html += `<div class="row">
+        <div class="date c-date">${whenMain(m)}<small>${whenSub(m)}</small></div>
+        <div class="match c-match"><b>${teams(m)}</b><div class="meta">${[m.venue,m.tv,m.vc].filter(Boolean).map(esc).join(" · ")||"&nbsp;"}</div></div>
+        ${slotHtml(m,"op")}${slotHtml(m,"as")}
+        <div class="c-edit"><button class="more" data-act="edit" data-id="${m.id}" aria-label="Επεξεργασία">✎</button></div>
+      </div>`;
+    });
+  }
+  html += `</section>`;
+  $("tabBody").innerHTML = html;
+  $("fMonth").onchange=e=>{st.month=e.target.value;renderAdmin();};
+  $("fPerson").onchange=e=>{st.person=e.target.value;renderAdmin();};
+  $("fPaid").onchange=e=>{st.paid=e.target.value;renderAdmin();};
+  $("fSearch").oninput=e=>{st.q=e.target.value;renderAdmin();};
+}
+function slotHtml(m, r){
+  if(!m[r]) return `<div class="slot"><span class="role ${r}">${ROLE[r]}</span><span class="empty-slot">— χωρίς άτομο —</span></div>`;
+  const linked = !!uidForName(m[r]); const paid=!!m["paid_"+r];
+  return `<div class="slot">
+    <div class="nm"><span class="dot ${linked?"on":""}" title="${linked?"Συνδεδεμένος λογαριασμός – βλέπει την ανάθεση":"Δεν έχει συνδεθεί λογαριασμός"}"></span>${esc(m[r])}</div>
+    <div class="ln"><span class="role ${r}">${ROLE[r]}</span><span class="fee">${eur(m["fee_"+r])}</span>
+    <button class="pay ${paid?"yes":"no"}" data-act="pay" data-id="${m.id}" data-role="${r}" title="Αλλαγή κατάστασης πληρωμής">${paid?"✓ Πληρώθηκε":"● Εκκρεμεί"}</button></div>
+  </div>`;
+}
+
+async function renderPeople(pending){
+  const counts={}; sched.forEach(m=>["op","as"].forEach(r=>{ if(m[r]){ const k=norm(m[r]); counts[k]=(counts[k]||0)+1; } }));
+  const ids = [...new Set([...Object.values(links), ...pending.map(c=>c.uid)])];
+  const profs = (user && ids.length) ? await user.profiles(ids) : {};
+  const pname = uid => profs[uid]?.name || "Λογαριασμός χωρίς όνομα";
+  const rmap = Object.fromEntries(roster.map(r=>[r.id,r]));
+  $("tabBody").innerHTML = `
+  <div class="people">
+    <section class="panel">
+      <div class="ph"><h2 class="sec">Άτομα</h2>
+        <form id="addPerson" class="actions"><input id="newPerson" class="btn" style="font-weight:400;min-width:0;width:200px" placeholder="π.χ. ΤΣΙΜΠΙΝΟΣ Ι." aria-label="Νέο άτομο"><button class="btn small" type="submit">+ Προσθήκη</button></form>
+      </div>
+      ${roster.length? roster.map(r=>{ const uid=links[r.id]; const waiting=pending.find(c=>c.rid===r.id);
+        return `<div class="prow"><div class="who"><b>${esc(r.name)}</b><span class="note">${counts[norm(r.name)]||0} αναθέσεις${uid?` · ${esc(pname(uid))}`:""}</span></div>
+        <div class="actions">${uid?`<span class="tag on">✓ Βλέπει τις αναθέσεις του</span><button class="btn small danger" data-act="unlink" data-rid="${r.id}">Αποσύνδεση</button>`:waiting?`<span class="tag wait">Αίτημα σε αναμονή</span>`:`<span class="tag off">Χωρίς λογαριασμό</span>`}
+        ${!uid && !counts[norm(r.name)]?`<button class="btn small danger" data-act="delperson" data-rid="${r.id}" aria-label="Διαγραφή">✕</button>`:""}</div></div>`;}).join("")
+      : `<div class="empty"><strong>Κανένα άτομο ακόμα</strong><div>Τα ονόματα προστίθενται αυτόματα από τις αναθέσεις και το Excel.</div></div>`}
+    </section>
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <section class="panel">
+        <div class="ph"><h2 class="sec">Αιτήματα σύνδεσης</h2></div>
+        ${pending.length? pending.map(c=>`<div class="prow"><div class="who" style="flex-direction:row;gap:10px;align-items:center">
+            ${profs[c.uid]?`<img class="avatar" alt="" src="${esc(profs[c.uid].avatarUrl)}">`:""}
+            <div class="who"><b>${esc(pname(c.uid))}</b><span class="note">δηλώνει: <b>${esc(rmap[c.rid]?.name||"—")}</b></span></div></div>
+            <div class="actions"><button class="btn small primary" data-act="approve" data-uid="${c.uid}">Έγκριση</button><button class="btn small danger" data-act="reject" data-uid="${c.uid}">Απόρριψη</button></div></div>`).join("")
+          : `<div class="pbody note">Όταν κάποιος ανοίξει τη σελίδα και επιλέξει το όνομά του, θα εμφανιστεί εδώ για έγκριση.</div>`}
+      </section>
+      <section class="panel">
+        <div class="ph"><h2 class="sec">Προεπιλεγμένες αμοιβές</h2></div>
+        <form class="pbody" id="feesForm">
+          <div class="grid2"><div class="f"><label for="feeOp">Χειριστής (€)</label><input id="feeOp" type="number" min="0" step="0.5" value="${fees.op||""}"></div>
+          <div class="f"><label for="feeAs">Βοηθός (€)</label><input id="feeAs" type="number" min="0" step="0.5" value="${fees.as||""}"></div></div>
+          <div class="actions"><button class="btn small" type="submit">Αποθήκευση</button></div>
+          <div class="note">Μπαίνουν αυτόματα σε κάθε νέα ανάθεση και στην εισαγωγή από Excel.</div>
+        </form>
+      </section>
+      <section class="panel"><div class="pbody note"><div>
+        <b style="color:var(--ink)">Πώς βλέπει κάποιος τις αναθέσεις του</b><br>
+        1. Μοιράσου τη σελίδα μαζί του ως <b>Contributor</b> (Share).<br>
+        2. Ανοίγει τη σελίδα και επιλέγει το όνομά του.<br>
+        3. Εγκρίνεις το αίτημα εδώ — βλέπει μόνο τις δικές του αναθέσεις.</div>
+        <div class="actions" style="margin-top:10px"><button class="btn small" data-act="resync">↻ Επανασυγχρονισμός όλων</button></div>
+      </div></section>
+    </div>
+  </div>`;
+  $("addPerson").onsubmit = async e => { e.preventDefault(); const n=$("newPerson").value.trim(); if(!n) return;
+    if(rosterByNorm()[norm(n)]){ toast("Υπάρχει ήδη"); return; }
+    try{ await db.collection("roster").add({name:n}); }catch{ toast("Η προσθήκη απέτυχε"); } };
+  $("feesForm").onsubmit = async e => { e.preventDefault(); const f={op:+$("feeOp").value||0, as:+$("feeAs").value||0};
+    try{ await db.doc("settings/fees").set(f); fees=f; toast("Οι αμοιβές αποθηκεύτηκαν"); }catch{ toast("Η αποθήκευση απέτυχε"); } };
+}
+
+/* ---------- sync: copy each assignment into the assigned person's private list ---------- */
+function itemFor(m, r){
+  const o = r==="op"?"as":"op";
+  return {match:m.id, date:m.date||"", time:m.time||"", dateText:m.dateText||"", timeText:m.timeText||"", dateTbc:!!m.dateTbc, comp:m.comp||"", venue:m.venue||"", home:m.home||"", away:m.away||"",
+    tv:m.tv||"", vc:m.vc||"", role:r, partner:m[o]||"", fee:+m["fee_"+r]||0, paid:!!m["paid_"+r], paidDate:m["paidDate_"+r]||"", notes:m.notes||""};
+}
+async function syncAndSave(m, prev){
+  const sync = {op:uidForName(m.op), as:uidForName(m.as)};
+  for(const r of ["op","as"]){
+    const old = prev?.sync?.[r];
+    if(old && old!==sync[r]) await w(()=>db.doc(`mine/${old}/items/${m.id}_${r}`).delete());
+    if(sync[r]) await w(()=>db.doc(`mine/${sync[r]}/items/${m.id}_${r}`).set(itemFor(m,r)));
+  }
+  const {id, ...body} = m;
+  await w(()=>db.doc(`sched/${m.id}`).set({...body, sync}));
+}
+async function deleteMatch(m){
+  for(const r of ["op","as"]) if(m.sync?.[r]) await w(()=>db.doc(`mine/${m.sync[r]}/items/${m.id}_${r}`).delete());
+  await w(()=>db.doc(`sched/${m.id}`).delete());
+}
+async function ensureRoster(names){
+  const have = rosterByNorm();
+  for(const n of uniq(names)){ if(!have[norm(n)]){ const ref = await w(()=>db.collection("roster").add({name:n})); const r={id:ref.id,name:n}; roster.push(r); have[norm(n)]=r; } }
+}
+async function resync(pred, label){
+  const list = sched.filter(pred); let i=0;
+  for(const m of list){ await syncAndSave(m, m); i++; }
+  if(label) toast(`${label} (${i} αναθέσεις)`);
+}
+
+/* ---------- supervisor actions ---------- */
+document.addEventListener("click", async e => {
+  if(!isAdmin) return;
+  const b = e.target.closest("[data-act],[data-tab]"); if(!b) return;
+  if(b.dataset.tab){ tab=b.dataset.tab; ls.set("cm.tab",tab); renderAdmin(); return; }
+  const act=b.dataset.act, m=sched.find(x=>x.id===b.dataset.id);
+  if(act==="add") openForm(null);
+  if(act==="import") openImport();
+  if(act==="edit"&&m) openForm(m);
+  if(act==="clear"){ Object.assign(st,{month:"",person:"",paid:"",q:""}); renderAdmin(); }
+  if(act==="pay"&&m){
+    const r=b.dataset.role, now=!m["paid_"+r]; b.disabled=true;
+    try{ await syncAndSave({...m, ["paid_"+r]:now, ["paidDate_"+r]:now?today():"", updatedAt:Date.now()}, m); toast(now?"Σημειώθηκε ως πληρωμένο":"Σημειώθηκε ως εκκρεμές"); }
+    catch{ b.disabled=false; toast("Η αλλαγή απέτυχε"); }
+  }
+  if(act==="approve"){
+    const c=claims.find(x=>x.uid===b.dataset.uid); if(!c) return;
+    const other = Object.entries(links).find(([rid,uid])=>rid===c.rid && uid!==c.uid);
+    if(other && !confirm("Αυτό το όνομα είναι ήδη συνδεδεμένο με άλλον λογαριασμό. Να αντικατασταθεί;")) return;
+    b.disabled=true;
+    try{
+      for(const [rid,uid] of Object.entries(links)) if(uid===c.uid && rid!==c.rid){ await w(()=>db.doc(`links/${rid}`).delete()); delete links[rid]; }
+      await w(()=>db.doc(`links/${c.rid}`).set({uid:c.uid})); links[c.rid]=c.uid;
+      await w(()=>db.doc(`claims/${c.uid}`).update({status:"approved", decidedAt:Date.now()}));
+      const nm = norm(roster.find(r=>r.id===c.rid)?.name);
+      await resync(m=>norm(m.op)===nm||norm(m.as)===nm||m.sync?.op===c.uid||m.sync?.as===c.uid||(other&&(m.sync?.op===other[1]||m.sync?.as===other[1])), "Εγκρίθηκε");
+    }catch{ toast("Η έγκριση απέτυχε"); b.disabled=false; }
+  }
+  if(act==="reject"){ try{ await w(()=>db.doc(`claims/${b.dataset.uid}`).update({status:"rejected", decidedAt:Date.now()})); }catch{ toast("Απέτυχε"); } }
+  if(act==="unlink"){
+    const rid=b.dataset.rid, uid=links[rid]; if(!uid) return;
+    if(!confirm("Να αποσυνδεθεί ο λογαριασμός; Δεν θα βλέπει πλέον τις αναθέσεις του.")) return;
+    try{
+      await w(()=>db.doc(`links/${rid}`).delete()); delete links[rid];
+      await w(()=>db.doc(`claims/${uid}`).update({status:"rejected", decidedAt:Date.now()})).catch(()=>{});
+      await resync(m=>m.sync?.op===uid||m.sync?.as===uid, "Αποσυνδέθηκε");
+    }catch{ toast("Απέτυχε"); }
+  }
+  if(act==="delperson"){ try{ await w(()=>db.doc(`roster/${b.dataset.rid}`).delete()); }catch{ toast("Απέτυχε"); } }
+  if(act==="resync"){ b.disabled=true; try{ await resync(()=>true, "Ολοκληρώθηκε"); }catch{ toast("Απέτυχε"); } b.disabled=false; }
+});
+$("btnAdd").onclick=()=>openForm(null);
+$("btnImport").onclick=()=>openImport();
+
+/* ---------- assignment form ---------- */
+let editing=null;
+function openForm(m){
+  editing=m;
+  $("frmTitle").textContent = m?"Επεξεργασία ανάθεσης":"Νέα ανάθεση";
+  const v=(id,val)=>$(id).value=val??"";
+  v("iDate",m?.date||today()); v("iTime",m?.time); v("iComp",m?.comp??ls.get("cm.comp","")); v("iHome",m?.home); v("iAway",m?.away);
+  v("iVenue",m?.venue); v("iTv",m?.tv); v("iVc",m?.vc); v("iOp",m?.op); v("iAs",m?.as);
+  v("iFeeOp", m?m.fee_op:(fees.op||"")); v("iFeeAs", m?m.fee_as:(fees.as||""));
+  $("iTbc").checked=!!m?.dateTbc; $("iPaidOp").checked=!!m?.paid_op; $("iPaidAs").checked=!!m?.paid_as; v("iNotes",m?.notes);
+  $("frmErr").hidden=true;
+  $("delWrap").innerHTML = m?`<button type="button" class="btn danger" data-del="ask">Διαγραφή</button>`:"";
+  $("dlg").showModal();
+}
+$("btnCancel").onclick=()=>$("dlg").close();
+$("delWrap").addEventListener("click", async e=>{
+  const a=e.target.closest("[data-del]")?.dataset.del;
+  if(a==="ask") $("delWrap").innerHTML=`<span class="confirm">Οριστικά; <button type="button" class="btn danger" data-del="yes">Ναι, διαγραφή</button><button type="button" class="btn" data-del="no">Όχι</button></span>`;
+  if(a==="no") $("delWrap").innerHTML=`<button type="button" class="btn danger" data-del="ask">Διαγραφή</button>`;
+  if(a==="yes"){ try{ await deleteMatch(editing); $("dlg").close(); toast("Η ανάθεση διαγράφηκε"); }catch{ $("frmErr").hidden=false; $("frmErr").textContent="Η διαγραφή απέτυχε."; } }
+});
+$("frm").addEventListener("submit", async e=>{
+  e.preventDefault();
+  const g=id=>$(id).value.trim();
+  const d={date:g("iDate"), time:g("iTime"), comp:g("iComp"), home:g("iHome"), away:g("iAway"), venue:g("iVenue"), tv:g("iTv"), vc:g("iVc"),
+    op:g("iOp"), as:g("iAs"), fee_op:+g("iFeeOp")||0, fee_as:+g("iFeeAs")||0, notes:g("iNotes"), dateTbc:$("iTbc").checked,
+    dateText: editing && editing.date===g("iDate") ? (editing.dateText||"") : "", timeText: g("iTime") ? "" : (editing?.timeText||"")};
+  for(const r of ["op","as"]){ const p=$(r==="op"?"iPaidOp":"iPaidAs").checked; d["paid_"+r]=p && !!d[r]; d["paidDate_"+r]=p&&d[r]?(editing?.["paid_"+r]?editing["paidDate_"+r]:today()):""; }
+  if(!d.date||!d.home){ $("frmErr").hidden=false; $("frmErr").textContent="Συμπλήρωσε ημερομηνία και αγώνα."; return; }
+  d.key = matchKey(d);
+  const dup = sched.find(x=>x.key===d.key && x.id!==editing?.id);
+  if(dup){ $("frmErr").hidden=false; $("frmErr").textContent="Υπάρχει ήδη ο ίδιος αγώνας την ίδια ώρα."; return; }
+  $("btnSave").disabled=true;
+  try{
+    await ensureRoster([d.op,d.as]);
+    const id = editing?.id || db.collection("sched").doc().id;
+    await syncAndSave({...(editing||{}), ...d, id, createdAt:editing?.createdAt||Date.now(), updatedAt:Date.now()}, editing);
+    ls.set("cm.comp", d.comp);
+    $("dlg").close(); toast(editing?"Οι αλλαγές αποθηκεύτηκαν":"Η ανάθεση καταχωρίστηκε");
+  }catch{ $("frmErr").hidden=false; $("frmErr").textContent="Η αποθήκευση απέτυχε. Δοκίμασε ξανά."; }
+  finally{ $("btnSave").disabled=false; }
+});
+
+/* ---------- Excel import ---------- */
+let impRows=[];
+function loadXLSX(){
+  if(window.XLSX) return Promise.resolve(window.XLSX);
+  return new Promise((res,rej)=>{ const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; s.onload=()=>res(window.XLSX); s.onerror=()=>rej(new Error("load")); document.head.appendChild(s); });
+}
+function openImport(){
+  impRows=[]; $("impFile").value=""; $("impStep1").hidden=false; $("impStep2").hidden=true; $("impGo").hidden=true; $("impErr").hidden=true; $("impProg").hidden=true;
+  $("impFeeOp").value=fees.op||""; $("impFeeAs").value=fees.as||"";
+  $("dlgImp").showModal(); loadXLSX().catch(()=>{});
+}
+$("impCancel").onclick=()=>$("dlgImp").close();
+const drop=$("drop");
+["dragover","dragenter"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,()=>drop.classList.remove("over")));
+drop.addEventListener("drop",e=>{e.preventDefault(); const f=e.dataTransfer.files[0]; if(f) readFile(f);});
+$("impFile").onchange=e=>{ const f=e.target.files[0]; if(f) readFile(f); };
+async function readFile(file){
+  $("impErr").hidden=true;
+  try{
+    const X = await loadXLSX();
+    const wb = X.read(await file.arrayBuffer(), {type:"array"});
+    let parsed={rows:[],skipped:[]};
+    for(const name of wb.SheetNames){
+      const rows = X.utils.sheet_to_json(wb.Sheets[name], {header:1, raw:true, defval:""});
+      const p = P.parseRows(rows); parsed.rows.push(...p.rows); parsed.skipped.push(...p.skipped);
+    }
+    if(!parsed.rows.length){ $("impErr").hidden=false; $("impErr").textContent="Δεν βρέθηκαν αγώνες στο αρχείο. Έλεγξε ότι η 1η στήλη έχει ημερομηνία (π.χ. 08.04.2026)."; return; }
+    const byKey = Object.fromEntries(sched.map(m=>[m.key||matchKey(m), m]));
+    const known = rosterByNorm();
+    const seen = new Set();
+    impRows = parsed.rows.map(r=>{
+      const key=matchKey(r); const ex=byKey[key];
+      let status = ex ? (["date","time","dateText","timeText","venue","tv","vc"].some(k=>(ex[k]||"")!==(r[k]||"")) || !!ex.dateTbc!==!!r.dateTbc || norm(ex.op)!==norm(r.op) || norm(ex.as)!==norm(r.as) ? "upd":"same") : "new";
+      if(seen.has(key)) status="dup"; seen.add(key);
+      return {...r, key, ex, status};
+    });
+    const n = s=>impRows.filter(r=>r.status===s).length;
+    const unknown = uniq(impRows.flatMap(r=>[r.op,r.as]).filter(x=>x && !known[norm(x)]));
+    $("impSummary").innerHTML = `<b style="color:var(--ink)">${impRows.length}</b> αγώνες στο αρχείο: <span class="st new">${n("new")} νέοι</span> · <span class="st upd">${n("upd")} με αλλαγές</span> · <span class="st same">${n("same")} ίδιοι</span>${n("dup")?` · ${n("dup")} διπλές γραμμές (παραλείπονται)`:""}`
+      + (impRows.some(r=>r.warn)?`<br><span class="err">⚠ ${impRows.filter(r=>r.warn).length} αγώνες με ύποπτη ημερομηνία (π.χ. γρ. ${impRows.find(r=>r.warn).line}: ${fmtDate(impRows.find(r=>r.warn).date)}) – διόρθωσέ τες στο Excel ή μετά την εισαγωγή.</span>`:"")
+      + (unknown.length?`<br><span class="unk">Νέα ονόματα που θα προστεθούν: ${unknown.map(esc).join(", ")}</span>`:"")
+      + (parsed.skipped.length?`<br><span class="err">Παραλείφθηκαν ${parsed.skipped.length} γραμμές: ${parsed.skipped.slice(0,3).map(s=>`γρ. ${s.line}`).join(", ")}${parsed.skipped.length>3?"…":""}</span>`:"");
+    const lab={new:"ΝΕΟΣ",upd:"ΑΛΛΑΓΗ",same:"ΙΔΙΟΣ",dup:"ΔΙΠΛΟΣ"};
+    let lastComp=null;
+    $("impBody").innerHTML = impRows.map(r=>{
+      const head = r.comp!==lastComp ? (lastComp=r.comp, `<tr><td colspan="9" style="background:var(--blue-bg);color:var(--blue);font-weight:600">${esc(r.comp||"—")}</td></tr>`) : "";
+      const nm = x => x ? `<span class="${known[norm(x)]?"":"unk"}">${esc(x)}</span>` : `<span class="note">—</span>`;
+      return head+`<tr><td><span class="st ${r.status}">${lab[r.status]}</span></td><td${r.warn?` class="err" title="${esc(r.warn)}"`:""}>${r.warn?"⚠ ":""}${esc(r.dateText||fmtDate(r.date))}${r.dateTbc?` <span class="note" title="Ημερομηνία αγωνιστικής">~</span>`:""}</td><td>${esc(r.time||r.timeText)}</td><td>${teams(r)}</td><td>${esc(r.venue)}</td><td>${esc(r.tv)}</td><td>${esc(r.vc)}</td><td>${nm(r.op)}</td><td>${nm(r.as)}</td></tr>`;
+    }).join("");
+    $("impStep1").hidden=true; $("impStep2").hidden=false;
+    const todo = n("new")+n("upd");
+    $("impGo").hidden = !todo; $("impGo").disabled=false; $("impGo").textContent = `Εισαγωγή ${todo} αγώνων`;
+  }catch(err){ $("impErr").hidden=false; $("impErr").textContent = err?.message==="load" ? "Δεν φορτώθηκε ο αναγνώστης Excel. Έλεγξε τη σύνδεση και δοκίμασε ξανά." : "Το αρχείο δεν διαβάστηκε. Αποθήκευσέ το ως .xlsx και δοκίμασε ξανά."; }
+}
+$("impGo").onclick = async ()=>{
+  const todo = impRows.filter(r=>r.status==="new"||r.status==="upd");
+  const fOp=+$("impFeeOp").value||0, fAs=+$("impFeeAs").value||0;
+  $("impGo").disabled=true; $("impProg").hidden=false; const bar=$("impProg").firstElementChild;
+  let done=0, failed=0;
+  try{ await ensureRoster(todo.flatMap(r=>[r.op,r.as])); }catch{ $("impErr").hidden=false; $("impErr").textContent="Η εισαγωγή απέτυχε."; return; }
+  for(const r of todo){
+    const {line,status,ex,warn,extra,...f} = r;
+    try{
+      let m;
+      if(ex){
+        m = {...ex, ...f, updatedAt:Date.now()};
+        for(const k of ["op","as"]) if(norm(ex[k])!==norm(f[k])){ m["paid_"+k]=false; m["paidDate_"+k]=""; }
+      } else {
+        m = {...f, id:db.collection("sched").doc().id, fee_op:f.op?fOp:0, fee_as:f.as?fAs:0, paid_op:false, paid_as:false, paidDate_op:"", paidDate_as:"", notes:extra?"Επίσης: "+extra:"", createdAt:Date.now()};
+      }
+      await syncAndSave(m, ex);
+    }catch{ failed++; }
+    done++; bar.style.width = (done/todo.length*100)+"%";
+  }
+  if(fOp!==fees.op||fAs!==fees.as){ try{ await db.doc("settings/fees").set({op:fOp,as:fAs}); fees={op:fOp,as:fAs}; }catch{} }
+  $("dlgImp").close();
+  toast(failed?`Εισήχθησαν ${done-failed}, απέτυχαν ${failed} – ξαναδοκίμασε την εισαγωγή`:`Εισήχθησαν ${done} αγώνες`);
+};
+
+/* ---------- CSV ---------- */
+$("btnCsv").onclick = async ()=>{
+  const pn=st.person?norm(st.person):"";
+  const slots = slotsOf(filteredSched()).filter(s=>!pn||norm(s.name)===pn);
+  if(!slots.length){ toast("Δεν υπάρχουν αναθέσεις για εξαγωγή"); return; }
+  const q=v=>{const s=String(v??"");return /[;"\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s;};
+  const head=["Ημερομηνία","Ημέρα","Ώρα","Διοργάνωση","Γηπεδούχος","Φιλοξενούμενη","Γήπεδο","Κάλυψη","VAR","Άτομο","Θέση","Αμοιβή (€)","Πληρώθηκε","Ημ. πληρωμής"];
+  const lines=[head.join(";"),...slots.map(s=>[s.m.dateText||fmtDate(s.m.date),s.m.dateText?"":dayName(s.m.date),s.m.time||s.m.timeText,s.m.comp,s.m.home,s.m.away,s.m.venue,s.m.tv,s.m.vc,s.name,ROLE[s.role],String(s.fee).replace(".",","),s.paid?"ΝΑΙ":"ΟΧΙ",fmtDate(s.m["paidDate_"+s.role])].map(q).join(";"))];
+  const dl=await claude.use("downloads"); if(!dl){ toast("Η λήψη δεν είναι διαθέσιμη εδώ"); return; }
+  try{ await dl.save({filename:`CheckMate_${st.month||"ola"}_${today()}.csv`, data:"﻿"+lines.join("\r\n")}); }catch(err){ if(err?.code!=="declined") toast("Η λήψη δεν ολοκληρώθηκε"); }
+};
+
+/* =================================================================
+   USER (read-only, own assignments)
+   ================================================================= */
+let myItems=[], myClaim=undefined, uRoster=[], showPast=false;
+async function startUser(){
+  const uid = me?.id;
+  if(!uid){ $("app").innerHTML=`<div class="panel"><div class="empty"><strong>Δεν αναγνωρίστηκε ο λογαριασμός σου</strong><div>Άνοιξε τη σελίδα συνδεδεμένος στο claude.ai, από τον σύνδεσμο που σου έστειλε ο επόπτης.</div></div></div>`; return; }
+  $("subtitle").textContent = "Video Check · οι αναθέσεις μου";
+  db.doc(`claims/${uid}`).onSnapshot(s=>{ myClaim = s.exists ? s.data() : null; renderUser(); }, ()=>{ myClaim=null; renderUser(); });
+  db.collection("roster").limit(1000).onSnapshot(s=>{ uRoster=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); renderUser(); }, ()=>{});
+  db.collection(`mine/${uid}/items`).limit(2000).onSnapshot(s=>{ myItems=s.docs.map(d=>({id:d.id,...d.data()})); renderUser(); }, ()=>{});
+}
+function renderUser(){
+  if(myClaim===undefined) return;
+  const greet = me?.name ? `Γεια σου, ${esc(me.name.split(" ")[0])}` : "Καλώς ήρθες";
+  if(!myClaim || myClaim.status==="rejected"){
+    $("app").innerHTML = `<section class="panel"><form class="pbody" id="claimForm" style="max-width:480px">
+      <h2 class="sec">${greet}</h2>
+      ${myClaim?.status==="rejected"?`<div class="err">Το προηγούμενο αίτημα δεν εγκρίθηκε. Επίλεξε ξανά ή μίλα με τον επόπτη.</div>`:""}
+      <div class="note">Για να δεις τις αναθέσεις σου, διάλεξε το όνομά σου όπως εμφανίζεται στο πρόγραμμα. Ο επόπτης θα εγκρίνει τη σύνδεση.</div>
+      <div class="f"><label for="claimName">Το όνομά μου</label><select id="claimName"><option value="">— Επίλεξε —</option>${uRoster.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join("")}</select></div>
+      ${uRoster.length?"":`<div class="note">Δεν υπάρχουν ακόμα ονόματα στο πρόγραμμα. Ξαναδοκίμασε όταν ο επόπτης ανεβάσει αναθέσεις.</div>`}
+      <div class="actions"><button class="btn primary" type="submit">Αποστολή αιτήματος</button></div>
+    </form></section>`;
+    $("claimForm").onsubmit = async e=>{ e.preventDefault(); const rid=$("claimName").value; if(!rid){ toast("Επίλεξε το όνομά σου"); return; }
+      try{ await db.doc(`claims/${me.id}`).set({rid, status:"pending", at:Date.now()}); }catch{ toast("Δεν στάλθηκε. Βεβαιώσου ότι έχεις πρόσβαση Contributor."); } };
+    return;
+  }
+  if(myClaim.status==="pending" && !myItems.length){
+    const nm = uRoster.find(r=>r.id===myClaim.rid)?.name||"";
+    $("app").innerHTML = `<section class="panel"><div class="empty"><div class="board-art"></div><strong>Το αίτημα στάλθηκε</strong>
+      <div>Δήλωσες ότι είσαι <b>${esc(nm)}</b>. Μόλις το εγκρίνει ο επόπτης, οι αναθέσεις σου θα εμφανιστούν εδώ.</div>
+      <button class="btn small" id="reclaim">Λάθος όνομα;</button></div></section>`;
+    $("reclaim").onclick = async ()=>{ try{ await db.doc(`claims/${me.id}`).delete(); }catch{} };
+    return;
+  }
+  const t=today();
+  const items = myItems.slice().sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const upcoming = items.filter(i=>i.date>=t), past = items.filter(i=>i.date<t).reverse();
+  const total=items.reduce((a,i)=>a+(+i.fee||0),0), paid=items.filter(i=>i.paid).reduce((a,i)=>a+(+i.fee||0),0);
+  const card=(i,first)=>`<article class="card ${i.role} ${i.date<t?"past":""}">
+    <div class="top"><div class="when">${whenMain(i)} <small>${whenSub(i)}</small></div>${first?`<span class="next">Επόμενη</span>`:""}</div>
+    <div class="teams">${teams(i)}</div>
+    <div class="venue">📍 ${esc(i.venue||"—")}</div>
+    <dl>${i.comp?`<dt>Διοργάνωση</dt><dd>${esc(i.comp)}</dd>`:""}<dt>Θέση</dt><dd><span class="role ${i.role}">${ROLE[i.role]}</span></dd>
+      ${i.partner?`<dt>${i.role==="op"?"Βοηθός":"Χειριστής"}</dt><dd>${esc(i.partner)}</dd>`:""}${i.vc?`<dt>VAR</dt><dd>${esc(i.vc)}</dd>`:""}${i.tv?`<dt>Κάλυψη</dt><dd>${esc(i.tv)}</dd>`:""}${i.dateTbc?`<dt>Σημ.</dt><dd>Η ημέρα/ώρα θα επιβεβαιωθεί</dd>`:""}
+      ${i.notes?`<dt>Σημειώσεις</dt><dd>${esc(i.notes)}</dd>`:""}</dl>
+    <div class="bottom"><span class="fee">${eur(i.fee)}</span><span class="pay ${i.paid?"yes":"no"}">${i.paid?`✓ Πληρώθηκε${i.paidDate?" "+fmtDate(i.paidDate).slice(0,5):""}`:"● Εκκρεμεί"}</span></div>
+  </article>`;
+  $("app").innerHTML = `<div style="display:flex;flex-direction:column;gap:18px">
+    <section class="board four" aria-label="Σύνοψη">
+      <div class="cell"><div class="k">Επόμενες</div><div class="v">${upcoming.length}</div></div>
+      <div class="cell"><div class="k">Σύνολο αμοιβών</div><div class="v">${eur(total)}</div></div>
+      <div class="cell"><div class="k">Πληρώθηκαν</div><div class="v">${eur(paid)}</div></div>
+      <div class="cell"><div class="k">Εκκρεμούν</div><div class="v or">${eur(total-paid)}</div></div>
+    </section>
+    <h2 class="sec">${greet} · Επόμενες αναθέσεις</h2>
+    ${upcoming.length?`<div class="cards">${upcoming.map((i,k)=>card(i,k===0)).join("")}</div>`:`<div class="panel"><div class="empty"><strong>Δεν έχεις επόμενες αναθέσεις</strong><div>Θα εμφανιστούν εδώ μόλις σε ορίσει ο επόπτης.</div></div></div>`}
+    ${past.length?`<div class="actions"><button class="btn" id="togglePast">${showPast?"Απόκρυψη":"Προβολή"} προηγούμενων (${past.length})</button></div>
+      ${showPast?`<div class="cards">${past.map(i=>card(i,false)).join("")}</div>`:""}`:""}
+  </div>`;
+  const tp=$("togglePast"); if(tp) tp.onclick=()=>{ showPast=!showPast; renderUser(); };
+}
+})();
+</script>
