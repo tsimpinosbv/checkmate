@@ -560,7 +560,7 @@ function registeredPanel(rmap){
       : pend ? `<span class="tag wait">Αίτημα: ${esc(rmap[pend.rid]?.name||"—")}</span>`
       : `<span class="tag off">${p.uid===me?.id?"Εσύ · ":""}Χωρίς όνομα</span>`;
     const free = roster.filter(r=>!links[r.id]);
-    const linker = rid ? "" : `<div class="ulink"><select data-linksel="${p.uid}" aria-label="Όνομα στο πρόγραμμα"><option value="">Σύνδεση με όνομα…</option>${free.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join("")}</select><button class="btn small" type="button" data-act="linkuser" data-uid="${p.uid}">Σύνδεση</button></div>`;
+    const linker = rid ? "" : `<div class="ulink"><select data-linksel="${p.uid}" aria-label="Όνομα στο πρόγραμμα"><option value="">Σύνδεση με όνομα…</option>${free.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join("")}</select><button class="btn small" type="button" data-act="linkuser" data-uid="${p.uid}">Σύνδεση</button>${p.uid===me?.id?"":`<span data-delwrap="${p.uid}"><button class="btn small danger" type="button" data-act="deluser" data-uid="${p.uid}">Διαγραφή</button></span>`}</div>`;
     return `<div class="prow ureg"><div class="who"><b>${esc(p.name||"Χωρίς όνομα")}</b><span class="mail">${esc(p.email||"—")}</span>
       <span class="note">Εγγραφή ${fmtTs(p.joinedAt)}${p.via==="google"?" · Google":""} · τελευταία είσοδος ${fmtTs(p.seenAt,true)}</span></div><div class="ulink">${tag}${linker}</div></div>`;
   }).join("");
@@ -758,6 +758,20 @@ document.addEventListener("click", async e => {
     const r=b.dataset.role, now=!m["paid_"+r]; b.disabled=true;
     try{ await syncAndSave({...m, ["paid_"+r]:now, ["paidDate_"+r]:now?today():"", updatedAt:Date.now()}, m); toast(now?"Σημειώθηκε ως πληρωμένο":"Σημειώθηκε ως εκκρεμές"); }
     catch{ b.disabled=false; toast("Η αλλαγή απέτυχε"); }
+  }
+  if(act==="deluser"){
+    const uid=b.dataset.uid;
+    document.querySelector(`[data-delwrap="${uid}"]`).innerHTML = `<span class="confirm">Αφαίρεση από τη λίστα; <button class="btn small danger" type="button" data-act="deluseryes" data-uid="${uid}">Ναι</button><button class="btn small" type="button" data-act="deluserno" data-uid="${uid}">Όχι</button></span>`;
+  }
+  if(act==="deluserno") renderAdmin();
+  if(act==="deluseryes"){
+    const uid=b.dataset.uid; b.disabled=true;
+    try{
+      for(const [rid,u] of Object.entries(links)) if(u===uid){ await w(()=>db.doc(`links/${rid}`).delete()); delete links[rid]; }
+      await w(()=>db.doc(`claims/${uid}`).delete()).catch(()=>{});
+      await w(()=>db.doc(`profiles/${uid}`).delete());
+      toast("Αφαιρέθηκε από τη λίστα. Για οριστική διαγραφή του λογαριασμού: Firebase → Authentication → Users.");
+    }catch{ toast("Η διαγραφή απέτυχε"); b.disabled=false; }
   }
   if(act==="linkuser"){
     const uid=b.dataset.uid, rid=document.querySelector(`[data-linksel="${uid}"]`)?.value;
