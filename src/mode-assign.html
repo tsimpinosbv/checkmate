@@ -305,7 +305,7 @@ let db=null, user=null, me=null, isAdmin=false;
    links/{rid}  {uid}         name -> account (supervisor only)
    claims/{uid} {rid,status}  a user's "this is me" request (own doc)
    mine/{uid}/items/{id_role} what each user sees (written by supervisor, read by that user only)
-   settings/fees {op,as}
+   config/fees {op,as}
    ================================================================= */
 
 (async () => {
@@ -320,7 +320,7 @@ let db=null, user=null, me=null, isAdmin=false;
 /* =================================================================
    SUPERVISOR
    ================================================================= */
-let sched=[], roster=[], links={}, claims=[], fees={op:0,as:0};
+let sched=[], roster=[], links={}, claims=[], fees={op:80,as:40};
 let ready={sched:false,roster:false,links:false};
 let tab = ls.get("cm.tab","sched");
 const st = {month:"", person:"", paid:"", q:""};
@@ -335,7 +335,7 @@ function startAdmin(){
   db.collection("roster").limit(1000).onSnapshot(s=>{ roster=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); ready.roster=true; renderAdmin(); }, loadErr);
   db.collection("links").limit(1000).onSnapshot(s=>{ links={}; s.docs.forEach(d=>links[d.id]=d.data().uid); ready.links=true; renderAdmin(); }, loadErr);
   db.collection("claims").limit(1000).onSnapshot(s=>{ claims=s.docs.map(d=>({uid:d.id,...d.data()})); renderAdmin(); }, ()=>{});
-  db.doc("settings/fees").onSnapshot(s=>{ if(s.exists) fees={op:0,as:0,...s.data()}; }, ()=>{});
+  db.doc("config/fees").onSnapshot(s=>{ if(s.exists) fees={op:80,as:40,...s.data()}; }, ()=>{});
 }
 function loadErr(){ $("app").innerHTML = `<div class="panel"><div class="empty"><strong>Δεν φορτώθηκαν τα δεδομένα</strong><div>Ανανέωσε τη σελίδα.</div></div></div>`; }
 
@@ -477,7 +477,7 @@ async function renderPeople(pending){
     if(rosterByNorm()[norm(n)]){ toast("Υπάρχει ήδη"); return; }
     try{ await db.collection("roster").add({name:n}); }catch{ toast("Η προσθήκη απέτυχε"); } };
   $("feesForm").onsubmit = async e => { e.preventDefault(); const f={op:+$("feeOp").value||0, as:+$("feeAs").value||0};
-    try{ await db.doc("settings/fees").set(f); fees=f; toast("Οι αμοιβές αποθηκεύτηκαν"); }catch{ toast("Η αποθήκευση απέτυχε"); } };
+    try{ await db.doc("config/fees").set(f); fees=f; toast("Οι αμοιβές αποθηκεύτηκαν"); }catch{ toast("Η αποθήκευση απέτυχε"); } };
 }
 
 /* ---------- sync: copy each assignment into the assigned person's private list ---------- */
@@ -672,7 +672,7 @@ $("impGo").onclick = async ()=>{
     }catch{ failed++; }
     done++; bar.style.width = (done/todo.length*100)+"%";
   }
-  if(fOp!==fees.op||fAs!==fees.as){ try{ await db.doc("settings/fees").set({op:fOp,as:fAs}); fees={op:fOp,as:fAs}; }catch{} }
+  if(fOp!==fees.op||fAs!==fees.as){ try{ await db.doc("config/fees").set({op:fOp,as:fAs}); fees={op:fOp,as:fAs}; }catch{} }
   $("dlgImp").close();
   toast(failed?`Εισήχθησαν ${done-failed}, απέτυχαν ${failed} – ξαναδοκίμασε την εισαγωγή`:`Εισήχθησαν ${done} αγώνες`);
 };

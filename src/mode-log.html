@@ -101,6 +101,10 @@ h1 span{color:var(--accent)}
 .empty strong{color:var(--ink);font-size:16px}
 .note{font-size:13px;color:var(--muted)}
 .status{font-size:13px;color:var(--muted)}
+.feebar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;font-size:13px}
+.feebar[hidden]{display:none}
+.feebar .f input{width:110px}
+.feebar .t{font-weight:600;color:var(--ink);align-self:center}
 .lockmsg{font-size:13px;color:var(--warn);background:var(--warn-bg);border-radius:8px;padding:8px 10px}
 
 /* drawer form */
@@ -173,6 +177,12 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
     <div class="empty"><div class="board-art"></div><strong>Φόρτωση αγώνων…</strong></div>
   </section>
   <div class="status" id="status"></div>
+  <form class="feebar" id="feeBar" hidden>
+    <span class="t">Αμοιβές:</span>
+    <div class="f"><label for="fbOp">Χειριστής (€)</label><input id="fbOp" type="number" min="0" step="0.5" inputmode="decimal"></div>
+    <div class="f"><label for="fbAs">Βοηθός (€)</label><input id="fbAs" type="number" min="0" step="0.5" inputmode="decimal"></div>
+    <button class="btn" type="submit">Αποθήκευση αμοιβών</button>
+  </form>
 </div>
 
 <dialog id="dlg">
@@ -199,7 +209,7 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
         <label><input type="radio" name="role" id="rAs" value="as"> Βοηθός</label>
       </div></div>
     <div class="grid2">
-      <div class="f"><label for="iFee">Αμοιβή (€)</label><input id="iFee" type="number" min="0" step="0.5" inputmode="decimal"></div>
+      <div class="f"><label for="iFee">Αμοιβή (€) <small id="feeHint" hidden>(ορίζεται από τον διαχειριστή)</small></label><input id="iFee" type="number" min="0" step="0.5" inputmode="decimal"></div>
       <div class="f"><label for="iPaidDate">Ημ. πληρωμής</label><input id="iPaidDate" type="date"></div>
     </div>
     <label class="check"><input type="checkbox" id="iPaid"> Πληρώθηκε <small id="paidHint" hidden>(μόνο ο διαχειριστής)</small></label>
@@ -228,6 +238,7 @@ const DAYS = ["Κυρ","Δευ","Τρι","Τετ","Πεμ","Παρ","Σαβ"];
    Paid matches live in "paid" — only Editors/Owner (admin) can write there,
    so once the administrator marks a match paid, nobody else can change or delete it. */
 let db = null, col = null, colPaid = null, openRows = [], paidRows = [], rows = [];
+let FEES = {op:80, as:40};
 let loadedOpen = false, loadedPaid = false, canWrite = true, isAdmin = false, editingId = null;
 const st = {season:"", month:"", person:"", role:"", paid:"", q:""};
 
@@ -329,14 +340,15 @@ function openForm(r){
   if(locked(r)){ toast("Ο αγώνας πληρώθηκε και είναι κλειδωμένος"); return; }
   editingId = r?.id || null;
   $("frmTitle").textContent = r ? "Επεξεργασία αγώνα" : "Νέος αγώνας";
-  const lastPerson = ls.get("cm.person",""), fees = ls.get("cm.fees",{});
+  const lastPerson = ls.get("cm.person","");
   $("iDate").value = r?.date || today(); $("iTime").value = r?.time || "";
   $("iHome").value = r?.home || ""; $("iAway").value = r?.away || "";
   $("iComp").value = r?.comp ?? ls.get("cm.comp",""); $("iVenue").value = r?.venue || "";
   $("iPerson").value = r?.person ?? lastPerson;
   const role = r?.role || ls.get("cm.role","op");
   $(role==="as"?"rAs":"rOp").checked = true;
-  $("iFee").value = r ? (r.fee ?? "") : (fees[role] ?? "");
+  $("iFee").value = r ? (r.fee ?? FEES[role]) : FEES[role];
+  $("iFee").readOnly = !isAdmin; $("feeHint").hidden = isAdmin;
   $("iPaid").checked = !!r?.paid; $("iPaidDate").value = r?.paidDate || "";
   $("iPaid").disabled = !isAdmin; $("iPaidDate").disabled = !isAdmin; $("paidHint").hidden = isAdmin;
   $("iNotes").value = r?.notes || "";
@@ -345,7 +357,7 @@ function openForm(r){
   $("dlg").showModal();
 }
 document.querySelectorAll('input[name="role"]').forEach(el=>el.addEventListener("change",()=>{
-  if(editingId) return; const fees=ls.get("cm.fees",{}); if(fees[el.value]!=null) $("iFee").value=fees[el.value];
+  if(editingId && isAdmin) return; $("iFee").value = FEES[el.value];
 }));
 $("iPaid").addEventListener("change",()=>{ if($("iPaid").checked && !$("iPaidDate").value) $("iPaidDate").value=today(); });
 $("btnCancel").onclick = () => $("dlg").close();
@@ -372,7 +384,7 @@ $("frm").addEventListener("submit", async e => {
   const d = {
     date:$("iDate").value, time:$("iTime").value, home:$("iHome").value.trim(), away:$("iAway").value.trim(),
     comp:$("iComp").value.trim(), venue:$("iVenue").value.trim(), person:$("iPerson").value.trim(), role,
-    fee: $("iFee").value===""?0:Math.max(0,+$("iFee").value), paid:paidNow,
+    fee: isAdmin ? ($("iFee").value===""?0:Math.max(0,+$("iFee").value)) : FEES[role], paid:paidNow,
     paidDate:paidNow?(isAdmin?($("iPaidDate").value||today()):(prevRow?.paidDate||"")):"", notes:$("iNotes").value.trim()
   };
   if(!d.date||!d.home||!d.away||!d.person){ $("frmErr").hidden=false; $("frmErr").textContent="Συμπλήρωσε ημερομηνία, τις δύο ομάδες και το άτομο."; return; }
@@ -384,7 +396,6 @@ $("frm").addEventListener("submit", async e => {
       await saveMatch(editingId, {...prev, ...d, createdAt:prev.createdAt||Date.now(), updatedAt:Date.now()}, !!prevRow?.paid);
     } else await saveMatch(null, {...d, createdAt:Date.now()});
     ls.set("cm.person",d.person); ls.set("cm.role",role); ls.set("cm.comp",d.comp);
-    const fees=ls.get("cm.fees",{}); if(d.fee) {fees[role]=d.fee; ls.set("cm.fees",fees);}
     $("dlg").close(); toast(editingId?"Οι αλλαγές αποθηκεύτηκαν":"Ο αγώνας καταχωρίστηκε");
   }catch(err){ showErr(err); }
   finally{ $("btnSave").disabled=false; }
@@ -477,6 +488,16 @@ function setWriteUI(){ $("btnAdd").disabled=!canWrite; }
       render();
     }
   }catch{}
+  db.doc("config/fees").onSnapshot(s => {
+    if(s.exists){ const d=s.data(); FEES = {op: d.op ?? 80, as: d.as ?? 40}; }
+    if(isAdmin && document.activeElement?.closest("#feeBar")==null){ $("fbOp").value=FEES.op; $("fbAs").value=FEES.as; }
+  }, ()=>{});
+  if(isAdmin){
+    $("feeBar").hidden = false; $("fbOp").value=FEES.op; $("fbAs").value=FEES.as;
+    $("feeBar").onsubmit = async e => { e.preventDefault();
+      const f = {op:Math.max(0,+$("fbOp").value||0), as:Math.max(0,+$("fbAs").value||0)};
+      try{ await db.doc("config/fees").set(f); FEES=f; toast("Οι αμοιβές αποθηκεύτηκαν· ισχύουν για τους νέους αγώνες"); }catch{ toast("Η αποθήκευση απέτυχε"); } };
+  }
   const fail = () => { loadedOpen=loadedPaid=true; $("log").innerHTML=`<div class="empty"><strong>Δεν φορτώθηκαν οι αγώνες</strong><div>Ανανέωσε τη σελίδα.</div></div>`; };
   col.orderBy("date","desc").limit(1000).onSnapshot(snap => {
     openRows = snap.docs.map(d=>({id:d.id, ...d.data()})); loadedOpen = true; merge(); render();
