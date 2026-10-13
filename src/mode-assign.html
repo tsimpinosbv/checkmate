@@ -92,6 +92,13 @@ button.pay:hover{border-color:currentColor}
 .empty-slot{color:var(--muted);font-size:13px;font-style:italic}
 .more{border:0;background:none;width:34px;height:34px;border-radius:8px;color:var(--muted);font-size:18px}
 .more:hover{background:var(--sq);color:var(--ink)}
+.vis{display:inline-flex;align-items:center;gap:4px;margin-top:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:2px 9px;font:600 12px var(--f-body);color:var(--good);cursor:pointer;white-space:nowrap}
+.vis::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.vis.off{color:var(--muted);border-style:dashed}
+.vis:hover{border-color:currentColor}
+.row.is-hidden>.c-match,.row.is-hidden>.slot{opacity:.5}
+.bulk{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;color:var(--muted);margin-top:12px}
+.bulk .confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 @media (max-width:820px){
   .row.head{display:none}
   .row{grid-template-columns:minmax(0,1fr) auto;row-gap:10px}
@@ -224,6 +231,7 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
         <label class="check"><input type="checkbox" id="iPaidAs"> Πληρώθηκε</label>
       </div>
     </div>
+    <label class="check"><input type="checkbox" id="iVisible"> Ορατή στους χρήστες (τη βλέπουν ο χειριστής και ο βοηθός της)</label>
     <div class="f"><label for="iNotes">Σημειώσεις (τις βλέπουν τα άτομα της ανάθεσης)</label><textarea id="iNotes" placeholder="Ώρα προσέλευσης, παραλαβή εξοπλισμού…"></textarea></div>
     <div class="err" id="frmErr" hidden></div>
     <div class="foot">
@@ -255,6 +263,7 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
         <div class="f"><label for="impFeeOp">Αμοιβή χειριστή για νέους αγώνες (€)</label><input id="impFeeOp" type="number" min="0" step="0.5"></div>
         <div class="f"><label for="impFeeAs">Αμοιβή βοηθού για νέους αγώνες (€)</label><input id="impFeeAs" type="number" min="0" step="0.5"></div>
       </div>
+      <label class="check"><input type="checkbox" id="impHidden"> Οι νέοι αγώνες να μείνουν <b>κρυφοί</b> από τους χρήστες μέχρι να τους εμφανίσω</label>
       <div class="progress" id="impProg" hidden><i></i></div>
     </div>
     <div class="err" id="impErr" hidden></div>
@@ -323,7 +332,7 @@ let db=null, user=null, me=null, isAdmin=false;
 let sched=[], roster=[], links={}, claims=[], fees={op:80,as:40};
 let ready={sched:false,roster:false,links:false};
 let tab = ls.get("cm.tab","sched");
-const st = {month:"", person:"", paid:"", q:""};
+const st = {month:"", person:"", paid:"", vis:"", q:""};
 
 function rosterByNorm(){ const m={}; roster.forEach(r=>m[norm(r.name)]=r); return m; }
 function uidForName(name){ if(!name) return null; const r=rosterByNorm()[norm(name)]; return r ? (links[r.id]||null) : null; }
@@ -346,6 +355,7 @@ function filteredSched(){
     (!st.month || (m.date||"").slice(0,7)===st.month) &&
     (!pn || norm(m.op)===pn || norm(m.as)===pn) &&
     (!st.paid || ["op","as"].some(r=>m[r] && (!pn||norm(m[r])===pn) && (st.paid==="yes")===!!m["paid_"+r])) &&
+    (!st.vis || (st.vis==="hidden")===!!m.hidden) &&
     (!q || [m.home,m.away,m.comp,m.venue,m.op,m.as,m.tv,m.vc].join(" ").toLowerCase().includes(q))
   );
 }
@@ -390,9 +400,11 @@ function renderSched(months, people){
     <div class="f"><label for="fMonth">Μήνας</label><select id="fMonth">${opt(months.slice().reverse().map(m=>[m,MONTHS_FULL[+m.slice(5)-1]+" "+m.slice(0,4)]),st.month,"Όλοι")}</select></div>
     <div class="f"><label for="fPerson">Άτομο</label><select id="fPerson">${opt(people.map(p=>[p,p]),st.person,"Όλα")}</select></div>
     <div class="f"><label for="fPaid">Πληρωμή</label><select id="fPaid">${opt([["no","Εκκρεμεί"],["yes","Πληρώθηκε"]],st.paid,"Όλα")}</select></div>
+    <div class="f"><label for="fVis">Στους χρήστες</label><select id="fVis">${opt([["shown","Ορατές"],["hidden","Κρυφές"]],st.vis,"Όλες")}</select></div>
     <div class="f grow"><label for="fSearch">Αναζήτηση</label><input id="fSearch" type="search" value="${esc(st.q)}" placeholder="Ομάδα, γήπεδο, VC…"></div>
   </section>
-  <section class="panel" style="margin-top:18px">`;
+  ${list.length?`<div class="bulk" id="bulk">${bulkIdle(list)}</div>`:""}
+  <section class="panel" style="margin-top:12px">`;
   if(!sched.length){
     html += `<div class="empty"><div class="board-art"></div><strong>Δεν υπάρχουν αναθέσεις ακόμα</strong><div>Πρόσθεσε μία χειροκίνητα ή φέρε το πρόγραμμα από Excel.</div>
       <div class="actions"><button class="btn" data-act="import">⬆ Εισαγωγή Excel</button><button class="btn primary" data-act="add">+ Νέα ανάθεση</button></div></div>`;
@@ -403,8 +415,8 @@ function renderSched(months, people){
     let lastComp=null;
     list.forEach(m=>{
       if((m.comp||"")!==lastComp){ lastComp=m.comp||""; if(lastComp) html+=`<div class="comp-head">${esc(lastComp)}</div>`; }
-      html += `<div class="row">
-        <div class="date c-date">${whenMain(m)}<small>${whenSub(m)}</small></div>
+      html += `<div class="row${m.hidden?" is-hidden":""}">
+        <div class="date c-date">${whenMain(m)}<small>${whenSub(m)}</small><button type="button" class="vis${m.hidden?" off":""}" data-act="vis" data-id="${m.id}" title="${m.hidden?"Οι χρήστες δεν τη βλέπουν. Πάτα για εμφάνιση.":"Τη βλέπουν τα άτομα της ανάθεσης. Πάτα για απόκρυψη."}">${m.hidden?"Κρυφή":"Ορατή"}</button></div>
         <div class="match c-match"><b>${teams(m)}</b><div class="meta">${[m.venue,m.tv,m.vc].filter(Boolean).map(esc).join(" · ")||"&nbsp;"}</div></div>
         ${slotHtml(m,"op")}${slotHtml(m,"as")}
         <div class="c-edit"><button class="more" data-act="edit" data-id="${m.id}" aria-label="Επεξεργασία">✎</button></div>
@@ -416,7 +428,14 @@ function renderSched(months, people){
   $("fMonth").onchange=e=>{st.month=e.target.value;renderAdmin();};
   $("fPerson").onchange=e=>{st.person=e.target.value;renderAdmin();};
   $("fPaid").onchange=e=>{st.paid=e.target.value;renderAdmin();};
+  $("fVis").onchange=e=>{st.vis=e.target.value;renderAdmin();};
   $("fSearch").oninput=e=>{st.q=e.target.value;renderAdmin();};
+}
+function bulkIdle(list){
+  const shown=list.filter(m=>!m.hidden).length, hid=list.length-shown;
+  return `<span>Στη λίστα: ${shown} ορατές, ${hid} κρυφές στους χρήστες.</span>`+
+    (hid?`<button type="button" class="btn small" data-act="bulk" data-to="show">Εμφάνιση όλων (${hid})</button>`:"")+
+    (shown?`<button type="button" class="btn small" data-act="bulk" data-to="hide">Απόκρυψη όλων (${shown})</button>`:"");
 }
 function slotHtml(m, r){
   if(!m[r]) return `<div class="slot"><span class="role ${r}">${ROLE[r]}</span><span class="empty-slot">— χωρίς άτομο —</span></div>`;
@@ -467,8 +486,9 @@ async function renderPeople(pending){
       <section class="panel"><div class="pbody note"><div>
         <b style="color:var(--ink)">Πώς βλέπει κάποιος τις αναθέσεις του</b><br>
         1. Του στέλνεις τον σύνδεσμο της σελίδας.<br>
-        2. Συνδέεται με Google και επιλέγει το όνομά του.<br>
-        3. Εγκρίνεις το αίτημα εδώ — βλέπει μόνο τις δικές του αναθέσεις.</div>
+        2. Κάνει εγγραφή (ή συνδέεται με Google) και επιλέγει το όνομά του.<br>
+        3. Εγκρίνεις το αίτημα εδώ — βλέπει μόνο τις δικές του αναθέσεις.<br>
+        4. Στο «Πρόγραμμα» ορίζεις ποιες αναθέσεις είναι <b>Ορατές</b> ή <b>Κρυφές</b>. Οι κρυφές δεν φαίνονται σε κανέναν χρήστη.</div>
         <div class="actions" style="margin-top:10px"><button class="btn small" data-act="resync">↻ Επανασυγχρονισμός όλων</button></div>
       </div></section>
     </div>
@@ -514,7 +534,7 @@ function itemFor(m, r){
     tv:m.tv||"", vc:m.vc||"", role:r, partner:m[o]||"", fee:+m["fee_"+r]||0, paid:!!m["paid_"+r], paidDate:m["paidDate_"+r]||"", notes:m.notes||""};
 }
 async function syncAndSave(m, prev){
-  const sync = {op:uidForName(m.op), as:uidForName(m.as)};
+  const sync = m.hidden ? {op:null, as:null} : {op:uidForName(m.op), as:uidForName(m.as)};
   for(const r of ["op","as"]){
     const old = prev?.sync?.[r];
     if(old && old!==sync[r]) await w(()=>db.doc(`mine/${old}/items/${m.id}_${r}`).delete());
@@ -546,7 +566,25 @@ document.addEventListener("click", async e => {
   if(act==="add") openForm(null);
   if(act==="import") openImport();
   if(act==="edit"&&m) openForm(m);
-  if(act==="clear"){ Object.assign(st,{month:"",person:"",paid:"",q:""}); renderAdmin(); }
+  if(act==="clear"){ Object.assign(st,{month:"",person:"",paid:"",vis:"",q:""}); renderAdmin(); }
+  if(act==="vis"&&m){
+    b.disabled=true;
+    try{ await syncAndSave({...m, hidden:!m.hidden, updatedAt:Date.now()}, m); toast(m.hidden?"Η ανάθεση φαίνεται πλέον στους χρήστες":"Η ανάθεση κρύφτηκε από τους χρήστες"); }
+    catch{ b.disabled=false; toast("Η αλλαγή απέτυχε"); }
+  }
+  if(act==="bulk"){
+    const hide = b.dataset.to==="hide", list = filteredSched().filter(x=>!!x.hidden!==hide);
+    $("bulk").innerHTML = `<span class="confirm">${hide?"Απόκρυψη":"Εμφάνιση"} ${list.length} αναθέσεων ${hide?"από":"στους"} χρήστες; <button type="button" class="btn small primary" data-act="bulkyes" data-to="${b.dataset.to}">Ναι</button><button type="button" class="btn small" data-act="bulkno">Όχι</button></span>`;
+  }
+  if(act==="bulkno") $("bulk").innerHTML = bulkIdle(filteredSched());
+  if(act==="bulkyes"){
+    const hide = b.dataset.to==="hide", list = filteredSched().filter(x=>!!x.hidden!==hide);
+    $("bulk").innerHTML = `<span>Ενημέρωση ${list.length} αναθέσεων…</span>`;
+    let n=0, failed=0;
+    for(const x of list){ try{ await syncAndSave({...x, hidden:hide, updatedAt:Date.now()}, x); n++; }catch{ failed++; } }
+    toast(failed?`Έγιναν ${n}, απέτυχαν ${failed}. Δοκίμασε ξανά.`:(hide?`Κρύφτηκαν ${n} αναθέσεις`:`Εμφανίζονται ${n} αναθέσεις`));
+    if($("bulk")) $("bulk").innerHTML = bulkIdle(filteredSched());
+  }
   if(act==="pay"&&m){
     const r=b.dataset.role, now=!m["paid_"+r]; b.disabled=true;
     try{ await syncAndSave({...m, ["paid_"+r]:now, ["paidDate_"+r]:now?today():"", updatedAt:Date.now()}, m); toast(now?"Σημειώθηκε ως πληρωμένο":"Σημειώθηκε ως εκκρεμές"); }
@@ -590,7 +628,7 @@ function openForm(m){
   v("iDate",m?.date||today()); v("iTime",m?.time); v("iComp",m?.comp??ls.get("cm.comp","")); v("iHome",m?.home); v("iAway",m?.away);
   v("iVenue",m?.venue); v("iTv",m?.tv); v("iVc",m?.vc); v("iOp",m?.op); v("iAs",m?.as);
   v("iFeeOp", m?m.fee_op:(fees.op||"")); v("iFeeAs", m?m.fee_as:(fees.as||""));
-  $("iTbc").checked=!!m?.dateTbc; $("iPaidOp").checked=!!m?.paid_op; $("iPaidAs").checked=!!m?.paid_as; v("iNotes",m?.notes);
+  $("iTbc").checked=!!m?.dateTbc; $("iVisible").checked=!m?.hidden; $("iPaidOp").checked=!!m?.paid_op; $("iPaidAs").checked=!!m?.paid_as; v("iNotes",m?.notes);
   $("frmErr").hidden=true;
   $("delWrap").innerHTML = m?`<button type="button" class="btn danger" data-del="ask">Διαγραφή</button>`:"";
   $("dlg").showModal();
@@ -606,7 +644,7 @@ $("frm").addEventListener("submit", async e=>{
   e.preventDefault();
   const g=id=>$(id).value.trim();
   const d={date:g("iDate"), time:g("iTime"), comp:g("iComp"), home:g("iHome"), away:g("iAway"), venue:g("iVenue"), tv:g("iTv"), vc:g("iVc"),
-    op:g("iOp"), as:g("iAs"), fee_op:+g("iFeeOp")||0, fee_as:+g("iFeeAs")||0, notes:g("iNotes"), dateTbc:$("iTbc").checked,
+    op:g("iOp"), as:g("iAs"), fee_op:+g("iFeeOp")||0, fee_as:+g("iFeeAs")||0, notes:g("iNotes"), dateTbc:$("iTbc").checked, hidden:!$("iVisible").checked,
     dateText: editing && editing.date===g("iDate") ? (editing.dateText||"") : "", timeText: g("iTime") ? "" : (editing?.timeText||"")};
   for(const r of ["op","as"]){ const p=$(r==="op"?"iPaidOp":"iPaidAs").checked; d["paid_"+r]=p && !!d[r]; d["paidDate_"+r]=p&&d[r]?(editing?.["paid_"+r]?editing["paidDate_"+r]:today()):""; }
   if(!d.date||!d.home){ $("frmErr").hidden=false; $("frmErr").textContent="Συμπλήρωσε ημερομηνία και αγώνα."; return; }
@@ -693,7 +731,7 @@ $("impGo").onclick = async ()=>{
         m = {...ex, ...f, updatedAt:Date.now()};
         for(const k of ["op","as"]) if(norm(ex[k])!==norm(f[k])){ m["paid_"+k]=false; m["paidDate_"+k]=""; }
       } else {
-        m = {...f, id:db.collection("sched").doc().id, fee_op:f.op?fOp:0, fee_as:f.as?fAs:0, paid_op:false, paid_as:false, paidDate_op:"", paidDate_as:"", notes:extra?"Επίσης: "+extra:"", createdAt:Date.now()};
+        m = {...f, id:db.collection("sched").doc().id, fee_op:f.op?fOp:0, fee_as:f.as?fAs:0, paid_op:false, paid_as:false, paidDate_op:"", paidDate_as:"", notes:extra?"Επίσης: "+extra:"", hidden:$("impHidden").checked, createdAt:Date.now()};
       }
       await syncAndSave(m, ex);
     }catch{ failed++; }
