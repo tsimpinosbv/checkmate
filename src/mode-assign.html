@@ -193,6 +193,7 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
       </div>
     </div>
     <div class="actions" id="adminActions" hidden>
+      <button class="btn" id="btnXlsx" type="button" title="Αναθέσεις και στατιστικά σε Excel, με τα τρέχοντα φίλτρα">⬇ Excel</button>
       <button class="btn" id="btnCsv" type="button">⬇ CSV</button>
       <button class="btn" id="btnImport" type="button">⬆ Εισαγωγή Excel</button>
       <button class="btn primary" id="btnAdd" type="button">+ Νέα ανάθεση</button>
@@ -893,6 +894,118 @@ $("btnCsv").onclick = async ()=>{
   const lines=[head.join(";"),...slots.map(s=>[s.m.dateText||fmtDate(s.m.date),s.m.dateText?"":dayName(s.m.date),s.m.time||s.m.timeText,s.m.comp,s.m.home,s.m.away,s.m.venue,s.m.tv,s.m.vc,s.name,ROLE[s.role],String(s.fee).replace(".",","),s.paid?"ΝΑΙ":"ΟΧΙ",fmtDate(s.m["paidDate_"+s.role])].map(q).join(";"))];
   const dl=await claude.use("downloads"); if(!dl){ toast("Η λήψη δεν είναι διαθέσιμη εδώ"); return; }
   try{ await dl.save({filename:`CheckMate_${st.month||"ola"}_${today()}.csv`, data:"﻿"+lines.join("\r\n")}); }catch(err){ if(err?.code!=="declined") toast("Η λήψη δεν ολοκληρώθηκε"); }
+};
+
+/* ---------- Excel export with statistics ---------- */
+function loadExcelJS(){
+  if(window.ExcelJS) return Promise.resolve(window.ExcelJS);
+  return new Promise((res,rej)=>{ const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"; s.onload=()=>res(window.ExcelJS); s.onerror=()=>rej(new Error("load")); document.head.appendChild(s); });
+}
+$("btnXlsx").onclick = async ()=>{
+  const btn=$("btnXlsx");
+  const pn=st.person?norm(st.person):"";
+  const list=filteredSched();
+  const slots=slotsOf(list).filter(s=>!pn||norm(s.name)===pn)
+    .sort((a,b)=>(a.m.date||"").localeCompare(b.m.date||"")||(a.m.time||"").localeCompare(b.m.time||"")||(a.role==="op"?-1:1));
+  if(!slots.length){ toast("Δεν υπάρχουν αναθέσεις για εξαγωγή"); return; }
+  btn.disabled=true; const label=btn.textContent; btn.textContent="Δημιουργία…";
+  try{
+    const ExcelJS=await loadExcelJS();
+    const wb=new ExcelJS.Workbook(); wb.creator="Check Mate"; wb.created=new Date();
+    wb.calcProperties={fullCalcOnLoad:true};
+    const NAVY="FF14213A", ORANGE="FFF0821E", SQ="FFE6EAF2", LINE="FFD9DFEA", GOOD="FF1D8A52";
+    const EUR='#,##0.00 "€"';
+    const head=(ws,row)=>{ row.eachCell(c=>{ c.font={bold:true,color:{argb:"FFFFFFFF"}}; c.fill={type:"pattern",pattern:"solid",fgColor:{argb:NAVY}}; c.alignment={vertical:"middle",wrapText:true}; }); row.height=22; };
+    const totalRow=row=>row.eachCell(c=>{ c.font={bold:true}; c.fill={type:"pattern",pattern:"solid",fgColor:{argb:SQ}}; c.border={top:{style:"thin",color:{argb:NAVY}}}; });
+    const monthLabel=k=>k?MONTHS_FULL[+k.slice(5)-1]+" "+k.slice(0,4):"Χωρίς ημερομηνία";
+    const dateOf=s=>{ if(!s) return null; const [y,mo,d]=s.split("-").map(Number); return new Date(Date.UTC(y,mo-1,d)); };
+
+    const S=wb.addWorksheet("Σύνοψη");   // first tab; filled at the end
+    /* --- sheet: assignments (one row per person per match) --- */
+    const A=wb.addWorksheet("Αναθέσεις",{views:[{state:"frozen",ySplit:1}]});
+    A.columns=[
+      {header:"Ημερομηνία",key:"date",width:12,style:{numFmt:"dd/mm/yyyy"}},{header:"Ημέρα",key:"day",width:8},{header:"Ώρα",key:"time",width:8},
+      {header:"Μήνας",key:"month",width:16},{header:"Διοργάνωση",key:"comp",width:28},{header:"Γηπεδούχος",key:"home",width:20},{header:"Φιλοξενούμενη",key:"away",width:20},
+      {header:"Γήπεδο",key:"venue",width:18},{header:"Κάλυψη",key:"tv",width:10},{header:"VAR",key:"vc",width:9},{header:"Άτομο",key:"person",width:22},
+      {header:"Θέση",key:"role",width:11},{header:"Αμοιβή (€)",key:"fee",width:12,style:{numFmt:EUR}},{header:"Πληρώθηκε",key:"paid",width:11},
+      {header:"Ημ. πληρωμής",key:"paidDate",width:13,style:{numFmt:"dd/mm/yyyy"}},{header:"Ορατή στον χρήστη",key:"vis",width:12}];
+    head(A,A.getRow(1));
+    slots.forEach(s=>{ const m=s.m;
+      const r=A.addRow({date:dateOf(m.date), day:m.dateTbc?"~ αγωνιστική":dayName(m.date), time:m.time||m.timeText||"", month:monthLabel((m.date||"").slice(0,7)),
+        comp:m.comp||"", home:m.home||"", away:m.away||"", venue:m.venue||"", tv:m.tv||"", vc:m.vc||"", person:s.name, role:ROLE[s.role],
+        fee:+s.fee||0, paid:s.paid?"ΝΑΙ":"ΟΧΙ", paidDate:dateOf(m["paidDate_"+s.role]), vis:m.hidden?"ΟΧΙ":"ΝΑΙ"});
+      r.getCell("paid").font={bold:true,color:{argb:s.paid?GOOD:ORANGE}};
+    });
+    const n=slots.length, last=n+1;
+    A.autoFilter={from:"A1",to:{row:last,column:16}};
+    const tr=A.addRow({person:"Σύνολο", fee:{formula:`SUBTOTAL(9,M2:M${last})`, result:slots.reduce((a,s)=>a+s.fee,0)}}); totalRow(tr);
+    tr.getCell("fee").numFmt=EUR;
+
+    const R="'Αναθέσεις'!"; const rng=c=>`${R}$${c}$2:$${c}$${last}`;
+    const sumIf=(...conds)=>`SUMIFS(${rng("M")},${conds.join(",")})`;
+    const cntIf=(...conds)=>`COUNTIFS(${conds.join(",")})`;
+
+    /* --- grouped statistics sheets --- */
+    function groupSheet(name, title, keyCol, keys, labelOf, keyOf){
+      const ws=wb.addWorksheet(name,{views:[{state:"frozen",ySplit:1}]});
+      ws.columns=[{header:title,width:30},{header:"Αναθέσεις",width:11},{header:"Χειριστής",width:11},{header:"Βοηθός",width:10},
+        {header:"Σύνολο (€)",width:14,style:{numFmt:EUR}},{header:"Πληρώθηκαν (€)",width:15,style:{numFmt:EUR}},{header:"Εκκρεμούν (€)",width:14,style:{numFmt:EUR}},{header:"% πληρωμένα",width:12,style:{numFmt:"0%"}}];
+      head(ws,ws.getRow(1));
+      keys.forEach((k,i)=>{
+        const r=i+2, sl=slots.filter(s=>keyOf(s)===k), tot=sl.reduce((a,s)=>a+s.fee,0), pd=sl.filter(s=>s.paid).reduce((a,s)=>a+s.fee,0);
+        const crit=`${rng(keyCol)},$A${r}`;
+        ws.addRow([labelOf(k),
+          {formula:cntIf(crit),result:sl.length},
+          {formula:cntIf(crit,`${rng("L")},"Χειριστής"`),result:sl.filter(s=>s.role==="op").length},
+          {formula:cntIf(crit,`${rng("L")},"Βοηθός"`),result:sl.filter(s=>s.role==="as").length},
+          {formula:sumIf(crit),result:tot},
+          {formula:sumIf(crit,`${rng("N")},"ΝΑΙ"`),result:pd},
+          {formula:`E${r}-F${r}`,result:tot-pd},
+          {formula:`IF(E${r}=0,0,F${r}/E${r})`,result:tot?pd/tot:0}]);
+      });
+      const e=keys.length+1, sumRow=ws.addRow(["Σύνολο",...["B","C","D","E","F","G"].map(c=>({formula:`SUM(${c}2:${c}${e})`})),{formula:`IF(E${e+1}=0,0,F${e+1}/E${e+1})`}]);
+      totalRow(sumRow);
+      return ws;
+    }
+    const people=uniq(slots.map(s=>s.name)).sort((a,b)=>a.localeCompare(b,"el"));
+    groupSheet("Ανά άτομο","Άτομο","K",people,k=>k,s=>s.name);
+    const months=[...new Set(slots.map(s=>(s.m.date||"").slice(0,7)))].sort();
+    groupSheet("Ανά μήνα","Μήνας","D",months.map(monthLabel),k=>k,s=>monthLabel((s.m.date||"").slice(0,7)));
+    const comps=uniq(slots.map(s=>s.m.comp||"")).filter(Boolean).sort((a,b)=>a.localeCompare(b,"el"));
+    if(comps.length) groupSheet("Ανά διοργάνωση","Διοργάνωση","E",comps,k=>k,s=>s.m.comp||"");
+
+    /* --- summary sheet (first tab) --- */
+    S.columns=[{width:30},{width:18}];
+    S.getCell("A1").value="Check Mate · Αναθέσεις"; S.getCell("A1").font={bold:true,size:16,color:{argb:NAVY}};
+    const f=[st.month?monthLabel(st.month):"", st.person?"Άτομο: "+st.person:"", st.paid?(st.paid==="yes"?"Πληρωμένες":"Εκκρεμείς"):"", st.vis?(st.vis==="hidden"?"Κρυφές":"Ορατές"):"", st.q?`Αναζήτηση: «${st.q}»`:""].filter(Boolean);
+    S.getCell("A2").value=`Εξαγωγή ${fmtDate(today())} · ${f.length?f.join(" · "):"όλες οι αναθέσεις"}`; S.getCell("A2").font={color:{argb:"FF5D6B84"}};
+    const tot=slots.reduce((a,s)=>a+s.fee,0), pd=slots.filter(s=>s.paid).reduce((a,s)=>a+s.fee,0);
+    const kpi=[
+      ["Αγώνες", list.filter(m=>slots.some(s=>s.m===m)).length, null],
+      ["Αναθέσεις (άτομα × αγώνες)", {formula:`COUNTA(${rng("K")})`,result:n}, null],
+      ["Χειριστής", {formula:cntIf(`${rng("L")},"Χειριστής"`),result:slots.filter(s=>s.role==="op").length}, null],
+      ["Βοηθός", {formula:cntIf(`${rng("L")},"Βοηθός"`),result:slots.filter(s=>s.role==="as").length}, null],
+      ["Άτομα", people.length, null],
+      ["Σύνολο αμοιβών", {formula:`SUM(${rng("M")})`,result:tot}, EUR],
+      ["Πληρώθηκαν", {formula:sumIf(`${rng("N")},"ΝΑΙ"`),result:pd}, EUR],
+      ["Εκκρεμούν", {formula:"B9-B10",result:tot-pd}, EUR],
+      ["% πληρωμένα", {formula:"IF(B9=0,0,B10/B9)",result:tot?pd/tot:0}, "0%"],
+      ["Κρυφές από τους χρήστες", {formula:cntIf(`${rng("P")},"ΟΧΙ"`),result:slots.filter(s=>s.m.hidden).length}, null]];
+    kpi.forEach(([k,v,fmt],i)=>{ const r=S.getRow(4+i); r.getCell(1).value=k; r.getCell(2).value=v; if(fmt) r.getCell(2).numFmt=fmt;
+      r.getCell(1).font={color:{argb:"FF5D6B84"}}; r.getCell(2).font={bold:true,size:12,color:{argb:k==="Εκκρεμούν"?ORANGE:NAVY}};
+      r.getCell(1).border=r.getCell(2).border={bottom:{style:"hair",color:{argb:LINE}}}; });
+    S.getCell("A15").value="Λεπτομέρειες στα επόμενα φύλλα.";
+    S.getCell("A16").value="Τα σύνολα ενημερώνονται αν αλλάξεις το φύλλο «Αναθέσεις».";
+    S.getCell("A15").font=S.getCell("A16").font={italic:true,color:{argb:"FF5D6B84"}};
+    wb.views=[{activeTab:0}];
+
+    const buf=await wb.xlsx.writeBuffer();
+    const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    const dl=await claude.use("downloads");
+    await dl.save({filename:`CheckMate_${st.month||"ola"}_${today()}.xlsx`, data:blob});
+    toast(`Εξήχθησαν ${n} αναθέσεις`);
+  }catch(err){ console.warn(err); toast(err?.message==="load"?"Δεν φορτώθηκε η βιβλιοθήκη Excel. Έλεγξε τη σύνδεση.":"Η εξαγωγή απέτυχε"); }
+  finally{ btn.disabled=false; btn.textContent=label; }
 };
 
 /* =================================================================
