@@ -1434,6 +1434,10 @@ async function renderPeople(pending){
         </form>
       </section>
       ${notifyPanel()}
+      <section class="panel"><div class="pbody note" style="display:flex;flex-direction:column;gap:8px">
+        <div><b style="color:var(--ink)">Ημερολόγιο αγώνων</b> <span class="tag off">κρυφό</span><br>Εναλλακτική λειτουργία: κάθε χρήστης καταγράφει μόνος του τους αγώνες που δούλεψε. Αν την ενεργοποιήσεις, ισχύει για όλους μέχρι να γυρίσεις πίσω από τη μπάρα στην κορυφή. Τα δεδομένα δεν χάνονται.</div>
+        <div class="actions" id="logModeWrap"><button class="btn small" type="button" data-act="logmode">Ενεργοποίηση ημερολογίου</button></div>
+      </div></section>
       <section class="panel"><div class="pbody note"><div>
         <b style="color:var(--ink)">Πώς βλέπει κάποιος τις αναθέσεις του</b><br>
         1. Του στέλνεις τον σύνδεσμο της σελίδας.<br>
@@ -1643,6 +1647,9 @@ document.addEventListener("click", async e => {
   if(act==="import") openImport();
   if(act==="edit"&&m) openForm(m);
   if(act==="clear"){ Object.assign(st,{month:"",person:"",paid:"",vis:"",q:""}); renderAdmin(); }
+  if(act==="logmode") $("logModeWrap").innerHTML = `<span class="confirm">Αλλαγή όλης της εφαρμογής σε «Ημερολόγιο αγώνων»; <button type="button" class="btn small primary" data-act="logmodeyes">Ναι</button><button type="button" class="btn small" data-act="logmodeno">Όχι</button></span>`;
+  if(act==="logmodeno") $("logModeWrap").innerHTML = `<button class="btn small" type="button" data-act="logmode">Ενεργοποίηση ημερολογίου</button>`;
+  if(act==="logmodeyes"){ try{ await db.doc("config/app").set({mode:"log", changedAt:Date.now()}); location.reload(); }catch{ toast("Η αλλαγή απέτυχε"); } }
   if(act==="vis"&&m){
     b.disabled=true;
     try{ await syncAndSave({...m, hidden:!m.hidden, updatedAt:Date.now()}, m); toast(m.hidden?"Η ανάθεση φαίνεται πλέον στους χρήστες":"Η ανάθεση κρύφτηκε από τους χρήστες"); }
@@ -1906,7 +1913,8 @@ function renderUser(){
   const root = document.getElementById("root");
   root.replaceChildren(document.getElementById("tpl-"+mode).content.cloneNode(true));
   (mode==="log" ? runLog : runAssign)();
-  if(isAdmin){
+  /* the mode bar is hidden while "assign" is active; the log mode is switched on from Άτομα → Ημερολόγιο αγώνων */
+  if(isAdmin && (mode==="log" || /[?&]modes/.test(location.search))){
     const bar = document.getElementById("modebar"); bar.hidden = false;
     bar.querySelectorAll("[data-mode]").forEach(b=>{
       b.setAttribute("aria-pressed", String(b.dataset.mode===mode));

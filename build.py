@@ -89,7 +89,8 @@ function runAssign(){{
   const root = document.getElementById("root");
   root.replaceChildren(document.getElementById("tpl-"+mode).content.cloneNode(true));
   (mode==="log" ? runLog : runAssign)();
-  if(isAdmin){{
+  /* the mode bar is hidden while "assign" is active; the log mode is switched on from Άτομα → Ημερολόγιο αγώνων */
+  if(isAdmin && (mode==="log" || /[?&]modes\b/.test(location.search))){{
     const bar = document.getElementById("modebar"); bar.hidden = false;
     bar.querySelectorAll("[data-mode]").forEach(b=>{{
       b.setAttribute("aria-pressed", String(b.dataset.mode===mode));
