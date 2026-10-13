@@ -330,7 +330,7 @@ function uidForName(name){ if(!name) return null; const r=rosterByNorm()[norm(na
 
 function startAdmin(){
   $("adminActions").hidden = false;
-  $("subtitle").textContent = "Video Check · πίνακας επόπτη";
+  $("subtitle").textContent = "Video Check · πίνακας διαχειριστή";
   db.collection("sched").orderBy("date","asc").limit(2000).onSnapshot(s=>{ sched=s.docs.map(d=>({id:d.id,...d.data()})); ready.sched=true; renderAdmin(); }, loadErr);
   db.collection("roster").limit(1000).onSnapshot(s=>{ roster=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); ready.roster=true; renderAdmin(); }, loadErr);
   db.collection("links").limit(1000).onSnapshot(s=>{ links={}; s.docs.forEach(d=>links[d.id]=d.data().uid); ready.links=true; renderAdmin(); }, loadErr);
@@ -695,7 +695,7 @@ $("btnCsv").onclick = async ()=>{
 let myItems=[], myClaim=undefined, uRoster=[], showPast=false;
 async function startUser(){
   const uid = me?.id;
-  if(!uid){ $("app").innerHTML=`<div class="panel"><div class="empty"><strong>Δεν αναγνωρίστηκε ο λογαριασμός σου</strong><div>Άνοιξε τη σελίδα συνδεδεμένος στο claude.ai, από τον σύνδεσμο που σου έστειλε ο επόπτης.</div></div></div>`; return; }
+  if(!uid){ $("app").innerHTML=`<div class="panel"><div class="empty"><strong>Δεν αναγνωρίστηκε ο λογαριασμός σου</strong><div>Άνοιξε τη σελίδα συνδεδεμένος στο claude.ai, από τον σύνδεσμο που σου έστειλε ο διαχειριστής.</div></div></div>`; return; }
   $("subtitle").textContent = "Video Check · οι αναθέσεις μου";
   db.doc(`claims/${uid}`).onSnapshot(s=>{ myClaim = s.exists ? s.data() : null; renderUser(); }, ()=>{ myClaim=null; renderUser(); });
   db.collection("roster").limit(1000).onSnapshot(s=>{ uRoster=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); renderUser(); }, ()=>{});
@@ -707,10 +707,10 @@ function renderUser(){
   if(!myClaim || myClaim.status==="rejected"){
     $("app").innerHTML = `<section class="panel"><form class="pbody" id="claimForm" style="max-width:480px">
       <h2 class="sec">${greet}</h2>
-      ${myClaim?.status==="rejected"?`<div class="err">Το προηγούμενο αίτημα δεν εγκρίθηκε. Επίλεξε ξανά ή μίλα με τον επόπτη.</div>`:""}
-      <div class="note">Για να δεις τις αναθέσεις σου, διάλεξε το όνομά σου όπως εμφανίζεται στο πρόγραμμα. Ο επόπτης θα εγκρίνει τη σύνδεση.</div>
+      ${myClaim?.status==="rejected"?`<div class="err">Το προηγούμενο αίτημα δεν εγκρίθηκε. Επίλεξε ξανά ή μίλα με τον διαχειριστή.</div>`:""}
+      <div class="note">Για να δεις τις αναθέσεις σου, διάλεξε το όνομά σου όπως εμφανίζεται στο πρόγραμμα. Ο διαχειριστής θα εγκρίνει τη σύνδεση.</div>
       <div class="f"><label for="claimName">Το όνομά μου</label><select id="claimName"><option value="">— Επίλεξε —</option>${uRoster.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join("")}</select></div>
-      ${uRoster.length?"":`<div class="note">Δεν υπάρχουν ακόμα ονόματα στο πρόγραμμα. Ξαναδοκίμασε όταν ο επόπτης ανεβάσει αναθέσεις.</div>`}
+      ${uRoster.length?"":`<div class="note">Δεν υπάρχουν ακόμα ονόματα στο πρόγραμμα. Ξαναδοκίμασε όταν ο διαχειριστής ανεβάσει αναθέσεις.</div>`}
       <div class="actions"><button class="btn primary" type="submit">Αποστολή αιτήματος</button></div>
     </form></section>`;
     $("claimForm").onsubmit = async e=>{ e.preventDefault(); const rid=$("claimName").value; if(!rid){ toast("Επίλεξε το όνομά σου"); return; }
@@ -720,7 +720,7 @@ function renderUser(){
   if(myClaim.status==="pending" && !myItems.length){
     const nm = uRoster.find(r=>r.id===myClaim.rid)?.name||"";
     $("app").innerHTML = `<section class="panel"><div class="empty"><div class="board-art"></div><strong>Το αίτημα στάλθηκε</strong>
-      <div>Δήλωσες ότι είσαι <b>${esc(nm)}</b>. Μόλις το εγκρίνει ο επόπτης, οι αναθέσεις σου θα εμφανιστούν εδώ.</div>
+      <div>Δήλωσες ότι είσαι <b>${esc(nm)}</b>. Μόλις το εγκρίνει ο διαχειριστής, οι αναθέσεις σου θα εμφανιστούν εδώ.</div>
       <button class="btn small" id="reclaim">Λάθος όνομα;</button></div></section>`;
     $("reclaim").onclick = async ()=>{ try{ await db.doc(`claims/${me.id}`).delete(); }catch{} };
     return;
@@ -746,7 +746,7 @@ function renderUser(){
       <div class="cell"><div class="k">Εκκρεμούν</div><div class="v or">${eur(total-paid)}</div></div>
     </section>
     <h2 class="sec">${greet} · Επόμενες αναθέσεις</h2>
-    ${upcoming.length?`<div class="cards">${upcoming.map((i,k)=>card(i,k===0)).join("")}</div>`:`<div class="panel"><div class="empty"><strong>Δεν έχεις επόμενες αναθέσεις</strong><div>Θα εμφανιστούν εδώ μόλις σε ορίσει ο επόπτης.</div></div></div>`}
+    ${upcoming.length?`<div class="cards">${upcoming.map((i,k)=>card(i,k===0)).join("")}</div>`:`<div class="panel"><div class="empty"><strong>Δεν έχεις επόμενες αναθέσεις</strong><div>Θα εμφανιστούν εδώ μόλις σε ορίσει ο διαχειριστής.</div></div></div>`}
     ${past.length?`<div class="actions"><button class="btn" id="togglePast">${showPast?"Απόκρυψη":"Προβολή"} προηγούμενων (${past.length})</button></div>
       ${showPast?`<div class="cards">${past.map(i=>card(i,false)).join("")}</div>`:""}`:""}
   </div>`;

@@ -32,7 +32,7 @@ out=f'''<title>Check Mate Challenge</title>
   <span>Λειτουργία εφαρμογής:</span>
   <span class="mb-seg" role="group" aria-label="Λειτουργία">
     <button type="button" class="mb-btn" data-mode="log" aria-pressed="false">Ημερολόγιο αγώνων</button>
-    <button type="button" class="mb-btn" data-mode="assign" aria-pressed="false">Αναθέσεις επόπτη</button>
+    <button type="button" class="mb-btn" data-mode="assign" aria-pressed="false">Αναθέσεις διαχειριστή</button>
   </span>
   <span class="hint" id="modehint"></span>
 </div>
@@ -55,7 +55,7 @@ function runAssign(){{
 }}
 /* ===== boot: read the mode the admin chose and mount it ===== */
 (async () => {{
-  const HINT = {{log:"Οι χρήστες καταγράφουν μόνοι τους τους αγώνες τους.", assign:"Ο επόπτης ορίζει τις αναθέσεις· οι χρήστες βλέπουν μόνο τις δικές τους."}};
+  const HINT = {{log:"Οι χρήστες καταγράφουν μόνοι τους τους αγώνες τους.", assign:"Ο διαχειριστής ορίζει τις αναθέσεις· οι χρήστες βλέπουν μόνο τις δικές τους."}};
   const db = await claude.use("db"), user = await claude.use("user");
   const isAdmin = user ? !!(await user.canEdit()) : false;
   let mode = "assign";
