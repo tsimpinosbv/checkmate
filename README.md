@@ -15,15 +15,36 @@
 - `src/mode-log.html`, `src/mode-assign.html`: ο κώδικας κάθε λειτουργίας.
 - `src/parse.js`: ο αναγνώστης του Excel με το πρόγραμμα. Αναγνωρίζει τις στήλες ΗΜΕΡΟΜΗΝΙΑ · ΩΡΑ · ΓΗΠΕΔΟ · ΑΓΩΝΑΣ · ΚΑΛΥΨΗ · VAR · ΣΥΝΕΡΓΑΤΕΣ.
 - `build.py`: ενώνει τα παραπάνω στο `checkmate.html` (`python3 build.py`).
-- `capabilities.json`: τα δικαιώματα της βάσης (ποιος διαβάζει και γράφει τι).
+- `capabilities.json`: τα δικαιώματα της βάσης για την παλιά έκδοση στο claude.ai (κρατιέται για αναφορά).
 
-## Σημαντικό
+## Πού τρέχει
 
-Η σελίδα τρέχει ως **Artifact στο claude.ai**. Χρησιμοποιεί τη σύνδεση χρηστών και τη βάση δεδομένων του claude.ai (`claude.use("db")`, `claude.use("user")`). Αν την ανοίξεις απευθείας από το GitHub ή από τον υπολογιστή, φορτώνει χωρίς δεδομένα. Το repository κρατά τον κώδικα και το ιστορικό του.
+Η σελίδα δημοσιεύεται στο **GitHub Pages**: https://tsimpinosbv.github.io/checkmate
 
-Ρόλοι (από το Share του artifact):
-- **Owner / Editor**: διαχειριστής.
-- **Contributor**: χρήστης.
+Η σύνδεση χρηστών (Google) και η κοινή βάση δεδομένων γίνονται μέσω **Firebase** (δωρεάν).
+
+- `firebase-config.js`: τα στοιχεία του έργου Firebase.
+- `firestore.rules`: ποιος διαβάζει και γράφει τι (ίδιοι κανόνες με το `capabilities.json`).
+- `src/firebase-backend.js`: η σύνδεση της εφαρμογής με το Firebase.
+
+Ρόλοι:
+- **Διαχειριστής**: όποιος έχει έγγραφο στη συλλογή `admins` της βάσης, με όνομα το UID του.
+- **Χρήστης**: οποιοσδήποτε άλλος συνδέεται με Google.
+
+### Ρύθμιση Firebase (μία φορά)
+
+1. Στο https://console.firebase.google.com φτιάξε νέο project (π.χ. `checkmate`). Το Google Analytics δεν χρειάζεται.
+2. **Build → Authentication → Get started → Sign-in method → Google → Enable**.
+3. **Authentication → Settings → Authorized domains → Add domain**: `tsimpinosbv.github.io`.
+4. **Build → Firestore Database → Create database** (Production mode, τοποθεσία `eur3` ή κοντινή).
+5. **Firestore → Rules**: αντέγραψε όλο το `firestore.rules` και πάτα **Publish**.
+6. **Project settings (γρανάζι) → General → Your apps → Web (`</>`)**: δώσε όνομα και πάτα Register. Αντέγραψε τις τιμές του `firebaseConfig` στο `firebase-config.js`.
+7. Άνοιξε τη σελίδα και συνδέσου μία φορά με Google.
+8. **Authentication → Users**: αντέγραψε το **User UID** σου. Στο **Firestore → Data → Start collection** φτιάξε τη συλλογή `admins` με Document ID το UID σου (ένα οποιοδήποτε πεδίο, π.χ. `name`). Ανανέωσε τη σελίδα: είσαι διαχειριστής.
+
+Για να προσθέσεις κι άλλον διαχειριστή, πρόσθεσε το UID του στη συλλογή `admins`.
+
+Σημείωση: στη λειτουργία «Ημερολόγιο αγώνων» όποιος έχει τον σύνδεσμο και λογαριασμό Google μπορεί να καταχωρίσει αγώνες, όπως και πριν με τον σύνδεσμο του Share.
 
 ## Excel: κανόνες ανάγνωσης
 

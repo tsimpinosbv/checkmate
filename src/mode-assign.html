@@ -311,7 +311,7 @@ let db=null, user=null, me=null, isAdmin=false;
 (async () => {
   db = await claude.use("db");
   user = await claude.use("user");
-  if(!db){ $("app").innerHTML = `<div class="panel"><div class="empty"><strong>Η σελίδα χρειάζεται σύνδεση</strong><div>Άνοιξε τη σελίδα συνδεδεμένος στο claude.ai.</div></div></div>`; return; }
+  if(!db){ $("app").innerHTML = `<div class="panel"><div class="empty"><strong>Η σελίδα χρειάζεται σύνδεση</strong><div>Συνδέσου με τον λογαριασμό Google σου.</div></div></div>`; return; }
   isAdmin = user ? !!(await user.canEdit()) : false;
   me = user ? await user.me() : null;
   if(isAdmin) startAdmin(); else startUser();
@@ -466,8 +466,8 @@ async function renderPeople(pending){
       </section>
       <section class="panel"><div class="pbody note"><div>
         <b style="color:var(--ink)">Πώς βλέπει κάποιος τις αναθέσεις του</b><br>
-        1. Μοιράσου τη σελίδα μαζί του ως <b>Contributor</b> (Share).<br>
-        2. Ανοίγει τη σελίδα και επιλέγει το όνομά του.<br>
+        1. Του στέλνεις τον σύνδεσμο της σελίδας.<br>
+        2. Συνδέεται με Google και επιλέγει το όνομά του.<br>
         3. Εγκρίνεις το αίτημα εδώ — βλέπει μόνο τις δικές του αναθέσεις.</div>
         <div class="actions" style="margin-top:10px"><button class="btn small" data-act="resync">↻ Επανασυγχρονισμός όλων</button></div>
       </div></section>
@@ -695,7 +695,7 @@ $("btnCsv").onclick = async ()=>{
 let myItems=[], myClaim=undefined, uRoster=[], showPast=false;
 async function startUser(){
   const uid = me?.id;
-  if(!uid){ $("app").innerHTML=`<div class="panel"><div class="empty"><strong>Δεν αναγνωρίστηκε ο λογαριασμός σου</strong><div>Άνοιξε τη σελίδα συνδεδεμένος στο claude.ai, από τον σύνδεσμο που σου έστειλε ο διαχειριστής.</div></div></div>`; return; }
+  if(!uid){ $("app").innerHTML=`<div class="panel"><div class="empty"><strong>Δεν αναγνωρίστηκε ο λογαριασμός σου</strong><div>Συνδέσου με τον λογαριασμό Google σου, από τον σύνδεσμο που σου έστειλε ο διαχειριστής.</div></div></div>`; return; }
   $("subtitle").textContent = "Video Check · οι αναθέσεις μου";
   db.doc(`claims/${uid}`).onSnapshot(s=>{ myClaim = s.exists ? s.data() : null; renderUser(); }, ()=>{ myClaim=null; renderUser(); });
   db.collection("roster").limit(1000).onSnapshot(s=>{ uRoster=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); renderUser(); }, ()=>{});
@@ -714,7 +714,7 @@ function renderUser(){
       <div class="actions"><button class="btn primary" type="submit">Αποστολή αιτήματος</button></div>
     </form></section>`;
     $("claimForm").onsubmit = async e=>{ e.preventDefault(); const rid=$("claimName").value; if(!rid){ toast("Επίλεξε το όνομά σου"); return; }
-      try{ await db.doc(`claims/${me.id}`).set({rid, status:"pending", at:Date.now()}); }catch{ toast("Δεν στάλθηκε. Βεβαιώσου ότι έχεις πρόσβαση Contributor."); } };
+      try{ await db.doc(`claims/${me.id}`).set({rid, status:"pending", at:Date.now()}); }catch{ toast("Δεν στάλθηκε. Δοκίμασε ξανά."); } };
     return;
   }
   if(myClaim.status==="pending" && !myItems.length){

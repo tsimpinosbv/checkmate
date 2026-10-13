@@ -376,7 +376,7 @@ $("frm").addEventListener("submit", async e => {
     paidDate:paidNow?(isAdmin?($("iPaidDate").value||today()):(prevRow?.paidDate||"")):"", notes:$("iNotes").value.trim()
   };
   if(!d.date||!d.home||!d.away||!d.person){ $("frmErr").hidden=false; $("frmErr").textContent="Συμπλήρωσε ημερομηνία, τις δύο ομάδες και το άτομο."; return; }
-  if(!col){ $("frmErr").hidden=false; $("frmErr").textContent="Η αποθήκευση δεν είναι διαθέσιμη. Άνοιξε τη σελίδα συνδεδεμένος στο claude.ai."; return; }
+  if(!col){ $("frmErr").hidden=false; $("frmErr").textContent="Η αποθήκευση δεν είναι διαθέσιμη. Συνδέσου με τον λογαριασμό Google σου."; return; }
   $("btnSave").disabled = true;
   try{
     if(editingId){
@@ -464,7 +464,7 @@ function setWriteUI(){ $("btnAdd").disabled=!canWrite; }
 (async () => {
   render();
   db = await claude.use("db");
-  if(!db){ loadedOpen=loadedPaid=true; $("log").innerHTML=`<div class="empty"><strong>Η αποθήκευση δεν είναι διαθέσιμη</strong><div>Άνοιξε τη σελίδα συνδεδεμένος στο claude.ai για να δεις και να καταχωρίσεις αγώνες.</div></div>`; canWrite=false; setWriteUI(); return; }
+  if(!db){ loadedOpen=loadedPaid=true; $("log").innerHTML=`<div class="empty"><strong>Η αποθήκευση δεν είναι διαθέσιμη</strong><div>Συνδέσου με τον λογαριασμό Google σου για να δεις και να καταχωρίσεις αγώνες.</div></div>`; canWrite=false; setWriteUI(); return; }
   col = db.collection("matches"); colPaid = db.collection("paid");
   try{
     const u = await claude.use("user");

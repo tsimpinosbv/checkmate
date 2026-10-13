@@ -1,0 +1,36 @@
+rules_version = '2';
+// Check Mate: who can read and write what (same permissions as capabilities.json).
+// Admin = a signed-in user whose UID has a document in the `admins` collection.
+// User  = any other signed-in Google account.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Admins can read and write everything.
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // Each user can check whether they are an admin; only admins add admins.
+    match /admins/{uid} { allow read: if isSelf(uid); }
+
+    // Each user's name, shown to the admin when approving accounts.
+    match /users/{uid} { allow read, write: if isSelf(uid); }
+
+    // Shared settings (which mode is active).
+    match /config/{doc} { allow read: if signedIn(); }
+
+    // Mode 1 (match log): users add and edit open matches; paid ones are read-only.
+    match /matches/{doc} { allow read, write: if signedIn(); }
+    match /paid/{doc}    { allow read: if signedIn(); }
+
+    // Mode 2 (assignments): users see the roster, manage their own claim, read their own assignments.
+    match /roster/{doc}             { allow read: if signedIn(); }
+    match /claims/{uid}             { allow read, write: if isSelf(uid); }
+    match /mine/{uid}/{rest=**}     { allow read: if isSelf(uid); }
+  }
+}

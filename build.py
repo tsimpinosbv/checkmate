@@ -10,9 +10,15 @@ fonts='''<link rel="preconnect" href="https://fonts.googleapis.com">
 v1=open('src/mode-log.html').read()
 v2=open('src/mode-assign.html').read().replace('/*__PARSER__*/','')
 parser=open('src/parse.js').read()
+backend=open('src/firebase-backend.js').read()
 s1,m1,j1=split(v1); s2,m2,j2=split(v2)
 main1=j1[-1]; main2=[j for j in j2 if j.strip()][-1]
-out=f'''<title>Check Mate Challenge</title>
+out=f'''<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check Mate Challenge</title>
 {fonts}
 <style>
 /* mode bar (admin only) — the two modes bring their own styles inside their templates */
@@ -27,6 +33,8 @@ out=f'''<title>Check Mate Challenge</title>
 :root[data-theme="dark"] #modebar{{background:#e8edf6;color:#14213a}}
 #boot{{padding:60px 16px;text-align:center;font:15px "Commissioner",system-ui,sans-serif;color:#5d6b84}}
 </style>
+</head>
+<body>
 
 <div id="modebar" lang="el" hidden>
   <span>Λειτουργία εφαρμογής:</span>
@@ -40,6 +48,15 @@ out=f'''<title>Check Mate Challenge</title>
 
 <template id="tpl-log"><style>{s1}</style>{m1}</template>
 <template id="tpl-assign"><style>{s2}</style>{m2}</template>
+
+<!-- backend: Firebase sign-in + Firestore (see README) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+{backend}
+</script>
 
 <script>
 {parser}
@@ -80,6 +97,8 @@ function runAssign(){{
   if(db) db.doc("config/app").onSnapshot(s => {{ const m = s.exists ? s.data().mode : "assign"; if((m==="log"||m==="assign") && m!==mode) location.reload(); }}, ()=>{{}});
 }})();
 </script>
+</body>
+</html>
 '''
 open('checkmate.html','w').write(out)
 
