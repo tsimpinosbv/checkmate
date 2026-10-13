@@ -16,7 +16,7 @@ service cloud.firestore {
       );
     }
 
-    // Admins can read and write everything.
+    // Admins can read and write everything (incl. contacts/<rosterId>: notification emails, admin-only).
     match /{document=**} {
       allow read, write: if isAdmin();
     }

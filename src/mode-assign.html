@@ -125,6 +125,11 @@ button.pay:hover{border-color:currentColor}
 .avatar{width:28px;height:28px;border-radius:50%;flex:none}
 .ureg .who b{overflow-wrap:anywhere}
 .ureg .mail{font-size:13px;color:var(--ink);overflow-wrap:anywhere}
+.pmail{display:flex;gap:6px;align-items:center;flex:1 1 220px;max-width:280px}
+.pmail input{flex:1;min-width:0;font:13px var(--f-body);padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
+.pmail input:focus{outline:2px solid var(--blue);outline-offset:1px}
+.ulink{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ulink select{font:13px var(--f-body);padding:5px 6px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);max-width:180px}
 .ph .count{font-size:13px;color:var(--muted);font-weight:500;margin-left:6px}
 .scroll{max-height:420px;overflow:auto}
 
@@ -334,7 +339,7 @@ let db=null, user=null, me=null, isAdmin=false;
 /* =================================================================
    SUPERVISOR
    ================================================================= */
-let sched=[], roster=[], links={}, claims=[], fees={op:80,as:40}, profilesAll={}, notify={email:false, endpoint:""}, mail=null;
+let sched=[], roster=[], links={}, claims=[], fees={op:80,as:40}, contacts={}, profilesAll={}, notify={email:false, endpoint:""}, mail=null;
 let ready={sched:false,roster:false,links:false};
 let tab = ls.get("cm.tab","sched");
 const st = {month:"", person:"", paid:"", vis:"", q:""};
@@ -350,6 +355,7 @@ function startAdmin(){
   db.collection("links").limit(1000).onSnapshot(s=>{ links={}; s.docs.forEach(d=>links[d.id]=d.data().uid); ready.links=true; renderAdmin(); }, loadErr);
   db.collection("claims").limit(1000).onSnapshot(s=>{ claims=s.docs.map(d=>({uid:d.id,...d.data()})); renderAdmin(); }, ()=>{});
   db.collection("profiles").limit(2000).onSnapshot(s=>{ profilesAll={}; s.docs.forEach(d=>profilesAll[d.id]=d.data()); if(tab==="people") renderAdmin(); }, ()=>{});
+  db.collection("contacts").limit(1000).onSnapshot(s=>{ contacts={}; s.docs.forEach(d=>contacts[d.id]=d.data().email||""); if(tab==="people") renderAdmin(); }, ()=>{});
   db.doc("config/notify").onSnapshot(s=>{ notify={email:false, endpoint:"", ...(s.exists?s.data():{})}; if(tab==="people") renderAdmin(); }, ()=>{});
   claude.use("mail").then(x=>mail=x).catch(()=>{});
   db.doc("config/fees").onSnapshot(s=>{ if(s.exists) fees={op:80,as:40,...s.data()}; }, ()=>{});
@@ -468,7 +474,8 @@ async function renderPeople(pending){
         <form id="addPerson" class="actions"><input id="newPerson" class="btn" style="font-weight:400;min-width:0;width:200px" placeholder="π.χ. ΤΣΙΜΠΙΝΟΣ Ι." aria-label="Νέο άτομο"><button class="btn small" type="submit">+ Προσθήκη</button></form>
       </div>
       ${roster.length? roster.map(r=>{ const uid=links[r.id]; const waiting=pending.find(c=>c.rid===r.id);
-        return `<div class="prow"><div class="who"><b>${esc(r.name)}</b><span class="note">${counts[norm(r.name)]||0} αναθέσεις${uid?` · ${esc(pname(uid))}`:""}</span></div>
+        return `<div class="prow"><div class="who"><b>${esc(r.name)}</b><span class="note">${counts[norm(r.name)]||0} αναθέσεις${uid?` · ${esc(pname(uid))} · ${esc(profilesAll[uid]?.email||"")}`:""}</span></div>
+        ${uid?"":`<label class="pmail" title="Εδώ στέλνονται οι ειδοποιήσεις όσο το άτομο δεν έχει συνδεδεμένο λογαριασμό"><span aria-hidden="true">✉</span><input type="email" data-rmail="${r.id}" value="${esc(contacts[r.id]||"")}" placeholder="email για ειδοποιήσεις" aria-label="Email για ${esc(r.name)}"></label>`}
         <div class="actions">${uid?`<span class="tag on">✓ Βλέπει τις αναθέσεις του</span><button class="btn small danger" data-act="unlink" data-rid="${r.id}">Αποσύνδεση</button>`:waiting?`<span class="tag wait">Αίτημα σε αναμονή</span>`:`<span class="tag off">Χωρίς λογαριασμό</span>`}
         ${!uid && !counts[norm(r.name)]?`<button class="btn small danger" data-act="delperson" data-rid="${r.id}" aria-label="Διαγραφή">✕</button>`:""}</div></div>`;}).join("")
       : `<div class="empty"><strong>Κανένα άτομο ακόμα</strong><div>Τα ονόματα προστίθενται αυτόματα από τις αναθέσεις και το Excel.</div></div>`}
@@ -551,10 +558,11 @@ function registeredPanel(rmap){
     const rid = ridOf(p.uid), pend = claims.find(c=>c.uid===p.uid && c.status==="pending");
     const tag = rid ? `<span class="tag on">✓ ${esc(rmap[rid]?.name||"συνδεδεμένος")}</span>`
       : pend ? `<span class="tag wait">Αίτημα: ${esc(rmap[pend.rid]?.name||"—")}</span>`
-      : p.uid===me?.id ? `<span class="tag on">Εσύ · διαχειριστής</span>`
-      : `<span class="tag off">Δεν έχει δηλώσει όνομα</span>`;
+      : `<span class="tag off">${p.uid===me?.id?"Εσύ · ":""}Χωρίς όνομα</span>`;
+    const free = roster.filter(r=>!links[r.id]);
+    const linker = rid ? "" : `<div class="ulink"><select data-linksel="${p.uid}" aria-label="Όνομα στο πρόγραμμα"><option value="">Σύνδεση με όνομα…</option>${free.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join("")}</select><button class="btn small" type="button" data-act="linkuser" data-uid="${p.uid}">Σύνδεση</button></div>`;
     return `<div class="prow ureg"><div class="who"><b>${esc(p.name||"Χωρίς όνομα")}</b><span class="mail">${esc(p.email||"—")}</span>
-      <span class="note">Εγγραφή ${fmtTs(p.joinedAt)}${p.via==="google"?" · Google":""} · τελευταία είσοδος ${fmtTs(p.seenAt,true)}</span></div>${tag}</div>`;
+      <span class="note">Εγγραφή ${fmtTs(p.joinedAt)}${p.via==="google"?" · Google":""} · τελευταία είσοδος ${fmtTs(p.seenAt,true)}</span></div><div class="ulink">${tag}${linker}</div></div>`;
   }).join("");
   return `<section class="panel">
     <div class="ph"><h2 class="sec">Εγγεγραμμένοι χρήστες<span class="count">${list.length}</span></h2></div>
@@ -568,7 +576,7 @@ function notifyPanel(){
     <div class="ph"><h2 class="sec">Ειδοποιήσεις email</h2></div>
     <form class="pbody" id="notifyForm" style="display:flex;flex-direction:column;gap:10px">
       <label class="check"><input type="checkbox" id="nOn" ${notify.email?"checked":""}> Στέλνε email στα άτομα όταν αλλάζει κάτι στις αναθέσεις τους</label>
-      <div class="note">Ένα email ανά άτομο, με όλες τις αλλαγές μαζί: νέα ανάθεση, αλλαγή ημερομηνίας, ώρας, γηπέδου, συνεργάτη ή αμοιβής, ακύρωση, πληρωμή. Μόνο για όσους έχουν συνδεδεμένο λογαριασμό, και μόνο για ορατές αναθέσεις.</div>
+      <div class="note">Ένα email ανά άτομο, με όλες τις αλλαγές μαζί: νέα ανάθεση, αλλαγή ημερομηνίας, ώρας, γηπέδου, συνεργάτη ή αμοιβής, ακύρωση, πληρωμή. Πηγαίνει στο email του συνδεδεμένου λογαριασμού ή, αν δεν υπάρχει, στο email που έχεις γράψει στο άτομο (✉). Μόνο για ορατές αναθέσεις.</div>
       <div class="grid2">
         <div class="f"><label for="nName">Όνομα αποστολέα</label><input id="nName" value="${esc(notify.senderName||"Check Mate")}" autocomplete="off"></div>
         <div class="f"><label for="nReply">Απαντήσεις στο email</label><input id="nReply" type="email" value="${esc(notify.replyTo||"")}" placeholder="${esc(me?.email||"")}" autocomplete="off"></div>
@@ -605,10 +613,13 @@ function queueNote(uid, ev){
   (outbox[uid] = outbox[uid] || []).push(ev);
   clearTimeout(outboxTimer); outboxTimer = setTimeout(flushNotes, 4000);
 }
-function noteChanges(prev, m, oldSync, newSync){
+/* who gets the email: the person in the role (by name), at their linked account's email or the email set in Άτομα */
+function emailForName(key){ const r = rosterByNorm()[key]; if(!r) return null; const uid = links[r.id]; return (uid && profilesAll[uid]?.email) || contacts[r.id] || null; }
+function nameForKey(key){ const r = rosterByNorm()[key]; const uid = r && links[r.id]; return (uid && profilesAll[uid]?.name) || ""; }   // programme names are "SURNAME I.", so no greeting by name
+function noteChanges(prev, m){
   for(const r of ["op","as"]){
-    const o = oldSync?.[r] || null, n = newSync?.[r] || null;
-    const oi = o && prev ? itemFor(prev, r) : null, ni = n && m ? itemFor(m, r) : null;
+    const o = prev && !prev.hidden && prev[r] ? norm(prev[r]) : null, n = m && !m.hidden && m[r] ? norm(m[r]) : null;
+    const oi = o ? itemFor(prev, r) : null, ni = n ? itemFor(m, r) : null;
     if(o && o !== n) queueNote(o, {type:"removed", item:oi});
     if(n && n !== o) queueNote(n, {type:"added", item:ni});
     if(n && n === o){
@@ -653,9 +664,9 @@ async function flushNotes(){
   clearTimeout(outboxTimer); outboxTimer = null;
   const box = outbox; outbox = {};
   const msgs = [];
-  for(const [uid, evs] of Object.entries(box)){
-    const p = profilesAll[uid]; if(!p?.email) continue;
-    msgs.push({to:p.email, subject:subjectFor(evs), html:mailHtml(p, evs)});
+  for(const [key, evs] of Object.entries(box)){
+    const to = emailForName(key); if(!to) continue;
+    msgs.push({to, subject:subjectFor(evs), html:mailHtml({name:nameForKey(key)}, evs)});
   }
   if(!msgs.length || !mail) return;
   try{ const r = await mail.send(notify.endpoint, msgs, senderOpts()); toast(`Στάλθηκαν ${r.sent ?? msgs.length} email ειδοποίησης`); }
@@ -678,12 +689,12 @@ async function syncAndSave(m, prev){
   }
   const {id, ...body} = m;
   await w(()=>db.doc(`sched/${m.id}`).set({...body, sync}));
-  noteChanges(prev, m, prev?.sync, sync);
+  noteChanges(prev, m);
 }
 async function deleteMatch(m){
   for(const r of ["op","as"]) if(m.sync?.[r]) await w(()=>db.doc(`mine/${m.sync[r]}/items/${m.id}_${r}`).delete());
   await w(()=>db.doc(`sched/${m.id}`).delete());
-  noteChanges(m, null, m.sync, null);
+  noteChanges(m, null);
 }
 async function ensureRoster(names){
   const have = rosterByNorm();
@@ -695,6 +706,22 @@ async function resync(pred, label){
   try{ for(const m of list){ await syncAndSave(m, m); i++; } } finally { muteNotes--; }
   if(label) toast(`${label} (${i} αναθέσεις)`);
 }
+
+/* ---------- link an account to a name in the programme ---------- */
+async function linkAccount(uid, rid, prevUid){
+  for(const [r,u] of Object.entries(links)) if(u===uid && r!==rid){ await w(()=>db.doc(`links/${r}`).delete()); delete links[r]; }
+  const other = links[rid] && links[rid]!==uid ? links[rid] : prevUid;
+  await w(()=>db.doc(`links/${rid}`).set({uid})); links[rid]=uid;
+  await w(()=>db.doc(`claims/${uid}`).set({rid, status:"approved", at:Date.now(), decidedAt:Date.now()}, {merge:true}));
+  const nm = norm(roster.find(r=>r.id===rid)?.name);
+  await resync(m=>norm(m.op)===nm||norm(m.as)===nm||m.sync?.op===uid||m.sync?.as===uid||(other&&(m.sync?.op===other||m.sync?.as===other)), "Συνδέθηκε");
+}
+document.addEventListener("change", async e => {
+  const inp = e.target.closest?.("[data-rmail]"); if(!inp || !isAdmin) return;
+  const v = inp.value.trim();
+  if(v && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)){ toast("Το email δεν είναι σωστό"); return; }
+  try{ await db.doc(`contacts/${inp.dataset.rmail}`).set({email:v}); toast(v?"Το email αποθηκεύτηκε":"Το email αφαιρέθηκε"); }catch{ toast("Η αποθήκευση απέτυχε"); }
+});
 
 /* ---------- supervisor actions ---------- */
 document.addEventListener("click", async e => {
@@ -731,6 +758,12 @@ document.addEventListener("click", async e => {
     const r=b.dataset.role, now=!m["paid_"+r]; b.disabled=true;
     try{ await syncAndSave({...m, ["paid_"+r]:now, ["paidDate_"+r]:now?today():"", updatedAt:Date.now()}, m); toast(now?"Σημειώθηκε ως πληρωμένο":"Σημειώθηκε ως εκκρεμές"); }
     catch{ b.disabled=false; toast("Η αλλαγή απέτυχε"); }
+  }
+  if(act==="linkuser"){
+    const uid=b.dataset.uid, rid=document.querySelector(`[data-linksel="${uid}"]`)?.value;
+    if(!rid){ toast("Διάλεξε πρώτα όνομα"); return; }
+    b.disabled=true;
+    try{ await linkAccount(uid, rid); toast("Ο λογαριασμός συνδέθηκε"); }catch{ toast("Η σύνδεση απέτυχε"); b.disabled=false; }
   }
   if(act==="approve"){
     const c=claims.find(x=>x.uid===b.dataset.uid); if(!c) return;
