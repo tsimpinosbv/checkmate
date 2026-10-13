@@ -460,8 +460,8 @@ async function renderPeople(pending){
         <form class="pbody" id="feesForm">
           <div class="grid2"><div class="f"><label for="feeOp">Χειριστής (€)</label><input id="feeOp" type="number" min="0" step="0.5" value="${fees.op||""}"></div>
           <div class="f"><label for="feeAs">Βοηθός (€)</label><input id="feeAs" type="number" min="0" step="0.5" value="${fees.as||""}"></div></div>
-          <div class="actions"><button class="btn small" type="submit">Αποθήκευση</button></div>
-          <div class="note">Μπαίνουν αυτόματα σε κάθε νέα ανάθεση και στην εισαγωγή από Excel.</div>
+          <div class="actions"><button class="btn small" type="submit">Αποθήκευση</button><span id="applyFeesWrap"><button class="btn small" type="button" id="applyFees">Εφαρμογή στις υπάρχουσες αναθέσεις</button></span></div>
+          <div class="note">Μπαίνουν αυτόματα σε κάθε νέα ανάθεση και στην εισαγωγή από Excel. Η «Εφαρμογή» αλλάζει το ποσό σε όλες τις απλήρωτες αναθέσεις που έχουν άτομο· οι πληρωμένες δεν αλλάζουν.</div>
         </form>
       </section>
       <section class="panel"><div class="pbody note"><div>
@@ -478,6 +478,33 @@ async function renderPeople(pending){
     try{ await db.collection("roster").add({name:n}); }catch{ toast("Η προσθήκη απέτυχε"); } };
   $("feesForm").onsubmit = async e => { e.preventDefault(); const f={op:+$("feeOp").value||0, as:+$("feeAs").value||0};
     try{ await db.doc("config/fees").set(f); fees=f; toast("Οι αμοιβές αποθηκεύτηκαν"); }catch{ toast("Η αποθήκευση απέτυχε"); } };
+  const needsFee = (m, f) => (m.op && !m.paid_op && +m.fee_op!==f.op) || (m.as && !m.paid_as && +m.fee_as!==f.as);
+  $("applyFeesWrap").onclick = async e => {
+    const id = e.target.closest("button")?.id; if(!id) return;
+    const f = {op:+$("feeOp").value||0, as:+$("feeAs").value||0};
+    const list = sched.filter(m=>needsFee(m,f));
+    if(id==="applyFees"){
+      if(!list.length){ toast("Όλες οι αναθέσεις έχουν ήδη αυτά τα ποσά"); return; }
+      $("applyFeesWrap").innerHTML = `<span class="confirm">${list.length} αναθέσεις → Χειριστής ${eur(f.op)}, Βοηθός ${eur(f.as)}; <button type="button" class="btn small primary" id="applyYes">Ναι, εφαρμογή</button><button type="button" class="btn small" id="applyNo">Όχι</button></span>`;
+      return;
+    }
+    if(id==="applyNo"){ $("applyFeesWrap").innerHTML = `<button class="btn small" type="button" id="applyFees">Εφαρμογή στις υπάρχουσες αναθέσεις</button>`; return; }
+    if(id==="applyYes"){
+      $("applyFeesWrap").innerHTML = `<span class="note">Ενημέρωση…</span>`;
+      try{
+        if(f.op!==fees.op||f.as!==fees.as){ await db.doc("config/fees").set(f); fees=f; }
+        let n=0;
+        for(const m of list){
+          const m2 = {...m};
+          if(m.op && !m.paid_op) m2.fee_op = f.op;
+          if(m.as && !m.paid_as) m2.fee_as = f.as;
+          await syncAndSave(m2, m); n++;
+        }
+        toast(`Ενημερώθηκαν ${n} αναθέσεις`);
+      }catch{ toast("Η ενημέρωση δεν ολοκληρώθηκε. Δοκίμασε ξανά."); }
+      $("applyFeesWrap").innerHTML = `<button class="btn small" type="button" id="applyFees">Εφαρμογή στις υπάρχουσες αναθέσεις</button>`;
+    }
+  };
 }
 
 /* ---------- sync: copy each assignment into the assigned person's private list ---------- */
