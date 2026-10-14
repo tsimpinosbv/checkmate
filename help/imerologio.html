@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="el"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check Mate · Ημερολόγιο – Οδηγίες</title>
+<meta name="theme-color" content="#1d6b47">
+<link rel="icon" type="image/png" sizes="32x32" href="../icons/diary-32.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans+Extra+Condensed:wght@800&family=Commissioner:wght@400;600&display=swap&subset=greek">
+<style>
+:root{--ink:#14213a;--bg:#f3f5f9;--surface:#fff;--line:#d9dfea;--muted:#5d6b84;--accent:#f0821e;--blue:#2a7fd4;--warn-bg:#fdeedd}
+@media (prefers-color-scheme: dark){:root{--ink:#eef2f8;--bg:#0f1729;--surface:#1b2436;--line:#33405a;--muted:#a9b4c8;--warn-bg:#3a2a17}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Commissioner",system-ui,-apple-system,"Segoe UI",sans-serif}
+header{background:#14213a;color:#fff;padding:12px 16px}
+@media (max-width:520px){.brand{min-width:0;flex:1 1 100%}.btn{flex:1;justify-content:center}}
+.hwrap{max-width:860px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;flex:1;min-width:200px;color:#fff;text-decoration:none}
+.brand img{width:38px;height:38px}
+.brand b{font:800 22px "Fira Sans Extra Condensed",system-ui,sans-serif;letter-spacing:.01em;text-transform:uppercase}
+.brand b span{color:#f0821e}
+.brand small{display:block;font-size:12px;opacity:.75;font-weight:400;text-transform:none}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none;border:1px solid rgba(255,255,255,.3);color:#fff}
+.btn.primary{background:#f0821e;border-color:#f0821e}
+main{max-width:860px;margin:0 auto;padding:20px 16px 60px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 18px 8px;margin:0 0 16px}
+h2{font:800 22px "Fira Sans Extra Condensed",system-ui,sans-serif;text-transform:uppercase;margin:4px 0 8px;letter-spacing:.01em}
+h3{font-size:17px;color:var(--blue);margin:16px 0 6px}
+p{margin:8px 0} ul,ol{margin:6px 0 10px;padding-left:22px} li{margin:4px 0}
+img{max-width:100%;height:auto}
+.pair{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:12px 0}
+.pair img{width:min(260px,100%);border:1px solid var(--line);border-radius:12px}
+.side{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;margin:12px 0}
+.side img{width:min(260px,100%);border:1px solid var(--line);border-radius:12px;display:block}
+.side img.wide{width:min(340px,100%)}
+.side>p:first-child{flex:none;margin:0;width:min(260px,100%)}
+.side>p:first-child:has(img.wide){width:min(340px,100%)}
+a{overflow-wrap:anywhere}
+.side>div{flex:1 1 260px;min-width:0}
+img.strip{display:block;width:min(360px,100%);margin:10px auto;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:15px;margin:8px 0}
+th{background:#14213a;color:#fff;text-align:left;padding:8px 10px}
+td{border-bottom:1px solid var(--line);padding:8px 10px;vertical-align:top}
+.note{color:var(--muted);font-style:italic;font-size:13px}
+.lead{font-size:17px}
+.box{background:#e3f4ea;border-left:4px solid #1d8a52;border-radius:8px;padding:2px 14px;margin:10px 0;color:#14213a}
+img.icon{width:64px;display:block;margin:8px 0}
+header{background:#1d6b47}
+</style></head>
+<body>
+<header><div class="hwrap">
+  <a class="brand" href="../imerologio.html"><img src="../icons/diary-192.png" alt=""><span><b>Check <span>Mate</span></b><small>Ημερολόγιο · οδηγίες χρήσης</small></span></a>
+  <a class="btn" href="Check-Mate-Imerologio-Odigies.pdf" download>⬇ PDF</a>
+  <a class="btn primary" href="../imerologio.html">← Στο Ημερολόγιο</a>
+</div></header>
+<main><section class="card lead"><p>Το <strong>Ημερολόγιο</strong> είναι μια μικρή εφαρμογή για <strong>προσωπική χρήση</strong>. Γράφετε μόνοι σας τους αγώνες που δουλέψατε, ως <strong>Χειριστής</strong> ή <strong>Βοηθός</strong>, την αμοιβή και αν πληρωθήκατε. Έτσι έχετε το δικό σας αρχείο και μπορείτε να το συγκρίνετε με όσα δείχνει το Check Mate.</p>
+<p><strong>Σύνδεσμος:</strong> <a href="https://tsimpinosbv.github.io/checkmate/imerologio.html">https://tsimpinosbv.github.io/checkmate/imerologio.html</a></p>
+<div class="box">
+<p>🔒 <strong>Μόνο εσείς βλέπετε το ημερολόγιό σας</strong>, ούτε οι διαχειριστές. Δεν συνδέεται με το Check Mate: ό,τι γράφετε ή σβήνετε εδώ δεν αλλάζει τις αναθέσεις σας, και το αντίθετο.</p>
+</div>
+</section><section class="card"><h2>Βήμα 1 · Είσοδος ή εγγραφή</h2>
+<p>Ανοίξτε τον σύνδεσμο. Θα δείτε την οθόνη εισόδου με το πράσινο εικονίδιο.</p>
+<ul>
+<li><strong>Έχετε ήδη λογαριασμό στο Check Mate;</strong> Μπείτε με τα ίδια στοιχεία, ή πατήστε <strong>Συνέχεια με Google</strong>.</li>
+<li><strong>Δεν έχετε;</strong> Πατήστε <strong>Εγγραφή</strong>, γράψτε ονοματεπώνυμο, email και έναν κωδικό (τουλάχιστον 6 χαρακτήρες) δύο φορές, και πατήστε <strong>Δημιουργία λογαριασμού</strong>.</li>
+</ul>
+<div class="pair"><img src="img/d-g01-eisodos.png" loading="lazy" alt=""><img src="img/d-g02-eggrafi.png" loading="lazy" alt=""></div>
+
+<p>Δεν χρειάζεται έγκριση από τον διαχειριστή. Μόλις μπείτε, το ημερολόγιό σας είναι έτοιμο.</p>
+</section><section class="card"><h2>Βήμα 2 · Καταχώριση αγώνα</h2>
+<div class="side">
+<p><img src="img/d-g03-neos.png" loading="lazy" alt=""><div markdown="1"></p>
+<p>Πατήστε <strong>+ Νέος αγώνας</strong> και συμπληρώστε:</p>
+<ul>
+<li><strong>Ημερομηνία</strong> και <strong>ώρα</strong>,</li>
+<li><strong>Γηπεδούχο</strong> και <strong>φιλοξενούμενη</strong> ομάδα,</li>
+<li><strong>Διοργάνωση</strong> και <strong>γήπεδο</strong>,</li>
+<li><strong>Συνεργάτη</strong> (προαιρετικό): με ποιον δουλέψατε,</li>
+<li><strong>Θέση</strong>: Χειριστής challenge ή Βοηθός.</li>
+</ul>
+<p>Η <strong>αμοιβή</strong> μπαίνει μόνη της από τις αμοιβές του Check Mate, ανάλογα με τη θέση. Αν πήρατε διαφορετικό ποσό, αλλάξτε την.</p>
+<p>Στις <strong>Σημειώσεις</strong> μπορείτε να γράψετε ό,τι θέλετε, π.χ. ώρα προσέλευσης ή τρόπο πληρωμής. Πατήστε <strong>Αποθήκευση</strong>.</p>
+<p>Η εφαρμογή θυμάται τις ομάδες, τα γήπεδα και τις διοργανώσεις που έχετε γράψει και σας τα προτείνει την επόμενη φορά.</p>
+</div>
+</div>
+</section><section class="card"><h2>Βήμα 3 · Πληρωμές</h2>
+<div class="side">
+<p><img src="img/d-g05-agones.png" loading="lazy" alt=""><div markdown="1"></p>
+<p>Κάθε αγώνας δείχνει ημερομηνία, ομάδες, θέση, συνεργάτη, αμοιβή και κατάσταση πληρωμής.</p>
+<ul>
+<li>Όταν πληρωθείτε, πατήστε <strong>● Εκκρεμεί</strong>. Γίνεται <strong>✓ Πληρώθηκε</strong>, με την ημερομηνία πληρωμής.</li>
+<li>Πατήστε το ξανά αν το σημειώσατε κατά λάθος.</li>
+<li>Με το <strong>✎</strong> στα δεξιά διορθώνετε τον αγώνα, αλλάζετε την ημερομηνία πληρωμής ή τον <strong>διαγράφετε</strong>.</li>
+</ul>
+</div>
+</div>
+</section><section class="card"><h2>Σύνολα, φίλτρα και σύγκριση με το Check Mate</h2>
+<div class="side">
+<p><img src="img/d-g06-filtro.png" loading="lazy" alt=""><div markdown="1"></p>
+<p>Στην κορυφή βλέπετε πόσους αγώνες έχετε, πόσους ως Χειριστής και πόσους ως Βοηθός, το <strong>σύνολο αμοιβών</strong>, πόσα <strong>πληρώθηκαν</strong> και πόσα <strong>εκκρεμούν</strong>.</p>
+<p>Τα σύνολα ακολουθούν τα <strong>φίλτρα</strong>: σεζόν, μήνα, συνεργάτη, θέση, πληρωμή και αναζήτηση. Για παράδειγμα, «Εκκρεμεί» δείχνει μόνο όσα δεν έχετε πληρωθεί ακόμα.</p>
+<p><strong>Σύγκριση:</strong> διαλέξτε τον ίδιο μήνα και εδώ και στο Check Mate, και ελέγξτε ότι συμφωνούν οι αγώνες, τα σύνολα και τα πληρωμένα. Αν κάτι διαφέρει, μιλήστε με τον διαχειριστή.</p>
+</div>
+</div>
+</section><section class="card"><h2>Εξαγωγή</h2>
+<ul>
+<li><strong>⬇ CSV (Excel):</strong> οι αγώνες που βλέπετε (με τα φίλτρα), σε αρχείο που ανοίγει στο Excel.</li>
+<li><strong>⬇ Αναφορά:</strong> σελίδα με σύνολα, ανάλυση ανά συνεργάτη και όλους τους αγώνες, έτοιμη για εκτύπωση ή PDF.</li>
+</ul>
+</section><section class="card"><h2>Εγκατάσταση στο κινητό ή στον υπολογιστή</h2>
+<p>Το Ημερολόγιο εγκαθίσταται <strong>χωριστά</strong> από το Check Mate, με δικό του πράσινο εικονίδιο. Αν έχετε εγκαταστήσει και το Check Mate, θα έχετε δύο εικονίδια.</p>
+<p><img src="../icons/diary-192.png" class="icon" alt=""></p>
+<ul>
+<li><strong>Android:</strong> πατήστε <strong>📲 Εγκατάσταση</strong> κάτω δεξιά, ή Chrome ⋮ → <strong>Εγκατάσταση εφαρμογής</strong> (ή «Προσθήκη στην αρχική οθόνη»).</li>
+<li><strong>iPhone / iPad:</strong> ανοίξτε τον σύνδεσμο στο <strong>Safari</strong> → <strong>Κοινοποίηση</strong> (τετράγωνο με βέλος ↑) → <strong>Προσθήκη στην οικία</strong> → <strong>Προσθήκη</strong>.</li>
+<li><strong>Υπολογιστής:</strong> Chrome: εικονίδιο εγκατάστασης δεξιά στη γραμμή διευθύνσεων. Edge: ⋯ → Εφαρμογές → <strong>Εγκατάσταση αυτής της τοποθεσίας ως εφαρμογής</strong>.</li>
+</ul>
+</section><section class="card"><h2>Συχνά προβλήματα</h2>
+<table>
+<thead>
+<tr>
+<th>Πρόβλημα</th>
+<th>Τι κάνω</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>«Λάθος email ή κωδικός»</td>
+<td>Ελέγξτε το email. Αν γραφτήκατε με Google, πατήστε «Συνέχεια με Google». Αλλιώς «Ξέχασα τον κωδικό».</td>
+</tr>
+<tr>
+<td>Ξέχασα τον κωδικό</td>
+<td>Στην είσοδο: <strong>Ξέχασα τον κωδικό</strong> → email → <strong>Αποστολή συνδέσμου</strong>. Κοιτάξτε και στα ανεπιθύμητα.</td>
+</tr>
+<tr>
+<td>Δεν βλέπω τους αγώνες μου</td>
+<td>Ελέγξτε ότι μπήκατε με τον ίδιο λογαριασμό, και πατήστε «Καθαρισμός φίλτρων».</td>
+</tr>
+<tr>
+<td>Δεν βλέπω τις αναθέσεις του Check Mate εδώ</td>
+<td>Σωστά: το Ημερολόγιο είναι ξεχωριστό. Τις αναθέσεις τις βλέπετε στο Check Mate.</td>
+</tr>
+<tr>
+<td>Θέλω να βγω</td>
+<td>Κουμπί <strong>Αποσύνδεση</strong> κάτω δεξιά.</td>
+</tr>
+<tr>
+<td>Οτιδήποτε άλλο</td>
+<td>Τηλεφωνήστε στον κ. Νικόλα Παπαχατζή ή στον κ. Μιχάλη Τσιντομηνά.</td>
+</tr>
+</tbody>
+</table>
+<p class="note">Οι εικόνες είναι παραδείγματα με φανταστικά στοιχεία.</p></section></main>
+</body></html>

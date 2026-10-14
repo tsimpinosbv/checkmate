@@ -30,7 +30,9 @@ img{max-width:100%;height:auto}
 .side{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;margin:12px 0}
 .side img{width:min(260px,100%);border:1px solid var(--line);border-radius:12px;display:block}
 .side img.wide{width:min(340px,100%)}
-.side>p:first-child{flex:none;margin:0}
+.side>p:first-child{flex:none;margin:0;width:min(260px,100%)}
+.side>p:first-child:has(img.wide){width:min(340px,100%)}
+a{overflow-wrap:anywhere}
 .side>div{flex:1 1 260px;min-width:0}
 img.strip{display:block;width:min(360px,100%);margin:10px auto;border:1px solid var(--line);border-radius:12px}
 table{border-collapse:collapse;width:100%;font-size:15px;margin:8px 0}
@@ -132,7 +134,7 @@ td{border-bottom:1px solid var(--line);padding:8px 10px;vertical-align:top}
 <li>Φίλτρα ανά σεζόν, μήνα, θέση και πληρωμή, με σύνολα στην κορυφή. <strong>⬇ CSV</strong> για Excel και <strong>⬇ Αναφορά</strong> για εκτύπωση.</li>
 </ul>
 <p>Εγκαθίσταται χωριστά, με δικό του πράσινο εικονίδιο, με τον ίδιο τρόπο όπως το Check Mate (δείτε «Εγκατάσταση» πιο πάνω). Έτσι έχετε και τις δύο εφαρμογές στο κινητό.</p>
-<p><a class="btn primary" style="display:inline-flex" href="../imerologio.html">📅 Άνοιγμα Ημερολογίου</a></p>
+<p><a class="btn primary" style="display:inline-flex" href="../imerologio.html">📅 Άνοιγμα Ημερολογίου</a> <a class="btn" style="display:inline-flex;color:var(--blue);border-color:var(--line)" href="imerologio.html">📖 Οδηγίες Ημερολογίου</a></p>
 </div>
 </div>
 </section><section class="card"><h2>Συχνά προβλήματα</h2>
