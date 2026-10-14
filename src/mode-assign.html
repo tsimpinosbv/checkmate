@@ -147,7 +147,8 @@ button.pay:hover{border-color:currentColor}
 .card .teams{font-family:var(--f-display);font-weight:800;font-size:22px;line-height:1.1;text-transform:uppercase;overflow-wrap:anywhere}
 .card .venue{font-weight:600}
 .card .venue a{color:inherit;text-decoration:none;border-bottom:1px dashed currentColor}
-.card .tfull{font-size:13.5px;color:var(--muted);margin-top:-4px}
+.card .tfull{font-size:13.5px;color:var(--muted);margin-top:-4px;letter-spacing:.02em}
+.card .teams.full{font-size:19px;text-transform:none}
 .match .tfull{font-size:12.5px}
 .card .vfull{font-size:13px;color:var(--muted);margin-top:-4px}
 details.map summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--blue);list-style:none;display:inline-flex;gap:4px;align-items:center}
@@ -1505,7 +1506,9 @@ function renderUser(){
   const total=items.reduce((a,i)=>a+(+i.fee||0),0), paid=items.filter(i=>i.paid).reduce((a,i)=>a+(+i.fee||0),0);
   const card=(i,first)=>`<article class="card ${i.role} ${i.date<t?"past":""}">
     <div class="top"><div class="when">${whenMain(i)} <small>${whenSub(i)}</small></div>${first?`<span class="next">Επόμενη</span>`:""}</div>
-    <div class="teams">${teams(i)}</div>${(i.homeFull||i.awayFull)?`<div class="tfull">${esc([i.homeFull||i.home, i.awayFull||i.away].filter(Boolean).join(" – "))}</div>`:""}
+    ${(i.homeFull||i.awayFull)
+      ? `<div class="teams full">${esc([i.homeFull||i.home, i.awayFull||i.away].filter(Boolean).join(" – "))}</div><div class="tfull">${teams(i)}</div>`
+      : `<div class="teams">${teams(i)}</div>`}
     ${venueCard(i)}
     <dl>${i.comp?`<dt>Διοργάνωση</dt><dd>${esc(i.comp)}</dd>`:""}<dt>Θέση</dt><dd><span class="role ${i.role}">${ROLE[i.role]}</span></dd>
       ${i.partner?`<dt>${i.role==="op"?"Βοηθός":"Χειριστής"}</dt><dd>${esc(i.partner)}</dd>`:""}${i.vc?`<dt>VAR</dt><dd>${esc(i.vc)}</dd>`:""}${i.tv?`<dt>Κάλυψη</dt><dd>${esc(i.tv)}</dd>`:""}${i.dateTbc?`<dt>Σημ.</dt><dd>Η ημέρα/ώρα θα επιβεβαιωθεί</dd>`:""}
