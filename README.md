@@ -4,8 +4,6 @@
 
 **Εφαρμογή:** https://tsimpinosbv.github.io/checkmate
 
-**Οδηγός στησίματος**: https://tsimpinosbv.github.io/checkmate/odigos.html
-
 **Προσωπικό Ημερολόγιο** (ξεχωριστή εφαρμογή): https://tsimpinosbv.github.io/checkmate/imerologio.html
 
 ## Οδηγίες
@@ -40,8 +38,6 @@
 | `index.html` | Ανακατεύθυνση στο `checkmate.html` |
 | `src/mode-assign.html` | Λειτουργία «Αναθέσεις διαχειριστή» (η κύρια) |
 | `imerologio.html` | Το προσωπικό Ημερολόγιο (δημιουργείται από το `build.py`) |
-| `odigos.html` | Ο Οδηγός στησίματος: βήματα, tips, γήπεδα με κωδικούς και Google Maps (δημιουργείται από το `build.py`) |
-| `src/mode-guide.html`, `odigos.webmanifest` | Πηγή και εγκατάσταση του Οδηγού |
 | `src/mode-diary.html` | Πηγή του προσωπικού Ημερολογίου |
 | `help/imerologio.html`, `help/Check-Mate-Imerologio-Odigies.pdf` | Οδηγίες μόνο για το Ημερολόγιο (σελίδα και PDF) |
 | `imerologio.webmanifest`, `icons/diary-*` | Εγκατάσταση του Ημερολογίου ως ξεχωριστής εφαρμογής |

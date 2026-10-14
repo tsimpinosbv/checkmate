@@ -57,7 +57,6 @@
   const esc = s => String(s??"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   /* the same code serves two apps: the main Check Mate app and the personal diary (imerologio.html) */
   const DIARY = window.CM_APP === "diary";
-  const GUIDE = window.CM_APP === "guide";   // setup guide (odigos.html): same accounts and profile as Check Mate
   function rootEl(){ return document.getElementById("root") || document.body; }
 
   /* ---------- install on phone / computer ---------- */
@@ -119,7 +118,7 @@
   function showAuth(view="login", msg=null, email=""){
     const head = DIARY
       ? `<div class="brand"><img src="icons/diary-192.png" alt=""><div><h1>Check <span>Mate</span></h1><div class="sub">Ημερολόγιο · προσωπικό αρχείο αγώνων</div></div></div>`
-      : `<div class="brand"><img src="icons/icon-192.png" alt=""><div><h1>Check <span>Mate</span></h1><div class="sub">${GUIDE ? "Οδηγός στησίματος · γήπεδα" : "Video Check · αγώνες &amp; αναθέσεις"}</div></div></div>`;
+      : `<div class="brand"><img src="icons/icon-192.png" alt=""><div><h1>Check <span>Mate</span></h1><div class="sub">Video Check · αγώνες &amp; αναθέσεις</div></div></div>`;
     const note = msg ? `<div class="msg ${msg.ok?"ok":"err"}" role="${msg.ok?"status":"alert"}">${esc(msg.text)}</div>` : "";
     let body;
     if(view==="reset"){
