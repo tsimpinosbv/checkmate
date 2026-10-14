@@ -423,6 +423,10 @@ details.map summary::-webkit-details-marker{display:none}
 details.map iframe{display:block;width:100%;height:220px;border:0;border-radius:10px;margin-top:8px;background:var(--sq)}
 details.map .go{display:inline-block;margin-top:6px;font-size:13px;color:var(--blue)}
 .vrow{align-items:flex-start}
+.mergebox{flex:1 1 100%;border:1px dashed var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;font-size:13.5px}
+.mergebox[hidden]{display:none}
+.mergebox select{font:13.5px var(--f-body);padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);max-width:100%}
+.mergebox label{display:flex;gap:6px;align-items:center}
 .tfin{flex:1 1 220px;min-width:0;font:13px var(--f-body);padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
 .vfields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;flex:1 1 420px;min-width:0}
 .vfields input{font:13px var(--f-body);padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);min-width:0}
@@ -1570,7 +1574,9 @@ async function renderPeople(pending){
         return `<div class="prow"><div class="who"><b>${esc(r.name)}</b><span class="note">${counts[norm(r.name)]||0} αναθέσεις${uid?` · ${esc(pname(uid))} · ${esc(profilesAll[uid]?.email||"")}`:""}</span></div>
         ${uid?"":`<label class="pmail" title="Εδώ στέλνονται οι ειδοποιήσεις όσο το άτομο δεν έχει συνδεδεμένο λογαριασμό"><span aria-hidden="true">✉</span><input type="email" data-rmail="${r.id}" value="${esc(contacts[r.id]||"")}" placeholder="email για ειδοποιήσεις" aria-label="Email για ${esc(r.name)}"></label>`}
         <div class="actions">${uid?`<span class="tag on">✓ Βλέπει τις αναθέσεις του</span><button class="btn small danger" data-act="unlink" data-rid="${r.id}">Αποσύνδεση</button>`:waiting?`<span class="tag wait">Αίτημα σε αναμονή</span>`:`<span class="tag off">Χωρίς λογαριασμό</span>`}
-        ${!uid && !counts[norm(r.name)]?`<button class="btn small danger" data-act="delperson" data-rid="${r.id}" aria-label="Διαγραφή">✕</button>`:""}</div></div>`;}).join("")
+        ${roster.length>1?`<button class="btn small" data-act="mergeask" data-rid="${r.id}" title="Το ίδιο άτομο με άλλο όνομα: μεταφορά όλων των αναθέσεων σε ένα όνομα">⇄ Συγχώνευση</button>`:""}
+        ${!uid && !counts[norm(r.name)]?`<button class="btn small danger" data-act="delperson" data-rid="${r.id}" aria-label="Διαγραφή">✕</button>`:""}</div>
+        <div class="mergebox" id="merge-${r.id}" hidden></div></div>`;}).join("")
       : `<div class="empty"><strong>Κανένα άτομο ακόμα</strong><div>Τα ονόματα προστίθενται αυτόματα από τις αναθέσεις και το Excel.</div></div>`}
     </section>
     <div style="display:flex;flex-direction:column;gap:18px">
@@ -1855,6 +1861,36 @@ async function resync(pred, label){
 }
 
 /* ---------- link an account to a name in the programme ---------- */
+/* the same person under two names: move every assignment of src to dst, keep one account linked, delete src. No emails. */
+async function mergePerson(src, dst, keepUid){
+  const sk=norm(src.name), involved=new Set([links[src.id], links[dst.id], keepUid].filter(Boolean));
+  // links: src goes away; dst is linked to keepUid (or to nobody)
+  if(links[src.id]){ await w(()=>db.doc(`links/${src.id}`).delete()); delete links[src.id]; }
+  for(const [r,u] of Object.entries(links)) if(keepUid && u===keepUid && r!==dst.id){ await w(()=>db.doc(`links/${r}`).delete()); delete links[r]; }
+  const prevDst = links[dst.id];
+  if(keepUid){
+    await w(()=>db.doc(`links/${dst.id}`).set({uid:keepUid})); links[dst.id]=keepUid;
+    await w(()=>db.doc(`claims/${keepUid}`).set({rid:dst.id, status:"approved", at:Date.now(), decidedAt:Date.now()}, {merge:true}));
+  } else if(prevDst){ await w(()=>db.doc(`links/${dst.id}`).delete()); delete links[dst.id]; }
+  for(const u of involved) if(u!==keepUid){ await w(()=>db.doc(`claims/${u}`).delete()).catch(()=>{}); }
+  // notification email of src, if dst has none
+  if(contacts[src.id] && !contacts[dst.id]){ await w(()=>db.doc(`contacts/${dst.id}`).set({email:contacts[src.id]})); contacts[dst.id]=contacts[src.id]; }
+  // assignments
+  const list = sched.filter(m=>norm(m.op)===sk || norm(m.as)===sk || ["op","as"].some(r=>m.sync?.[r] && involved.has(m.sync[r])) || norm(m.op)===norm(dst.name) || norm(m.as)===norm(dst.name));
+  let n=0;
+  muteNotes++;
+  try{
+    for(const m of list){
+      const upd={...m}; let ch=false;
+      for(const r of ["op","as"]) if(norm(m[r])===sk){ upd[r]=dst.name; ch=true; }
+      if(ch){ upd.updatedAt=Date.now(); n++; }
+      await syncAndSave(upd, m);
+    }
+  } finally { muteNotes--; }
+  await w(()=>db.doc(`roster/${src.id}`).delete());
+  if(contacts[src.id]) await w(()=>db.doc(`contacts/${src.id}`).delete()).catch(()=>{});
+  return n;
+}
 async function linkAccount(uid, rid, prevUid){
   for(const [r,u] of Object.entries(links)) if(u===uid && r!==rid){ await w(()=>db.doc(`links/${r}`).delete()); delete links[r]; }
   const other = links[rid] && links[rid]!==uid ? links[rid] : prevUid;
@@ -1972,6 +2008,36 @@ document.addEventListener("click", async e => {
       await w(()=>db.doc(`claims/${uid}`).update({status:"rejected", decidedAt:Date.now()})).catch(()=>{});
       await resync(m=>m.sync?.op===uid||m.sync?.as===uid, "Αποσυνδέθηκε");
     }catch{ toast("Απέτυχε"); }
+  }
+  if(act==="mergeask"){
+    const src=roster.find(r=>r.id===b.dataset.rid); if(!src) return;
+    const box=$("merge-"+src.id); if(!box) return;
+    if(!box.hidden){ box.hidden=true; return; }
+    const others=roster.filter(r=>r.id!==src.id);
+    box.innerHTML = `<div><b>${esc(src.name)}</b> είναι το ίδιο άτομο με:</div>
+      <select data-mergeto="${src.id}"><option value="">— Διάλεξε όνομα —</option>${others.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join("")}</select>
+      <div class="mergeacc" data-mergeacc="${src.id}"></div>
+      <div class="note">Όλες οι αναθέσεις του «${esc(src.name)}» θα περάσουν στο όνομα που διαλέγεις και το «${esc(src.name)}» θα διαγραφεί. Δεν στέλνεται email.</div>
+      <div class="actions"><button class="btn small primary" data-act="mergedo" data-rid="${src.id}">Συγχώνευση</button><button class="btn small" data-act="mergeask" data-rid="${src.id}">Άκυρο</button></div>`;
+    box.hidden=false;
+    const sel=box.querySelector("select"), acc=box.querySelector(".mergeacc");
+    sel.onchange=()=>{
+      const dst=sel.value; if(!dst){ acc.innerHTML=""; return; }
+      const cands=[...new Set([links[src.id], links[dst]].filter(Boolean))];
+      if(!cands.length){ acc.innerHTML=""; return; }
+      const def = links[src.id] || links[dst];
+      acc.innerHTML = `<div>Ποιος λογαριασμός θα βλέπει τις αναθέσεις;</div>` + cands.map(u=>`<label><input type="radio" name="macc-${src.id}" value="${u}"${u===def?" checked":""}> ${esc(profilesAll[u]?.email || profilesAll[u]?.name || u)}</label>`).join("")
+        + `<label><input type="radio" name="macc-${src.id}" value=""> Κανένας</label>`;
+    };
+  }
+  if(act==="mergedo"){
+    const src=roster.find(r=>r.id===b.dataset.rid), dstId=document.querySelector(`[data-mergeto="${b.dataset.rid}"]`)?.value, dst=roster.find(r=>r.id===dstId);
+    if(!src || !dst){ toast("Διάλεξε το όνομα"); return; }
+    const pick=document.querySelector(`input[name="macc-${src.id}"]:checked`);
+    const keep = pick ? (pick.value||null) : (links[src.id]||links[dst.id]||null);
+    b.disabled=true;
+    try{ const n = await mergePerson(src, dst, keep); toast(`Συγχωνεύτηκε: ${n} αναθέσεις στο «${dst.name}»`); renderAdmin(); }
+    catch(err){ console.error(err); toast("Η συγχώνευση απέτυχε"); b.disabled=false; }
   }
   if(act==="delperson"){ try{ await w(()=>db.doc(`roster/${b.dataset.rid}`).delete()); }catch{ toast("Απέτυχε"); } }
   if(act==="resync"){ b.disabled=true; try{ await resync(()=>true, "Ολοκληρώθηκε"); }catch{ toast("Απέτυχε"); } b.disabled=false; }
