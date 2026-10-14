@@ -161,6 +161,18 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 .form .f input,.form .f select,.form .f textarea{width:100%}
 .form textarea{resize:vertical;min-height:56px}
 .box{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.combo{position:relative;display:flex}
+.combo input{flex:1;width:100%;padding-right:34px!important}
+.combo-btn{position:absolute;right:2px;top:50%;transform:translateY(-50%);border:0;background:none;width:30px;height:30px;border-radius:6px;color:var(--muted);font-size:14px;cursor:pointer}
+.combo-btn:hover{background:var(--sq);color:var(--ink)}
+.combo-list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:20;margin:0;padding:4px;list-style:none;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(20,33,58,.16);max-height:230px;overflow:auto}
+.combo-list[hidden]{display:none}
+.combo-list li{padding:8px 10px;border-radius:7px;cursor:pointer;display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:14px}
+.combo-list li[aria-selected="true"],.combo-list li:hover{background:var(--blue-bg)}
+.combo-list li small{color:var(--muted);font-size:12px;white-space:nowrap}
+.combo-list li small.warn{color:var(--warn)}
+.combo-list li.new{color:var(--blue);font-weight:600}
+.combo-list li.none{color:var(--muted);font-style:italic}
 .box .lbl{font-weight:700}
 .check{display:flex;gap:8px;align-items:center;font-weight:600;font-size:14px}
 .check input{width:18px;height:18px;accent-color:var(--good)}
@@ -232,12 +244,12 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
     </div>
     <div class="grid2">
       <div class="box"><span class="lbl">Χειριστής</span>
-        <div class="f"><label for="iOp">Άτομο</label><input id="iOp" list="dlPeople" autocomplete="off"></div>
+        <div class="f"><label for="iOp">Άτομο</label><div class="combo"><input id="iOp" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="iOpList" placeholder="Διάλεξε ή γράψε όνομα"><button type="button" class="combo-btn" tabindex="-1" aria-label="Λίστα ατόμων">▾</button><ul class="combo-list" id="iOpList" role="listbox" hidden></ul></div></div>
         <div class="f"><label for="iFeeOp">Αμοιβή (€)</label><input id="iFeeOp" type="number" min="0" step="0.5" inputmode="decimal"></div>
         <label class="check"><input type="checkbox" id="iPaidOp"> Πληρώθηκε</label>
       </div>
       <div class="box"><span class="lbl">Βοηθός</span>
-        <div class="f"><label for="iAs">Άτομο</label><input id="iAs" list="dlPeople" autocomplete="off"></div>
+        <div class="f"><label for="iAs">Άτομο</label><div class="combo"><input id="iAs" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="iAsList" placeholder="Διάλεξε ή γράψε όνομα"><button type="button" class="combo-btn" tabindex="-1" aria-label="Λίστα ατόμων">▾</button><ul class="combo-list" id="iAsList" role="listbox" hidden></ul></div></div>
         <div class="f"><label for="iFeeAs">Αμοιβή (€)</label><input id="iFeeAs" type="number" min="0" step="0.5" inputmode="decimal"></div>
         <label class="check"><input type="checkbox" id="iPaidAs"> Πληρώθηκε</label>
       </div>
@@ -813,9 +825,52 @@ $("btnImport").onclick=()=>openImport();
 
 /* ---------- assignment form ---------- */
 let editing=null;
+/* ---------- person picker: dropdown of all people, and free typing ---------- */
+function setupCombo(inp){
+  const wrap=inp.closest(".combo"), list=wrap.querySelector(".combo-list"), btn=wrap.querySelector(".combo-btn");
+  let items=[], active=-1;
+  const close=()=>{ list.hidden=true; inp.setAttribute("aria-expanded","false"); active=-1; };
+  const pick=v=>{ inp.value=v; close(); inp.dispatchEvent(new Event("change",{bubbles:true})); };
+  function busy(name){   // already assigned the same day (other match)
+    const d=$("iDate").value; if(!d) return false; const k=norm(name);
+    return sched.some(m=>m.id!==editing?.id && m.date===d && (norm(m.op)===k||norm(m.as)===k));
+  }
+  function render(filter){
+    const q=norm(filter||""), names=roster.map(r=>r.name);
+    const shown=names.filter(n=>!q||norm(n).includes(q));
+    const exact=names.some(n=>norm(n)===q);
+    items=[];
+    if(inp.value.trim()) items.push({v:"",label:"— Κανένα άτομο —",cls:"none"});
+    shown.forEach(n=>items.push({v:n,label:n,hint:busy(n)?"⚠ ίδια μέρα":""}));
+    if(q && !exact) items.push({v:filter.trim(),label:`+ Νέο: «${filter.trim()}»`,cls:"new"});
+    list.innerHTML = items.length ? items.map((it,i)=>`<li role="option" id="${inp.id}-o${i}" data-i="${i}" class="${it.cls||""}" aria-selected="${i===active}">${esc(it.label)}${it.hint?`<small class="warn">${it.hint}</small>`:""}</li>`).join("")
+      : `<li class="none">Κανένα άτομο ακόμα — γράψε ένα όνομα</li>`;
+    list.hidden=false; inp.setAttribute("aria-expanded","true");
+    const a=list.querySelector('[aria-selected="true"]'); if(a){ a.scrollIntoView({block:"nearest"}); inp.setAttribute("aria-activedescendant",a.id); }
+  }
+  inp.addEventListener("input",()=>{ active=-1; render(inp.value); });
+  inp.addEventListener("focus",()=>{ active=-1; render(""); });
+  inp.addEventListener("click",()=>{ if(list.hidden) render(""); });
+  btn.addEventListener("mousedown",e=>e.preventDefault());
+  btn.addEventListener("click",()=>{ if(list.hidden){ inp.focus(); render(""); } else close(); });
+  list.addEventListener("mousedown",e=>e.preventDefault());
+  list.addEventListener("click",e=>{ const li=e.target.closest("li[data-i]"); if(li) pick(items[+li.dataset.i].v); });
+  inp.addEventListener("keydown",e=>{
+    if(e.key==="ArrowDown"||e.key==="ArrowUp"){ e.preventDefault(); if(list.hidden){ render(inp.value); }
+      const n=items.length; if(!n) return; active = e.key==="ArrowDown" ? (active+1)%n : (active<=0?n-1:active-1); render(inp.value); }
+    else if(e.key==="Enter" && !list.hidden && active>=0){ e.preventDefault(); pick(items[active].v); }
+    else if(e.key==="Escape" && !list.hidden){ e.preventDefault(); e.stopPropagation(); close(); }
+    else if(e.key==="Tab") close();
+  });
+  inp.addEventListener("blur",()=>setTimeout(close,120));
+  return {close};
+}
+const combos=[setupCombo($("iOp")), setupCombo($("iAs"))];
+
 function openForm(m){
   editing=m;
   $("frmTitle").textContent = m?"Επεξεργασία ανάθεσης":"Νέα ανάθεση";
+  combos.forEach(c=>c.close());
   const v=(id,val)=>$(id).value=val??"";
   v("iDate",m?.date||today()); v("iTime",m?.time); v("iComp",m?.comp??ls.get("cm.comp","")); v("iHome",m?.home); v("iAway",m?.away);
   v("iVenue",m?.venue); v("iTv",m?.tv); v("iVc",m?.vc); v("iOp",m?.op); v("iAs",m?.as);
