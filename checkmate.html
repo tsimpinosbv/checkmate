@@ -1334,7 +1334,7 @@ let db=null, user=null, me=null, isAdmin=false;
 let sched=[], roster=[], links={}, claims=[], teamList=[], venues=[], fees={op:80,as:40}, contacts={}, profilesAll={}, notify={email:false, endpoint:""}, mail=null;
 let ready={sched:false,roster:false,links:false};
 let tab = ls.get("cm.tab","sched");
-const st = {month:"", person:"", paid:"", vis:"", q:""};
+const st = {season:"", month:"", person:"", paid:"", vis:"", q:""};
 
 function rosterByNorm(){ const m={}; roster.forEach(r=>m[norm(r.name)]=r); return m; }
 function uidForName(name){ if(!name) return null; const r=rosterByNorm()[norm(name)]; return r ? (links[r.id]||null) : null; }
@@ -1360,6 +1360,7 @@ function slotsOf(list){ const s=[]; list.forEach(m=>["op","as"].forEach(r=>{ if(
 function filteredSched(){
   const q=st.q.trim().toLowerCase(), pn=st.person?norm(st.person):"";
   return sched.filter(m =>
+    (!st.season || seasonOf(m.date)===st.season) &&
     (!st.month || (m.date||"").slice(0,7)===st.month) &&
     (!pn || norm(m.op)===pn || norm(m.as)===pn) &&
     (!st.paid || ["op","as"].some(r=>m[r] && (!pn||norm(m[r])===pn) && (st.paid==="yes")===!!m["paid_"+r])) &&
@@ -1372,7 +1373,9 @@ function renderAdmin(){
   if(!(ready.sched&&ready.roster&&ready.links)) return;
   seedLists();
   const pending = claims.filter(c=>c.status==="pending");
-  const months = uniq(sched.map(m=>(m.date||"").slice(0,7)));
+  const seasons = uniq(sched.map(m=>seasonOf(m.date))).reverse();
+  if(st.season && !seasons.includes(st.season)) st.season="";
+  const months = uniq(sched.filter(m=>!st.season||seasonOf(m.date)===st.season).map(m=>(m.date||"").slice(0,7)));
   if(st.month && !months.includes(st.month)) st.month="";
   const people = uniq([...roster.map(r=>r.name)]);
   const fill = (id,arr)=>$(id).innerHTML=uniq(arr).map(v=>`<option value="${esc(v)}">`).join("");
@@ -1388,11 +1391,11 @@ function renderAdmin(){
     </nav>
     <div id="tabBody"></div>
   </div>`;
-  if(tab==="sched") renderSched(months, people); else if(tab==="lists") renderLists(); else renderPeople(pending);
+  if(tab==="sched") renderSched(months, people, seasons); else if(tab==="lists") renderLists(); else renderPeople(pending);
   if(focus && $(focus)){ const el=$(focus); el.focus(); if(el.setSelectionRange && el.type==="search") el.setSelectionRange(el.value.length, el.value.length); }
 }
 
-function renderSched(months, people){
+function renderSched(months, people, seasons=[]){
   const list = filteredSched();
   const pn = st.person?norm(st.person):"";
   const slots = slotsOf(list).filter(s=>!pn||norm(s.name)===pn);
@@ -1407,6 +1410,7 @@ function renderSched(months, people){
     <div class="cell"><div class="k">Εκκρεμούν</div><div class="v or">${eur(total-paid)}</div></div>
   </section>
   <section class="filters" aria-label="Φίλτρα" style="margin-top:18px">
+    <div class="f"><label for="fSeason">Σεζόν</label><select id="fSeason">${opt(seasons.map(x=>[x,x]),st.season,"Όλες")}</select></div>
     <div class="f"><label for="fMonth">Μήνας</label><select id="fMonth">${opt(months.slice().reverse().map(m=>[m,MONTHS_FULL[+m.slice(5)-1]+" "+m.slice(0,4)]),st.month,"Όλοι")}</select></div>
     <div class="f"><label for="fPerson">Άτομο</label><select id="fPerson">${opt(people.map(p=>[p,p]),st.person,"Όλα")}</select></div>
     <div class="f"><label for="fPaid">Πληρωμή</label><select id="fPaid">${opt([["no","Εκκρεμεί"],["yes","Πληρώθηκε"]],st.paid,"Όλα")}</select></div>
@@ -1435,6 +1439,7 @@ function renderSched(months, people){
   }
   html += `</section>`;
   $("tabBody").innerHTML = html;
+  $("fSeason").onchange=e=>{st.season=e.target.value;st.month="";renderAdmin();};
   $("fMonth").onchange=e=>{st.month=e.target.value;renderAdmin();};
   $("fPerson").onchange=e=>{st.person=e.target.value;renderAdmin();};
   $("fPaid").onchange=e=>{st.paid=e.target.value;renderAdmin();};
@@ -1445,7 +1450,7 @@ function bulkIdle(list){
   const shown=list.filter(m=>!m.hidden).length, hid=list.length-shown;
   return `<span>Στη λίστα: ${shown} ορατές, ${hid} κρυφές στους χρήστες.</span>`+
     (hid?`<button type="button" class="btn small" data-act="bulk" data-to="show">Εμφάνιση όλων (${hid})</button>`:"")+
-    (shown?`<button type="button" class="btn small" data-act="bulk" data-to="hide">Απόκρυψη όλων (${shown})</button>`:"");
+    (shown?`<button type="button" class="btn small" data-act="bulk" data-to="hide">${st.season&&!st.month&&!st.person&&!st.paid&&!st.vis&&!st.q?`Απόκρυψη όλης της σεζόν ${esc(st.season)}`:"Απόκρυψη όλων"} (${shown})</button>`:"");
 }
 function slotHtml(m, r){
   if(!m[r]) return `<div class="slot"><span class="role ${r}">${ROLE[r]}</span><span class="empty-slot">— χωρίς άτομο —</span></div>`;
@@ -1666,14 +1671,16 @@ function queueNote(uid, ev){
 function emailForName(key){ const r = rosterByNorm()[key]; if(!r) return null; const uid = links[r.id]; return (uid && profilesAll[uid]?.email) || contacts[r.id] || null; }
 function nameForKey(key){ const r = rosterByNorm()[key]; const uid = r && links[r.id]; return (uid && profilesAll[uid]?.name) || ""; }   // programme names are "SURNAME I.", so no greeting by name
 function noteChanges(prev, m){
+  /* games that have already been played: only payment changes are worth an email */
+  const played = ((m||prev)?.date||"9999") < today() && ((prev||m)?.date||"9999") < today();
   for(const r of ["op","as"]){
     const o = prev && !prev.hidden && prev[r] ? norm(prev[r]) : null, n = m && !m.hidden && m[r] ? norm(m[r]) : null;
     const oi = o ? itemFor(prev, r) : null, ni = n ? itemFor(m, r) : null;
-    if(o && o !== n) queueNote(o, {type:"removed", item:oi});
-    if(n && n !== o) queueNote(n, {type:"added", item:ni});
+    if(o && o !== n && !played) queueNote(o, {type:"removed", item:oi});
+    if(n && n !== o && !played) queueNote(n, {type:"added", item:ni});
     if(n && n === o){
       const ch = NOTE_FIELDS.filter(([k]) => String(oi[k] ?? "") !== String(ni[k] ?? "")).map(([k,l]) => ({k, l, from:oi[k], to:ni[k]}));
-      if(ch.length) queueNote(n, {type:"changed", item:ni, ch});
+      if(ch.length && !played) queueNote(n, {type:"changed", item:ni, ch});
       if(!!oi.paid !== !!ni.paid) queueNote(n, {type: ni.paid ? "paid" : "unpaid", item:ni});
     }
   }
@@ -1799,7 +1806,7 @@ document.addEventListener("click", async e => {
   if(act==="add") openForm(null);
   if(act==="import") openImport();
   if(act==="edit"&&m) openForm(m);
-  if(act==="clear"){ Object.assign(st,{month:"",person:"",paid:"",vis:"",q:""}); renderAdmin(); }
+  if(act==="clear"){ Object.assign(st,{season:"",month:"",person:"",paid:"",vis:"",q:""}); renderAdmin(); }
   if(act==="logmode") $("logModeWrap").innerHTML = `<span class="confirm">Αλλαγή όλης της εφαρμογής σε «Ημερολόγιο αγώνων»; <button type="button" class="btn small primary" data-act="logmodeyes">Ναι</button><button type="button" class="btn small" data-act="logmodeno">Όχι</button></span>`;
   if(act==="logmodeno") $("logModeWrap").innerHTML = `<button class="btn small" type="button" data-act="logmode">Ενεργοποίηση ημερολογίου</button>`;
   if(act==="logmodeyes"){ try{ await db.doc("config/app").set({mode:"log", changedAt:Date.now()}); location.reload(); }catch{ toast("Η αλλαγή απέτυχε"); } }
@@ -1817,7 +1824,9 @@ document.addEventListener("click", async e => {
     const hide = b.dataset.to==="hide", list = filteredSched().filter(x=>!!x.hidden!==hide);
     $("bulk").innerHTML = `<span>Ενημέρωση ${list.length} αναθέσεων…</span>`;
     let n=0, failed=0;
-    for(const x of list){ try{ await syncAndSave({...x, hidden:hide, updatedAt:Date.now()}, x); n++; }catch{ failed++; } }
+    if(hide) muteNotes++;   // hiding many games at once (e.g. archiving a season) sends no "cancelled" emails
+    try{ for(const x of list){ try{ await syncAndSave({...x, hidden:hide, updatedAt:Date.now()}, x); n++; }catch{ failed++; } } }
+    finally{ if(hide) muteNotes--; }
     toast(failed?`Έγιναν ${n}, απέτυχαν ${failed}. Δοκίμασε ξανά.`:(hide?`Κρύφτηκαν ${n} αναθέσεις`:`Εμφανίζονται ${n} αναθέσεις`));
     if($("bulk")) $("bulk").innerHTML = bulkIdle(filteredSched());
   }
