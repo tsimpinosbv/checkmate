@@ -414,6 +414,19 @@ button.pay:hover{border-color:currentColor}
 .card .when small{color:var(--muted);font-size:12.5px}
 .card .teams{font-family:var(--f-display);font-weight:800;font-size:22px;line-height:1.1;text-transform:uppercase;overflow-wrap:anywhere}
 .card .venue{font-weight:600}
+.card .venue a{color:inherit;text-decoration:none;border-bottom:1px dashed currentColor}
+.card .vfull{font-size:13px;color:var(--muted);margin-top:-4px}
+details.map summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--blue);list-style:none;display:inline-flex;gap:4px;align-items:center}
+details.map summary::-webkit-details-marker{display:none}
+details.map iframe{display:block;width:100%;height:220px;border:0;border-radius:10px;margin-top:8px;background:var(--sq)}
+details.map .go{display:inline-block;margin-top:6px;font-size:13px;color:var(--blue)}
+.vrow{align-items:flex-start}
+.vfields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;flex:1 1 420px;min-width:0}
+.vfields input{font:13px var(--f-body);padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);min-width:0}
+@media (max-width:720px){.vfields{grid-template-columns:1fr}}
+.vtools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+a.mlink{color:var(--blue);text-decoration:none}
+a.btn{text-decoration:none;color:inherit}
 .card dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:0;font-size:13.5px}
 .card dt{color:var(--muted)} .card dd{margin:0;overflow-wrap:anywhere}
 .card .bottom{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid var(--line);padding-top:8px}
@@ -1431,7 +1444,7 @@ function renderSched(months, people, seasons=[]){
       if((m.comp||"")!==lastComp){ lastComp=m.comp||""; if(lastComp) html+=`<div class="comp-head">${esc(lastComp)}</div>`; }
       html += `<div class="row${m.hidden?" is-hidden":""}">
         <div class="date c-date">${whenMain(m)}<small>${whenSub(m)}</small><button type="button" class="vis${m.hidden?" off":""}" data-act="vis" data-id="${m.id}" title="${m.hidden?"Οι χρήστες δεν τη βλέπουν. Πάτα για εμφάνιση.":"Τη βλέπουν τα άτομα της ανάθεσης. Πάτα για απόκρυψη."}">${m.hidden?"Κρυφή":"Ορατή"}</button></div>
-        <div class="match c-match"><b>${teams(m)}</b><div class="meta">${[m.venue,m.tv,m.vc].filter(Boolean).map(esc).join(" · ")||"&nbsp;"}</div></div>
+        <div class="match c-match"><b>${teams(m)}</b><div class="meta">${[m.venue?(mapUrl(m.venue)?`<a class="mlink" href="${esc(mapUrl(m.venue))}" target="_blank" rel="noopener" title="${esc(venueOf(m.venue)?.full||"Χάρτης")}">📍 ${esc(m.venue)}</a>`:esc(m.venue)):"",esc(m.tv||""),esc(m.vc||"")].filter(Boolean).join(" · ")||"&nbsp;"}</div></div>
         ${slotHtml(m,"op")}${slotHtml(m,"as")}
         <div class="c-edit"><button class="more" data-act="edit" data-id="${m.id}" aria-label="Επεξεργασία">✎</button></div>
       </div>`;
@@ -1486,19 +1499,26 @@ function renderLists(){
       : `<div class="empty"><strong>Καμία ομάδα ακόμα</strong><div>Προστίθενται και αυτόματα όταν γράφεις νέα ομάδα σε ανάθεση ή στο Excel.</div></div>`}
       </div>
     </section>
-    <section class="panel" style="align-self:start">
-      <div class="ph"><h2 class="sec">Γήπεδα<span class="count">${venues.length}</span></h2></div>
+    <section class="panel" style="grid-column:1/-1">
+      <div class="ph"><h2 class="sec">Γήπεδα<span class="count">${venues.length}</span></h2>
+        <div class="vtools"><button class="btn small" type="button" data-act="vimport">⬆ Excel γηπέδων</button><button class="btn small" type="button" data-act="vexport">⬇ Excel γηπέδων</button><input type="file" id="vFile" accept=".xlsx,.xls,.csv" hidden></div></div>
       <form id="addVenue" class="pbody addrow">
-        <div class="f"><label for="newVenue">Νέο γήπεδο</label><input id="newVenue" placeholder="π.χ. ΜΕΛΙΝΑ ΜΕΡΚΟΥΡΗ" autocomplete="off"></div>
+        <div class="f"><label for="newVenue">Νέο γήπεδο</label><input id="newVenue" placeholder="π.χ. ΣΕΦ" autocomplete="off"></div>
         <button class="btn small" type="submit">+ Προσθήκη</button>
       </form>
       ${missV.length?`<div class="pbody note" style="border-top:1px solid var(--line)">${missV.length} γήπεδα του προγράμματος δεν είναι στη λίστα: ${missV.slice(0,6).map(esc).join(", ")}${missV.length>6?"…":""} <button class="btn small" type="button" data-act="addmissing" data-kind="venues">Προσθήκη όλων</button></div>`:""}
-      <div class="scroll" style="max-height:560px">
-      ${venues.length? venues.map(x=>`<div class="prow"><div class="who"><b>${esc(x.name)}</b><span class="note">${cnt(cVen[norm(x.name)]||0)}</span></div>
-        <button class="btn small danger" type="button" data-act="dellist" data-kind="venues" data-id="${x.id}" aria-label="Διαγραφή ${esc(x.name)}">✕</button></div>`).join("")
+      <div class="scroll" style="max-height:620px">
+      ${venues.length? venues.map(x=>`<div class="prow vrow"><div class="who" style="min-width:110px"><b>${esc(x.name)}</b><span class="note">${cnt(cVen[norm(x.name)]||0)}</span></div>
+        <div class="vfields">
+          <input id="vf-full-${x.id}" data-vf="full" data-id="${x.id}" value="${esc(x.full||"")}" placeholder="Πλήρες όνομα" aria-label="Πλήρες όνομα ${esc(x.name)}">
+          <input id="vf-address-${x.id}" data-vf="address" data-id="${x.id}" value="${esc(x.address||"")}" placeholder="Διεύθυνση, πόλη" aria-label="Διεύθυνση ${esc(x.name)}">
+          <input id="vf-map-${x.id}" data-vf="map" data-id="${x.id}" value="${esc(x.map||"")}" placeholder="Σύνδεσμος Google Maps ή συντεταγμένες" aria-label="Χάρτης ${esc(x.name)}">
+        </div>
+        <div class="ulink">${mapUrl(x.name)?`<a class="btn small" href="${esc(mapUrl(x.name))}" target="_blank" rel="noopener">📍 Χάρτης</a>`:""}
+        <button class="btn small danger" type="button" data-act="dellist" data-kind="venues" data-id="${x.id}" aria-label="Διαγραφή ${esc(x.name)}">✕</button></div></div>`).join("")
       : `<div class="empty"><strong>Κανένα γήπεδο ακόμα</strong></div>`}
       </div>
-      <div class="pbody note" style="border-top:1px solid var(--line)">Οι λίστες εμφανίζονται στη φόρμα της ανάθεσης (Γηπεδούχος, Φιλοξενούμενη, Γήπεδο). Η διαγραφή από τη λίστα δεν αλλάζει τους αγώνες που υπάρχουν ήδη.</div>
+      <div class="pbody note" style="border-top:1px solid var(--line);display:block">Γράψτε το γήπεδο όπως εμφανίζεται στο πρόγραμμα (π.χ. το αρκτικόλεξο ΣΕΦ) και δίπλα το πλήρες όνομα και τη διεύθυνση ή έναν σύνδεσμο Google Maps. Οι χρήστες βλέπουν τότε το πλήρες όνομα και τον χάρτη στις αναθέσεις τους. Μπορείτε να τα φορτώσετε όλα μαζί με <b>⬆ Excel γηπέδων</b>: στήλες Αρκτικόλεξο · Πλήρες όνομα · Διεύθυνση · Χάρτης. Το <b>⬇ Excel γηπέδων</b> σας δίνει τη λίστα έτοιμη για συμπλήρωση.</div>
     </section>
   </div>`;
   $("addTeam").onsubmit = async e => { e.preventDefault(); const n=$("newTeam").value.trim(), v=$("newTeamVenue").value.trim(); if(!n) return;
@@ -1509,6 +1529,12 @@ function renderLists(){
     try{ await ensureLists([], [n]); toast("Το γήπεδο προστέθηκε"); renderAdmin(); }catch{ toast("Η προσθήκη απέτυχε"); } };
 }
 document.addEventListener("change", async e => {
+  const vf = e.target.closest?.("[data-vf]");
+  if(vf && isAdmin){
+    const f=vf.dataset.vf, id=vf.dataset.id, val=vf.value.trim();
+    try{ await w(()=>db.doc(`venues/${id}`).update({[f]:val})); const v=venues.find(x=>x.id===id); if(v){ v[f]=val; await resyncVenues([v.name]); } toast("Αποθηκεύτηκε"); }catch{ toast("Η αποθήκευση απέτυχε"); }
+    return;
+  }
   const inp = e.target.closest?.("[data-teamvenue]"); if(!inp || !isAdmin) return;
   const v = inp.value.trim();
   try{ await db.doc(`teams/${inp.dataset.teamvenue}`).update({venue:v}); if(v) await ensureLists([], [v]); toast(v?"Η έδρα αποθηκεύτηκε":"Η έδρα αφαιρέθηκε"); }catch{ toast("Η αποθήκευση απέτυχε"); }
@@ -1690,6 +1716,10 @@ const EV_TITLE = {added:"Νέα ανάθεση", removed:"Ακύρωση ανά�
 const EV_COLOR = {added:"#1d8a52", removed:"#c43a2c", changed:"#2a7fd4", paid:"#1d8a52", unpaid:"#b4530b", test:"#2a7fd4"};
 const fmtVal = (k, v) => k==="date" ? (v ? `${dayName(v)} ${fmtDate(v)}` : "—") : k==="fee" ? eur(v) : (v || "—");
 function evMatch(i){ return `${i.home||""}${i.away?" – "+i.away:""}`; }
+function venueMailHtml(name){
+  const v = venueOf(name), url = mapUrl(name);
+  return esc(name) + (v?.full ? ` – ${esc(v.full)}` : "") + (v?.address ? `<br><span style="color:#5d6b84">${esc(v.address)}</span>` : "") + (url ? ` <a href="${esc(url)}" style="color:#2a7fd4">📍 Χάρτης</a>` : "");
+}
 function mailHtml(p, evs){
   const h = s => esc(s);
   const app = location.origin + location.pathname;
@@ -1698,7 +1728,7 @@ function mailHtml(p, evs){
     const i = ev.item || {};
     const when = `${i.dateText || (i.date ? dayName(i.date)+" "+fmtDate(i.date) : "")}${i.time||i.timeText ? " · "+(i.time||i.timeText) : ""}`;
     const rows = [["Αγώνας", evMatch(i)], ["Διοργάνωση", i.comp], ["Ημερομηνία", when], ["Γήπεδο", i.venue], ["Θέση", ROLE[i.role]], ["Συνεργάτης", i.partner], ["Αμοιβή", eur(i.fee)], ["Κάλυψη / VAR", [i.tv,i.vc].filter(Boolean).join(" · ")], ["Σημειώσεις", i.notes]]
-      .filter(([,v]) => v).map(([k,v]) => `<tr><td style="padding:3px 12px 3px 0;color:#5d6b84;white-space:nowrap;vertical-align:top">${k}</td><td style="padding:3px 0">${h(v)}</td></tr>`).join("");
+      .filter(([,v]) => v).map(([k,v]) => `<tr><td style="padding:3px 12px 3px 0;color:#5d6b84;white-space:nowrap;vertical-align:top">${k}</td><td style="padding:3px 0">${k==="Γήπεδο" ? venueMailHtml(v) : h(v)}</td></tr>`).join("");
     const diff = ev.ch ? `<div style="margin:8px 0 0;padding:8px 10px;background:#fdeedd;border-radius:8px"><b>Τι άλλαξε:</b><br>${ev.ch.map(c => `${c.l}: <s style="color:#8a94a6">${h(fmtVal(c.k,c.from))}</s> → <b>${h(fmtVal(c.k,c.to))}</b>`).join("<br>")}</div>` : "";
     return `<div style="border:1px solid #d9dfea;border-left:4px solid ${EV_COLOR[ev.type]};border-radius:10px;padding:12px 14px;margin:0 0 12px">
       <div style="font-weight:700;color:${EV_COLOR[ev.type]};margin-bottom:6px">${EV_TITLE[ev.type]}</div>
@@ -1735,7 +1765,21 @@ document.addEventListener("visibilitychange", () => { if(document.visibilityStat
 function itemFor(m, r){
   const o = r==="op"?"as":"op";
   return {match:m.id, date:m.date||"", time:m.time||"", dateText:m.dateText||"", timeText:m.timeText||"", dateTbc:!!m.dateTbc, comp:m.comp||"", venue:m.venue||"", home:m.home||"", away:m.away||"",
-    tv:m.tv||"", vc:m.vc||"", role:r, partner:m[o]||"", fee:+m["fee_"+r]||0, paid:!!m["paid_"+r], paidDate:m["paidDate_"+r]||"", notes:m.notes||""};
+    tv:m.tv||"", vc:m.vc||"", role:r, partner:m[o]||"", fee:+m["fee_"+r]||0, paid:!!m["paid_"+r], paidDate:m["paidDate_"+r]||"", notes:m.notes||"",
+    ...venueExtra(m.venue)};
+}
+/* venue details travel with each user's copy of the assignment (users cannot read the venues list itself) */
+function venueExtra(name){
+  const v = venueOf(name);
+  return {venueFull:v?.full||"", venueAddr:v?.address||"", venueMap:mapUrl(name), venueEmbed:mapEmbed(name)};
+}
+/* after venue details change, refresh the users' copies of the visible games at those venues (no emails) */
+async function resyncVenues(names){
+  const keys = new Set(names.map(norm).filter(Boolean)); if(!keys.size) return 0;
+  const list = sched.filter(m=>!m.hidden && keys.has(norm(m.venue)) && (m.sync?.op || m.sync?.as));
+  muteNotes++;
+  try{ for(const m of list){ try{ await syncAndSave(m, m); }catch{} } } finally { muteNotes--; }
+  return list.length;
 }
 async function syncAndSave(m, prev){
   const sync = m.hidden ? {op:null, as:null} : {op:uidForName(m.op), as:uidForName(m.as)};
@@ -1756,6 +1800,13 @@ async function deleteMatch(m){
 const uniqNorm = arr => { const seen=new Set(), out=[]; arr.forEach(v=>{ const s=(v||"").trim(), k=norm(s); if(s && !seen.has(k)){ seen.add(k); out.push(s); } }); return out.sort((a,b)=>a.localeCompare(b,"el")); };
 /* the saved lists (tab «Ομάδες & γήπεδα») are the source; until they exist, names come from the programme */
 function teamNames(){ return teamList.length ? uniqNorm(teamList.map(t=>t.name)) : uniqNorm(sched.flatMap(m=>[m.home,m.away])); }
+/* venues: name = as written in the programme (often an acronym, e.g. ΣΕΦ), full name, address, map (Google Maps link or "lat,lng") */
+const venueOf = name => { const k=norm(name); return k ? venues.find(v=>norm(v.name)===k) || null : null; };
+const COORD = /^\s*-?\d{1,2}\.\d+\s*,\s*-?\d{1,3}\.\d+\s*$/;
+function venueQuery(v){ if(v.map && COORD.test(v.map)) return v.map.replace(/\s/g,""); return [v.full||v.name, v.address].filter(Boolean).join(", "); }
+const hasPlace = v => !!(v && (v.full || v.address || v.map));
+function mapUrl(name){ const v=venueOf(name); if(!hasPlace(v)) return ""; if(/^https?:\/\//i.test(v.map||"")) return v.map; return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(venueQuery(v)); }
+function mapEmbed(name){ const v=venueOf(name); if(!v || !(v.full || v.address || COORD.test(v.map||""))) return ""; return "https://maps.google.com/maps?q="+encodeURIComponent(venueQuery(v))+"&z=15&output=embed"; }
 function venueNames(){ return venues.length ? uniqNorm(venues.map(v=>v.name)) : uniqNorm([...teamList.map(t=>t.venue), ...sched.map(m=>m.venue)]); }
 let listsReady={teams:false,venues:false}, listsSeeded=false;
 async function seedLists(){   // first time only: fill the lists from the programme
@@ -1852,6 +1903,12 @@ document.addEventListener("click", async e => {
   if(act==="dellist"){
     const kind=b.dataset.kind, id=b.dataset.id;
     try{ await w(()=>db.doc(`${kind}/${id}`).delete()); if(kind==="teams") teamList=teamList.filter(x=>x.id!==id); else venues=venues.filter(x=>x.id!==id); toast("Αφαιρέθηκε από τη λίστα"); renderAdmin(); }catch{ toast("Η διαγραφή απέτυχε"); }
+  }
+  if(act==="vimport"){ const f=$("vFile"); f.value=""; f.onchange=()=>{ if(f.files[0]) importVenues(f.files[0]); }; f.click(); }
+  if(act==="vexport"){
+    try{ const X=await loadXLSX(); const aoa=[["Αρκτικόλεξο","Πλήρες όνομα","Διεύθυνση","Χάρτης (σύνδεσμος ή συντεταγμένες)"], ...venues.map(v=>[v.name, v.full||"", v.address||"", v.map||""])];
+      const ws=X.utils.aoa_to_sheet(aoa); ws["!cols"]=[{wch:16},{wch:40},{wch:40},{wch:45}]; const wb=X.utils.book_new(); X.utils.book_append_sheet(wb, ws, "Γήπεδα"); X.writeFile(wb, "CheckMate_Gipeda.xlsx"); }
+    catch{ toast("Η εξαγωγή απέτυχε"); }
   }
   if(act==="addmissing"){
     b.disabled=true;
@@ -1997,6 +2054,34 @@ $("frm").addEventListener("submit", async e=>{
 
 /* ---------- Excel import ---------- */
 let impRows=[];
+/* Excel with venues: Αρκτικόλεξο | Πλήρες όνομα | Διεύθυνση | Χάρτης. Header row optional; columns are found by their titles when present. */
+async function importVenues(file){
+  try{
+    const X = await loadXLSX();
+    const wb = X.read(await file.arrayBuffer(), {type:"array"});
+    const rows = X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, defval:"", raw:false}).map(r=>r.map(c=>String(c??"").trim())).filter(r=>r.some(Boolean));
+    if(!rows.length){ toast("Το αρχείο είναι άδειο"); return; }
+    let ci = {name:0, full:1, address:2, map:3}, start = 0;
+    const head = rows[0].map(c=>c.toUpperCase());
+    const isHead = head.some(c=>/ΑΡΚΤΙΚ|ΣΥΝΤΟΜ|ΓΗΠΕΔ|ΟΝΟΜΑ|ΔΙΕΥΘ|ΧΑΡΤ|MAP|ΚΩΔ/.test(c)) && !rows[0].some(c=>/^https?:/i.test(c));
+    if(isHead){
+      start = 1; const f = re => head.findIndex(c=>re.test(c));
+      const n=f(/ΑΡΚΤΙΚ|ΣΥΝΤΟΜ|ΚΩΔ/), fu=f(/ΠΛΗΡ|ΟΝΟΜΑΣΙΑ|ΠΕΡΙΓΡ|ΟΝΟΜΑ/), ad=f(/ΔΙΕΥΘ|ΠΟΛΗ|ΠΕΡΙΟΧ/), mp=f(/ΧΑΡΤ|MAP|ΣΥΝΔΕΣ|ΣΥΝΤΕΤ|LINK/);
+      if(n>=0) ci.name=n; if(fu>=0 && fu!==ci.name) ci.full=fu; if(ad>=0) ci.address=ad; if(mp>=0) ci.map=mp;
+    }
+    let added=0, updated=0; const touched=[];
+    for(const r of rows.slice(start)){
+      const name = r[ci.name]; if(!name) continue;
+      const d = {}; for(const k of ["full","address","map"]){ const v=r[ci[k]]; if(v) d[k]=v; }
+      if(!d.map){ const link=r.find((c,i)=>i!==ci.name && (/^https?:\/\//i.test(c) || COORD.test(c))); if(link) d.map=link; }
+      const ex = venueOf(name);
+      if(ex){ if(Object.keys(d).length && Object.entries(d).some(([k,v])=>ex[k]!==v)){ await w(()=>db.doc(`venues/${ex.id}`).update(d)); Object.assign(ex,d); updated++; touched.push(name); } }
+      else { const ref = await w(()=>db.collection("venues").add({name, ...d})); if(!venues.some(x=>x.id===ref.id)) venues.push({id:ref.id, name, ...d}); added++; touched.push(name); }
+    }
+    await resyncVenues(touched);
+    toast(`Γήπεδα: ${added} νέα, ${updated} ενημερώθηκαν`); renderAdmin();
+  }catch(err){ console.error(err); toast("Δεν διαβάστηκε το αρχείο. Ελέγξτε ότι είναι Excel ή CSV."); }
+}
 function loadXLSX(){
   if(window.XLSX) return Promise.resolve(window.XLSX);
   return new Promise((res,rej)=>{ const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; s.onload=()=>res(window.XLSX); s.onerror=()=>rej(new Error("load")); document.head.appendChild(s); });
@@ -2213,6 +2298,12 @@ async function startUser(){
   db.collection("roster").limit(1000).onSnapshot(s=>{ uRoster=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); renderUser(); }, ()=>{});
   db.collection(`mine/${uid}/items`).limit(2000).onSnapshot(s=>{ myItems=s.docs.map(d=>({id:d.id,...d.data()})); renderUser(); }, ()=>{});
 }
+function venueCard(i){
+  const name = i.venue, v = {full:i.venueFull, address:i.venueAddr}, url = i.venueMap||"", emb = i.venueEmbed||"";
+  return `<div class="venue">📍 ${url?`<a href="${esc(url)}" target="_blank" rel="noopener">${esc(name||"—")}</a>`:esc(name||"—")}</div>`
+    + (v?.full || v?.address ? `<div class="vfull">${esc([v.full, v.address].filter(Boolean).join(" · "))}</div>` : "")
+    + (emb ? `<details class="map"><summary>🗺 Χάρτης</summary><iframe src="${esc(emb)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Χάρτης ${esc(name)}"></iframe><a class="go" href="${esc(url)}" target="_blank" rel="noopener">Άνοιγμα στο Google Maps ↗</a></details>` : "");
+}
 function renderUser(){
   if(myClaim===undefined) return;
   const greet = me?.name ? `Γεια σου, ${esc(me.name.split(" ")[0])}` : "Καλώς ήρθες";
@@ -2244,7 +2335,7 @@ function renderUser(){
   const card=(i,first)=>`<article class="card ${i.role} ${i.date<t?"past":""}">
     <div class="top"><div class="when">${whenMain(i)} <small>${whenSub(i)}</small></div>${first?`<span class="next">Επόμενη</span>`:""}</div>
     <div class="teams">${teams(i)}</div>
-    <div class="venue">📍 ${esc(i.venue||"—")}</div>
+    ${venueCard(i)}
     <dl>${i.comp?`<dt>Διοργάνωση</dt><dd>${esc(i.comp)}</dd>`:""}<dt>Θέση</dt><dd><span class="role ${i.role}">${ROLE[i.role]}</span></dd>
       ${i.partner?`<dt>${i.role==="op"?"Βοηθός":"Χειριστής"}</dt><dd>${esc(i.partner)}</dd>`:""}${i.vc?`<dt>VAR</dt><dd>${esc(i.vc)}</dd>`:""}${i.tv?`<dt>Κάλυψη</dt><dd>${esc(i.tv)}</dd>`:""}${i.dateTbc?`<dt>Σημ.</dt><dd>Η ημέρα/ώρα θα επιβεβαιωθεί</dd>`:""}
       ${i.notes?`<dt>Σημειώσεις</dt><dd>${esc(i.notes)}</dd>`:""}</dl>
