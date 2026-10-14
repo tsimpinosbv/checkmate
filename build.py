@@ -162,3 +162,54 @@ diary=f'''<!doctype html>
 </html>
 '''
 open('imerologio.html','w').write(diary)
+
+
+# ---------- third page: setup guide (odigos.html) — same accounts as Check Mate, venues shared with the schedule ----------
+s4,m4,j4=split(open('src/mode-guide.html').read())
+guide=f'''<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Check Mate · Οδηγός</title>
+<meta name="theme-color" content="#14213a">
+<meta name="description" content="Στήσιμο video check, tips και γήπεδα με οδηγίες Google Maps.">
+<link rel="manifest" href="odigos.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Οδηγός">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+{fonts}
+<style>
+#boot{{padding:60px 16px;text-align:center;font:15px "Commissioner",system-ui,sans-serif;color:#5d6b84}}
+{s4}
+</style>
+</head>
+<body>
+<div id="root" lang="el"><div id="boot">Φόρτωση…</div></div>
+<template id="tpl-guide">{m4}</template>
+
+<script>window.CM_APP = "guide";</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+{backend}
+</script>
+<script>
+/* mount the guide once signed in (the sign-in screen is drawn into #root until then) */
+(async () => {{
+  await claude.use("db");
+  document.getElementById("root").replaceChildren(document.getElementById("tpl-guide").content.cloneNode(true));
+  (function(){{
+{j4[-1]}
+  }})();
+}})();
+</script>
+</body>
+</html>
+'''
+open('odigos.html','w').write(guide)

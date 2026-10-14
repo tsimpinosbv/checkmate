@@ -146,6 +146,9 @@ button.pay:hover{border-color:currentColor}
 .card .when small{color:var(--muted);font-size:12.5px}
 .card .teams{font-family:var(--f-display);font-weight:800;font-size:22px;line-height:1.1;text-transform:uppercase;overflow-wrap:anywhere}
 .card .venue{font-weight:600}
+.card .guide-link{font-weight:600;font-size:13.5px;color:var(--blue);text-decoration:none;white-space:nowrap}
+.card .guide-link:hover{text-decoration:underline}
+a.btn.guide-btn{text-decoration:none;color:var(--ink);margin-left:auto}
 .card dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:0;font-size:13.5px}
 .card dt{color:var(--muted)} .card dd{margin:0;overflow-wrap:anywhere}
 .card .bottom{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid var(--line);padding-top:8px}
@@ -212,6 +215,7 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
         <div class="sub" id="subtitle">Video Check · αναθέσεις αγώνων</div>
       </div>
     </div>
+    <a class="btn guide-btn" href="odigos.html" title="Στήσιμο, tips και γήπεδα με οδηγίες Google Maps">Οδηγός στησίματος</a>
     <div class="actions" id="adminActions" hidden>
       <button class="btn" id="btnXlsx" type="button" title="Αναθέσεις και στατιστικά σε Excel, με τα τρέχοντα φίλτρα">⬇ Excel</button>
       <button class="btn" id="btnCsv" type="button">⬇ CSV</button>
@@ -1294,7 +1298,7 @@ function renderUser(){
   const card=(i,first)=>`<article class="card ${i.role} ${i.date<t?"past":""}">
     <div class="top"><div class="when">${whenMain(i)} <small>${whenSub(i)}</small></div>${first?`<span class="next">Επόμενη</span>`:""}</div>
     <div class="teams">${teams(i)}</div>
-    <div class="venue">📍 ${esc(i.venue||"—")}</div>
+    <div class="venue">📍 ${esc(i.venue||"—")}${i.venue?` <a class="guide-link" href="odigos.html?venue=${encodeURIComponent(i.venue)}#venues">Κωδικός &amp; οδηγίες ›</a>`:""}</div>
     <dl>${i.comp?`<dt>Διοργάνωση</dt><dd>${esc(i.comp)}</dd>`:""}<dt>Θέση</dt><dd><span class="role ${i.role}">${ROLE[i.role]}</span></dd>
       ${i.partner?`<dt>${i.role==="op"?"Βοηθός":"Χειριστής"}</dt><dd>${esc(i.partner)}</dd>`:""}${i.vc?`<dt>VAR</dt><dd>${esc(i.vc)}</dd>`:""}${i.tv?`<dt>Κάλυψη</dt><dd>${esc(i.tv)}</dd>`:""}${i.dateTbc?`<dt>Σημ.</dt><dd>Η ημέρα/ώρα θα επιβεβαιωθεί</dd>`:""}
       ${i.notes?`<dt>Σημειώσεις</dt><dd>${esc(i.notes)}</dd>`:""}</dl>
