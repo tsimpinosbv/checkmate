@@ -132,6 +132,8 @@ button.pay:hover{border-color:currentColor}
 .ulink select{font:13px var(--f-body);padding:5px 6px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);max-width:180px}
 .ph .count{font-size:13px;color:var(--muted);font-weight:500;margin-left:6px}
 .scroll{max-height:420px;overflow:auto}
+.addrow{display:flex!important;flex-direction:row!important;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.addrow .f{flex:1 1 160px;min-width:0}.addrow .f input{width:100%}
 #notifyForm textarea{width:100%;font:inherit;font-size:14px;resize:vertical}
 
 /* user cards */
@@ -234,11 +236,11 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
     <label class="check"><input type="checkbox" id="iTbc"> Η ημερομηνία είναι της αγωνιστικής (προς επιβεβαίωση)</label>
     <div class="f"><label for="iComp">Διοργάνωση</label><input id="iComp" list="dlComps" autocomplete="off" placeholder="π.χ. PLAY OFF VOLLEY LEAGUE"></div>
     <div class="grid2">
-      <div class="f"><label for="iHome">Γηπεδούχος</label><input id="iHome" list="dlTeams" required autocomplete="off"></div>
-      <div class="f"><label for="iAway">Φιλοξενούμενη</label><input id="iAway" list="dlTeams" autocomplete="off"></div>
+      <div class="f"><label for="iHome">Γηπεδούχος</label><div class="combo"><input id="iHome" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="iHomeList" required placeholder="Διάλεξε ή γράψε ομάδα"><button type="button" class="combo-btn" tabindex="-1" aria-label="Λίστα">▾</button><ul class="combo-list" id="iHomeList" role="listbox" hidden></ul></div></div>
+      <div class="f"><label for="iAway">Φιλοξενούμενη</label><div class="combo"><input id="iAway" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="iAwayList" placeholder="Διάλεξε ή γράψε ομάδα"><button type="button" class="combo-btn" tabindex="-1" aria-label="Λίστα">▾</button><ul class="combo-list" id="iAwayList" role="listbox" hidden></ul></div></div>
     </div>
     <div class="grid3">
-      <div class="f"><label for="iVenue">Γήπεδο</label><input id="iVenue" list="dlVenues" autocomplete="off"></div>
+      <div class="f"><label for="iVenue">Γήπεδο</label><div class="combo"><input id="iVenue" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="iVenueList" placeholder="Διάλεξε ή γράψε γήπεδο"><button type="button" class="combo-btn" tabindex="-1" aria-label="Λίστα">▾</button><ul class="combo-list" id="iVenueList" role="listbox" hidden></ul></div></div>
       <div class="f"><label for="iTv">Κάλυψη</label><input id="iTv" list="dlTv" autocomplete="off" placeholder="ΕΡΤ / ΥΤ"></div>
       <div class="f"><label for="iVc">VAR</label><input id="iVc" autocomplete="off" placeholder="VC17"></div>
     </div>
@@ -352,7 +354,7 @@ let db=null, user=null, me=null, isAdmin=false;
 /* =================================================================
    SUPERVISOR
    ================================================================= */
-let sched=[], roster=[], links={}, claims=[], fees={op:80,as:40}, contacts={}, profilesAll={}, notify={email:false, endpoint:""}, mail=null;
+let sched=[], roster=[], links={}, claims=[], teamList=[], venues=[], fees={op:80,as:40}, contacts={}, profilesAll={}, notify={email:false, endpoint:""}, mail=null;
 let ready={sched:false,roster:false,links:false};
 let tab = ls.get("cm.tab","sched");
 const st = {month:"", person:"", paid:"", vis:"", q:""};
@@ -368,6 +370,8 @@ function startAdmin(){
   db.collection("links").limit(1000).onSnapshot(s=>{ links={}; s.docs.forEach(d=>links[d.id]=d.data().uid); ready.links=true; renderAdmin(); }, loadErr);
   db.collection("claims").limit(1000).onSnapshot(s=>{ claims=s.docs.map(d=>({uid:d.id,...d.data()})); renderAdmin(); }, ()=>{});
   db.collection("profiles").limit(2000).onSnapshot(s=>{ profilesAll={}; s.docs.forEach(d=>profilesAll[d.id]=d.data()); if(tab==="people") renderAdmin(); }, ()=>{});
+  db.collection("teams").limit(1000).onSnapshot(s=>{ teamList=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.teams=true; seedLists(); if(tab==="lists") renderAdmin(); }, ()=>{});
+  db.collection("venues").limit(1000).onSnapshot(s=>{ venues=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.venues=true; seedLists(); if(tab==="lists") renderAdmin(); }, ()=>{});
   db.collection("contacts").limit(1000).onSnapshot(s=>{ contacts={}; s.docs.forEach(d=>contacts[d.id]=d.data().email||""); if(tab==="people") renderAdmin(); }, ()=>{});
   db.doc("config/notify").onSnapshot(s=>{ notify={email:false, endpoint:"", ...(s.exists?s.data():{})}; if(tab==="people") renderAdmin(); }, ()=>{});
   claude.use("mail").then(x=>mail=x).catch(()=>{});
@@ -389,23 +393,25 @@ function filteredSched(){
 
 function renderAdmin(){
   if(!(ready.sched&&ready.roster&&ready.links)) return;
+  seedLists();
   const pending = claims.filter(c=>c.status==="pending");
   const months = uniq(sched.map(m=>(m.date||"").slice(0,7)));
   if(st.month && !months.includes(st.month)) st.month="";
   const people = uniq([...roster.map(r=>r.name)]);
   const fill = (id,arr)=>$(id).innerHTML=uniq(arr).map(v=>`<option value="${esc(v)}">`).join("");
-  fill("dlTeams", sched.flatMap(m=>[m.home,m.away])); fill("dlComps", sched.map(m=>m.comp)); fill("dlVenues", sched.map(m=>m.venue)); fill("dlTv", sched.map(m=>m.tv)); fill("dlPeople", people);
+  fill("dlTeams", teamNames()); fill("dlComps", sched.map(m=>m.comp)); fill("dlVenues", venueNames()); fill("dlTv", sched.map(m=>m.tv)); fill("dlPeople", people);
 
   const focus = document.activeElement?.id;
   $("app").innerHTML = `
   <div style="display:flex;flex-direction:column;gap:18px">
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="sched" aria-selected="${tab==="sched"}">Πρόγραμμα</button>
+      <button role="tab" data-tab="lists" aria-selected="${tab==="lists"}">Ομάδες & γήπεδα</button>
       <button role="tab" data-tab="people" aria-selected="${tab==="people"}">Άτομα${pending.length?`<span class="badge">${pending.length}</span>`:""}</button>
     </nav>
     <div id="tabBody"></div>
   </div>`;
-  if(tab==="sched") renderSched(months, people); else renderPeople(pending);
+  if(tab==="sched") renderSched(months, people); else if(tab==="lists") renderLists(); else renderPeople(pending);
   if(focus && $(focus)){ const el=$(focus); el.focus(); if(el.setSelectionRange && el.type==="search") el.setSelectionRange(el.value.length, el.value.length); }
 }
 
@@ -473,6 +479,58 @@ function slotHtml(m, r){
     <button class="pay ${paid?"yes":"no"}" data-act="pay" data-id="${m.id}" data-role="${r}" title="Αλλαγή κατάστασης πληρωμής">${paid?"✓ Πληρώθηκε":"● Εκκρεμεί"}</button></div>
   </div>`;
 }
+
+/* ---------- tab: teams & venues ---------- */
+function renderLists(){
+  const cTeam={}, cVen={};
+  sched.forEach(m=>{ [m.home,m.away].forEach(x=>{ const k=norm(x); if(k) cTeam[k]=(cTeam[k]||0)+1; }); const v=norm(m.venue); if(v) cVen[v]=(cVen[v]||0)+1; });
+  const missT=uniqNorm(sched.flatMap(m=>[m.home,m.away])).filter(n=>!teamList.some(t=>norm(t.name)===norm(n)));
+  const missV=uniqNorm(sched.map(m=>m.venue)).filter(n=>!venues.some(v=>norm(v.name)===norm(n)));
+  const cnt=n=>n?`${n} ${n===1?"αγώνας":"αγώνες"}`:"κανένας αγώνας";
+  $("tabBody").innerHTML = `
+  <div class="people">
+    <section class="panel">
+      <div class="ph"><h2 class="sec">Ομάδες<span class="count">${teamList.length}</span></h2></div>
+      <form id="addTeam" class="pbody addrow">
+        <div class="f"><label for="newTeam">Νέα ομάδα</label><input id="newTeam" placeholder="π.χ. ΟΛΥΜΠΙΑΚΟΣ" autocomplete="off"></div>
+        <div class="f"><label for="newTeamVenue">Έδρα</label><input id="newTeamVenue" list="dlVenues" placeholder="π.χ. ΣΕΦ" autocomplete="off"></div>
+        <button class="btn small" type="submit">+ Προσθήκη</button>
+      </form>
+      ${missT.length?`<div class="pbody note" style="border-top:1px solid var(--line)">${missT.length} ομάδες του προγράμματος δεν είναι στη λίστα: ${missT.slice(0,6).map(esc).join(", ")}${missT.length>6?"…":""} <button class="btn small" type="button" data-act="addmissing" data-kind="teams">Προσθήκη όλων</button></div>`:""}
+      <div class="scroll" style="max-height:560px">
+      ${teamList.length? teamList.map(x=>`<div class="prow"><div class="who"><b>${esc(x.name)}</b><span class="note">${cnt(cTeam[norm(x.name)]||0)}</span></div>
+        <div class="ulink"><label class="pmail" title="Συμπληρώνεται αυτόματα ως γήπεδο όταν η ομάδα είναι γηπεδούχος"><span aria-hidden="true">🏟</span><input data-teamvenue="${x.id}" list="dlVenues" value="${esc(x.venue||"")}" placeholder="έδρα" aria-label="Έδρα ${esc(x.name)}"></label>
+        <button class="btn small danger" type="button" data-act="dellist" data-kind="teams" data-id="${x.id}" aria-label="Διαγραφή ${esc(x.name)}">✕</button></div></div>`).join("")
+      : `<div class="empty"><strong>Καμία ομάδα ακόμα</strong><div>Προστίθενται και αυτόματα όταν γράφεις νέα ομάδα σε ανάθεση ή στο Excel.</div></div>`}
+      </div>
+    </section>
+    <section class="panel" style="align-self:start">
+      <div class="ph"><h2 class="sec">Γήπεδα<span class="count">${venues.length}</span></h2></div>
+      <form id="addVenue" class="pbody addrow">
+        <div class="f"><label for="newVenue">Νέο γήπεδο</label><input id="newVenue" placeholder="π.χ. ΜΕΛΙΝΑ ΜΕΡΚΟΥΡΗ" autocomplete="off"></div>
+        <button class="btn small" type="submit">+ Προσθήκη</button>
+      </form>
+      ${missV.length?`<div class="pbody note" style="border-top:1px solid var(--line)">${missV.length} γήπεδα του προγράμματος δεν είναι στη λίστα: ${missV.slice(0,6).map(esc).join(", ")}${missV.length>6?"…":""} <button class="btn small" type="button" data-act="addmissing" data-kind="venues">Προσθήκη όλων</button></div>`:""}
+      <div class="scroll" style="max-height:560px">
+      ${venues.length? venues.map(x=>`<div class="prow"><div class="who"><b>${esc(x.name)}</b><span class="note">${cnt(cVen[norm(x.name)]||0)}</span></div>
+        <button class="btn small danger" type="button" data-act="dellist" data-kind="venues" data-id="${x.id}" aria-label="Διαγραφή ${esc(x.name)}">✕</button></div>`).join("")
+      : `<div class="empty"><strong>Κανένα γήπεδο ακόμα</strong></div>`}
+      </div>
+      <div class="pbody note" style="border-top:1px solid var(--line)">Οι λίστες εμφανίζονται στη φόρμα της ανάθεσης (Γηπεδούχος, Φιλοξενούμενη, Γήπεδο). Η διαγραφή από τη λίστα δεν αλλάζει τους αγώνες που υπάρχουν ήδη.</div>
+    </section>
+  </div>`;
+  $("addTeam").onsubmit = async e => { e.preventDefault(); const n=$("newTeam").value.trim(), v=$("newTeamVenue").value.trim(); if(!n) return;
+    if(teamList.some(t=>norm(t.name)===norm(n))){ toast("Υπάρχει ήδη"); return; }
+    try{ await ensureLists([n], v?[v]:[], v?{[norm(n)]:v}:null); toast("Η ομάδα προστέθηκε"); renderAdmin(); }catch{ toast("Η προσθήκη απέτυχε"); } };
+  $("addVenue").onsubmit = async e => { e.preventDefault(); const n=$("newVenue").value.trim(); if(!n) return;
+    if(venues.some(t=>norm(t.name)===norm(n))){ toast("Υπάρχει ήδη"); return; }
+    try{ await ensureLists([], [n]); toast("Το γήπεδο προστέθηκε"); renderAdmin(); }catch{ toast("Η προσθήκη απέτυχε"); } };
+}
+document.addEventListener("change", async e => {
+  const inp = e.target.closest?.("[data-teamvenue]"); if(!inp || !isAdmin) return;
+  const v = inp.value.trim();
+  try{ await db.doc(`teams/${inp.dataset.teamvenue}`).update({venue:v}); if(v) await ensureLists([], [v]); toast(v?"Η έδρα αποθηκεύτηκε":"Η έδρα αφαιρέθηκε"); }catch{ toast("Η αποθήκευση απέτυχε"); }
+});
 
 async function renderPeople(pending){
   const counts={}; sched.forEach(m=>["op","as"].forEach(r=>{ if(m[r]){ const k=norm(m[r]); counts[k]=(counts[k]||0)+1; } }));
@@ -711,9 +769,26 @@ async function deleteMatch(m){
   await w(()=>db.doc(`sched/${m.id}`).delete());
   noteChanges(m, null);
 }
+const uniqNorm = arr => { const seen=new Set(), out=[]; arr.forEach(v=>{ const s=(v||"").trim(), k=norm(s); if(s && !seen.has(k)){ seen.add(k); out.push(s); } }); return out.sort((a,b)=>a.localeCompare(b,"el")); };
+/* the saved lists (tab «Ομάδες & γήπεδα») are the source; until they exist, names come from the programme */
+function teamNames(){ return teamList.length ? uniqNorm(teamList.map(t=>t.name)) : uniqNorm(sched.flatMap(m=>[m.home,m.away])); }
+function venueNames(){ return venues.length ? uniqNorm(venues.map(v=>v.name)) : uniqNorm([...teamList.map(t=>t.venue), ...sched.map(m=>m.venue)]); }
+let listsReady={teams:false,venues:false}, listsSeeded=false;
+async function seedLists(){   // first time only: fill the lists from the programme
+  if(listsSeeded || !ready.sched || !listsReady.teams || !listsReady.venues || teamList.length || venues.length || !sched.length) return;
+  listsSeeded=true;
+  const hv={}; sched.forEach(m=>{ const k=norm(m.home); if(k && m.venue && !hv[k]) hv[k]=homeVenueOf(m.home); });
+  try{ await ensureLists(sched.flatMap(m=>[m.home,m.away]), sched.map(m=>m.venue), hv); }catch{}
+}
+/* new teams/venues typed in a form or found in an import are added to the lists */
+async function ensureLists(newTeams, venueList, homeVenue){
+  const tk=new Set(teamList.map(t=>norm(t.name))), vk=new Set(venues.map(v=>norm(v.name)));
+  for(const n of uniqNorm(newTeams)) if(!tk.has(norm(n))){ const doc={name:n}; const hv=homeVenue?.[norm(n)]; if(hv) doc.venue=hv; const ref=await w(()=>db.collection("teams").add(doc)); if(!teamList.some(x=>x.id===ref.id)) teamList.push({id:ref.id,...doc}); tk.add(norm(n)); }
+  for(const n of uniqNorm(venueList)) if(!vk.has(norm(n))){ const ref=await w(()=>db.collection("venues").add({name:n})); if(!venues.some(x=>x.id===ref.id)) venues.push({id:ref.id,name:n}); vk.add(norm(n)); }
+}
 async function ensureRoster(names){
   const have = rosterByNorm();
-  for(const n of uniq(names)){ if(!have[norm(n)]){ const ref = await w(()=>db.collection("roster").add({name:n})); const r={id:ref.id,name:n}; roster.push(r); have[norm(n)]=r; } }
+  for(const n of uniq(names)){ if(!have[norm(n)]){ const ref = await w(()=>db.collection("roster").add({name:n})); const r={id:ref.id,name:n}; if(!roster.some(x=>x.id===ref.id)) roster.push(r); have[norm(n)]=r; } }
 }
 async function resync(pred, label){
   const list = sched.filter(pred); let i=0;
@@ -788,6 +863,16 @@ document.addEventListener("click", async e => {
       toast("Αφαιρέθηκε από τη λίστα. Για οριστική διαγραφή του λογαριασμού: Firebase → Authentication → Users.");
     }catch{ toast("Η διαγραφή απέτυχε"); b.disabled=false; }
   }
+  if(act==="dellist"){
+    const kind=b.dataset.kind, id=b.dataset.id;
+    try{ await w(()=>db.doc(`${kind}/${id}`).delete()); if(kind==="teams") teamList=teamList.filter(x=>x.id!==id); else venues=venues.filter(x=>x.id!==id); toast("Αφαιρέθηκε από τη λίστα"); renderAdmin(); }catch{ toast("Η διαγραφή απέτυχε"); }
+  }
+  if(act==="addmissing"){
+    b.disabled=true;
+    try{ if(b.dataset.kind==="teams"){ const hv={}; sched.forEach(m=>{ const k=norm(m.home); if(k&&m.venue&&!hv[k]) hv[k]=homeVenueOf(m.home); }); await ensureLists(sched.flatMap(m=>[m.home,m.away]),[],hv); }
+      else await ensureLists([], sched.map(m=>m.venue));
+      toast("Προστέθηκαν"); renderAdmin(); }catch{ toast("Απέτυχε"); b.disabled=false; }
+  }
   if(act==="linkuser"){
     const uid=b.dataset.uid, rid=document.querySelector(`[data-linksel="${uid}"]`)?.value;
     if(!rid){ toast("Διάλεξε πρώτα όνομα"); return; }
@@ -825,26 +910,22 @@ $("btnImport").onclick=()=>openImport();
 
 /* ---------- assignment form ---------- */
 let editing=null;
-/* ---------- person picker: dropdown of all people, and free typing ---------- */
-function setupCombo(inp){
+/* ---------- pickers: dropdown list + free typing (people, teams, venues) ---------- */
+function setupCombo(inp, o){
   const wrap=inp.closest(".combo"), list=wrap.querySelector(".combo-list"), btn=wrap.querySelector(".combo-btn");
   let items=[], active=-1;
   const close=()=>{ list.hidden=true; inp.setAttribute("aria-expanded","false"); active=-1; };
-  const pick=v=>{ inp.value=v; close(); inp.dispatchEvent(new Event("change",{bubbles:true})); };
-  function busy(name){   // already assigned the same day (other match)
-    const d=$("iDate").value; if(!d) return false; const k=norm(name);
-    return sched.some(m=>m.id!==editing?.id && m.date===d && (norm(m.op)===k||norm(m.as)===k));
-  }
+  const pick=v=>{ const before=inp.value; inp.value=v; close(); o.onPick?.(v, before); inp.dispatchEvent(new Event("change",{bubbles:true})); };
   function render(filter){
-    const q=norm(filter||""), names=roster.map(r=>r.name);
+    const q=norm(filter||""), names=o.source();
     const shown=names.filter(n=>!q||norm(n).includes(q));
     const exact=names.some(n=>norm(n)===q);
     items=[];
-    if(inp.value.trim()) items.push({v:"",label:"— Κανένα άτομο —",cls:"none"});
-    shown.forEach(n=>items.push({v:n,label:n,hint:busy(n)?"⚠ ίδια μέρα":""}));
+    if(inp.value.trim()) items.push({v:"",label:o.noneLabel||"— Κανένα —",cls:"none"});
+    shown.forEach(n=>items.push({v:n,label:n,hint:o.hint?.(n)||""}));
     if(q && !exact) items.push({v:filter.trim(),label:`+ Νέο: «${filter.trim()}»`,cls:"new"});
-    list.innerHTML = items.length ? items.map((it,i)=>`<li role="option" id="${inp.id}-o${i}" data-i="${i}" class="${it.cls||""}" aria-selected="${i===active}">${esc(it.label)}${it.hint?`<small class="warn">${it.hint}</small>`:""}</li>`).join("")
-      : `<li class="none">Κανένα άτομο ακόμα — γράψε ένα όνομα</li>`;
+    list.innerHTML = items.length ? items.map((it,i)=>`<li role="option" id="${inp.id}-o${i}" data-i="${i}" class="${it.cls||""}" aria-selected="${i===active}">${esc(it.label)}${it.hint?`<small class="${it.hint.startsWith("⚠")?"warn":""}">${esc(it.hint)}</small>`:""}</li>`).join("")
+      : `<li class="none">${o.emptyLabel||"Η λίστα είναι άδεια — γράψε ένα όνομα"}</li>`;
     list.hidden=false; inp.setAttribute("aria-expanded","true");
     const a=list.querySelector('[aria-selected="true"]'); if(a){ a.scrollIntoView({block:"nearest"}); inp.setAttribute("aria-activedescendant",a.id); }
   }
@@ -862,10 +943,27 @@ function setupCombo(inp){
     else if(e.key==="Escape" && !list.hidden){ e.preventDefault(); e.stopPropagation(); close(); }
     else if(e.key==="Tab") close();
   });
-  inp.addEventListener("blur",()=>setTimeout(close,120));
+  inp.addEventListener("blur",()=>setTimeout(()=>{ if(document.activeElement!==inp) close(); },120));
   return {close};
 }
-const combos=[setupCombo($("iOp")), setupCombo($("iAs"))];
+function busyPerson(name){   // already assigned the same day (another match)
+  const d=$("iDate").value; if(!d) return ""; const k=norm(name);
+  return sched.some(m=>m.id!==editing?.id && m.date===d && (norm(m.op)===k||norm(m.as)===k)) ? "⚠ ίδια μέρα" : "";
+}
+function homeVenueOf(team){
+  const k=norm(team); if(!k) return "";
+  const t=teamList.find(x=>norm(x.name)===k); if(t?.venue) return t.venue;
+  const c={}; sched.forEach(m=>{ if(norm(m.home)===k && m.venue) c[m.venue]=(c[m.venue]||0)+1; });
+  return Object.entries(c).sort((a,b)=>b[1]-a[1])[0]?.[0]||"";
+}
+const personOpts={source:()=>roster.map(r=>r.name), hint:busyPerson, noneLabel:"— Κανένα άτομο —", emptyLabel:"Κανένα άτομο ακόμα — γράψε ένα όνομα"};
+const combos=[
+  setupCombo($("iOp"), personOpts), setupCombo($("iAs"), personOpts),
+  setupCombo($("iHome"), {source:teamNames, hint:n=>homeVenueOf(n), noneLabel:"— Καμία —",
+    onPick:(v,before)=>{ const cur=$("iVenue").value.trim(), hv=homeVenueOf(v); if(hv && (!cur || norm(cur)===norm(homeVenueOf(before)))) $("iVenue").value=hv; }}),
+  setupCombo($("iAway"), {source:teamNames, noneLabel:"— Καμία —"}),
+  setupCombo($("iVenue"), {source:venueNames, noneLabel:"— Κανένα —"})
+];
 
 function openForm(m){
   editing=m;
@@ -901,6 +999,7 @@ $("frm").addEventListener("submit", async e=>{
   $("btnSave").disabled=true;
   try{
     await ensureRoster([d.op,d.as]);
+    try{ await ensureLists([d.home,d.away],[d.venue], d.home&&d.venue?{[norm(d.home)]:d.venue}:null); }catch{}
     const id = editing?.id || db.collection("sched").doc().id;
     await syncAndSave({...(editing||{}), ...d, id, createdAt:editing?.createdAt||Date.now(), updatedAt:Date.now()}, editing);
     ls.set("cm.comp", d.comp);
@@ -970,6 +1069,7 @@ $("impGo").onclick = async ()=>{
   $("impGo").disabled=true; $("impProg").hidden=false; const bar=$("impProg").firstElementChild;
   let done=0, failed=0;
   try{ await ensureRoster(todo.flatMap(r=>[r.op,r.as])); }catch{ $("impErr").hidden=false; $("impErr").textContent="Η εισαγωγή απέτυχε."; return; }
+  try{ const hv={}; todo.forEach(r=>{ if(r.home&&r.venue&&!hv[norm(r.home)]) hv[norm(r.home)]=r.venue; }); await ensureLists(todo.flatMap(r=>[r.home,r.away]), todo.map(r=>r.venue), hv); }catch{}
   for(const r of todo){
     const {line,status,ex,warn,extra,...f} = r;
     try{
