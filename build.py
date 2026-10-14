@@ -112,3 +112,53 @@ function runAssign(){{
 '''
 open('checkmate.html','w').write(out)
 
+
+# ---------- second app: personal diary (imerologio.html), installs separately, not linked to Check Mate ----------
+s3,m3,j3=split(open('src/mode-diary.html').read())
+diary=f'''<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check Mate · Ημερολόγιο</title>
+<meta name="theme-color" content="#1d6b47">
+<meta name="description" content="Προσωπικό ημερολόγιο αγώνων και πληρωμών.">
+<link rel="manifest" href="imerologio.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/diary-32.png">
+<link rel="apple-touch-icon" href="icons/diary-apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ημερολόγιο">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+{fonts}
+<style>
+#boot{{padding:60px 16px;text-align:center;font:15px "Commissioner",system-ui,sans-serif;color:#5d6b84}}
+{s3}
+</style>
+</head>
+<body>
+<div id="root" lang="el"><div id="boot">Φόρτωση…</div></div>
+<template id="tpl-diary">{m3}</template>
+
+<script>window.CM_APP = "diary";</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+{backend}
+</script>
+<script>
+/* mount the diary once signed in (the sign-in screen is drawn into #root until then) */
+(async () => {{
+  await claude.use("db");
+  document.getElementById("root").replaceChildren(document.getElementById("tpl-diary").content.cloneNode(true));
+  (function(){{
+{j3[-1]}
+  }})();
+}})();
+</script>
+</body>
+</html>
+'''
+open('imerologio.html','w').write(diary)

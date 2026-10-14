@@ -16,10 +16,14 @@ service cloud.firestore {
       );
     }
 
-    // Admins can read and write everything (incl. contacts/<rosterId>: notification emails, admin-only).
-    match /{document=**} {
-      allow read, write: if isAdmin();
+    // Admins can read and write everything (incl. contacts/<rosterId>: notification emails, admin-only),
+    // EXCEPT the personal diaries: diary/<uid>/... belongs only to that user.
+    match /{col}/{document=**} {
+      allow read, write: if isAdmin() && col != 'diary';
     }
+
+    // Personal diary app (imerologio.html): each user's own matches, private to them.
+    match /diary/{uid}/{rest=**} { allow read, write: if isSelf(uid); }
 
     // Admin list: users/<email> with role "admin". Each user can read their own entry; only admins change it.
     match /users/{email} { allow read: if signedIn() && request.auth.token.email_verified == true && email == myEmail(); }

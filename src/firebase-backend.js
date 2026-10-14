@@ -55,6 +55,8 @@
   const st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
 
   const esc = s => String(s??"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  /* the same code serves two apps: the main Check Mate app and the personal diary (imerologio.html) */
+  const DIARY = window.CM_APP === "diary";
   function rootEl(){ return document.getElementById("root") || document.body; }
 
   /* ---------- install on phone / computer ---------- */
@@ -114,7 +116,9 @@
     rootEl().innerHTML = `<div id="cm-auth"><h1>Check <span>Mate</span></h1><p class="lead" style="margin-top:12px">Η εφαρμογή δεν έχει ρυθμιστεί ακόμα. Συμπλήρωσε τα στοιχεία Firebase στο αρχείο <code>firebase-config.js</code>.</p></div>`;
   }
   function showAuth(view="login", msg=null, email=""){
-    const head = `<div class="brand"><img src="icons/icon-192.png" alt=""><div><h1>Check <span>Mate</span></h1><div class="sub">Video Check · αγώνες &amp; αναθέσεις</div></div></div>`;
+    const head = DIARY
+      ? `<div class="brand"><img src="icons/diary-192.png" alt=""><div><h1>Check <span>Mate</span></h1><div class="sub">Ημερολόγιο · προσωπικό αρχείο αγώνων</div></div></div>`
+      : `<div class="brand"><img src="icons/icon-192.png" alt=""><div><h1>Check <span>Mate</span></h1><div class="sub">Video Check · αγώνες &amp; αναθέσεις</div></div></div>`;
     const note = msg ? `<div class="msg ${msg.ok?"ok":"err"}" role="${msg.ok?"status":"alert"}">${esc(msg.text)}</div>` : "";
     let body;
     if(view==="reset"){
@@ -142,7 +146,7 @@
       <div class="or">ή</div>
       <button type="button" class="google" id="cm-google">${googleSvg} Συνέχεια με Google</button>`;
     }
-    const help = `<a class="help" href="help/">📖 Οδηγίες χρήσης</a>`;
+    const help = `<a class="help" href="${DIARY ? "help/#imerologio" : "help/"}">📖 Οδηγίες χρήσης</a>`;
     rootEl().innerHTML = `<div id="cm-auth">${head}${body}${help}</div>`;
     const box = document.getElementById("cm-auth");
     box.querySelectorAll("[data-view]").forEach(b => b.onclick = () => showAuth(b.dataset.view, null, (document.getElementById("cm-email")||{}).value||email));
@@ -204,7 +208,8 @@
       if(document.getElementById("cm-auth")) rootEl().innerHTML = `<div id="boot">Φόρτωση…</div>`;
       const joined = Date.parse(u.metadata && u.metadata.creationTime) || Date.now();
       const via = (u.providerData||[]).map(p=>p.providerId==="google.com"?"google":"email")[0] || "email";
-      try{ await fs.doc(`profiles/${u.uid}`).set({name:u.displayName||"", email:u.email||"", joinedAt:joined, via, seenAt:Date.now()}, {merge:true}); }catch{}
+      /* the diary is not linked to Check Mate: it never writes a profile, so using it does not register you there */
+      if(!DIARY) try{ await fs.doc(`profiles/${u.uid}`).set({name:u.displayName||"", email:u.email||"", joinedAt:joined, via, seenAt:Date.now()}, {merge:true}); }catch{}
       updateDock();
       resolve(u);
     });
