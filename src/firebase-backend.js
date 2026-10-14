@@ -30,6 +30,8 @@
   #cm-auth .or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;margin:16px 0}
   #cm-auth .or::before,#cm-auth .or::after{content:"";flex:1;height:1px;background:var(--line)}
   #cm-auth .google{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;font:600 15px "Commissioner",system-ui,sans-serif;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+  #cm-auth .help{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;padding:11px;border-radius:10px;border:1px dashed var(--line);color:var(--blue);font:600 15px "Commissioner",system-ui,sans-serif;text-decoration:none}
+  #cm-auth .help:hover{border-style:solid;border-color:var(--blue)}
   #cm-auth .msg{font-size:14px;line-height:1.45;border-radius:8px;padding:9px 11px}
   #cm-auth .msg.err{color:var(--bad);background:#fbe9e7}
   #cm-auth .msg.ok{color:var(--good);background:#e3f4ea}
@@ -140,7 +142,8 @@
       <div class="or">ή</div>
       <button type="button" class="google" id="cm-google">${googleSvg} Συνέχεια με Google</button>`;
     }
-    rootEl().innerHTML = `<div id="cm-auth">${head}${body}</div>`;
+    const help = `<a class="help" href="help/">📖 Οδηγίες χρήσης</a>`;
+    rootEl().innerHTML = `<div id="cm-auth">${head}${body}${help}</div>`;
     const box = document.getElementById("cm-auth");
     box.querySelectorAll("[data-view]").forEach(b => b.onclick = () => showAuth(b.dataset.view, null, (document.getElementById("cm-email")||{}).value||email));
     const g = document.getElementById("cm-google"); if(g) g.onclick = google;
