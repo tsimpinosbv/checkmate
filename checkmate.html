@@ -1279,8 +1279,10 @@ const uniq = a => [...new Set(a.filter(Boolean))].sort((x,y)=>x.localeCompare(y,
 function pairImport(rows){
   const groups = new Map();
   const g = k => { if(!groups.has(k)) groups.set(k,{file:[],ex:[]}); return groups.get(k); };
-  rows.forEach((r,i)=>g(matchKey(r)).file.push(i));
-  sched.forEach(m=>g(matchKey(m)).ex.push(m));
+  /* a new season never touches last season's games: pairing stays inside the same season (July → June) */
+  const sk = m => matchKey(m) + "|" + seasonOf(m.date);
+  rows.forEach((r,i)=>g(sk(r)).file.push(i));
+  sched.forEach(m=>g(sk(m)).ex.push(m));
   const out = new Map(), byDate = (a,b)=>(a.date||"").localeCompare(b.date||"")||(a.time||"").localeCompare(b.time||"");
   for(const {file, ex} of groups.values()){
     if(!file.length || !ex.length) continue;
@@ -1296,6 +1298,7 @@ function pairImport(rows){
   }
   return out;
 }
+const seasonOf = d => { if(!d) return ""; const [y,m]=d.split("-").map(Number); return m>=7 ? `${y}-${y+1}` : `${y-1}-${y}`; };
 const matchKey = m => m.comp ? ["C",norm(m.comp),norm(m.home),norm(m.away)].join("|") : [m.date, m.time||"", norm(m.home), norm(m.away)].join("|");
 const teams = m => esc(m.home) + (m.away ? " – " + esc(m.away) : "");
 const whenMain = m => esc(m.dateText || fmtDate(m.date));
