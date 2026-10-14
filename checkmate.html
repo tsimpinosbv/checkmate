@@ -1372,8 +1372,8 @@ function startAdmin(){
   db.collection("links").limit(1000).onSnapshot(s=>{ links={}; s.docs.forEach(d=>links[d.id]=d.data().uid); ready.links=true; renderAdmin(); }, loadErr);
   db.collection("claims").limit(1000).onSnapshot(s=>{ claims=s.docs.map(d=>({uid:d.id,...d.data()})); renderAdmin(); }, ()=>{});
   db.collection("profiles").limit(2000).onSnapshot(s=>{ profilesAll={}; s.docs.forEach(d=>profilesAll[d.id]=d.data()); if(tab==="people") renderAdmin(); }, ()=>{});
-  db.collection("teams").limit(1000).onSnapshot(s=>{ teamList=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.teams=true; seedLists(); if(tab==="lists") renderAdmin(); }, ()=>{});
-  db.collection("venues").limit(1000).onSnapshot(s=>{ venues=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.venues=true; seedLists(); if(tab==="lists") renderAdmin(); }, ()=>{});
+  db.collection("teams").limit(1000).onSnapshot(s=>{ teamList=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.teams=true; seedLists(); upgradeItems(); if(tab==="lists") renderAdmin(); }, ()=>{});
+  db.collection("venues").limit(1000).onSnapshot(s=>{ venues=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.venues=true; seedLists(); upgradeItems(); if(tab==="lists") renderAdmin(); }, ()=>{});
   db.collection("contacts").limit(1000).onSnapshot(s=>{ contacts={}; s.docs.forEach(d=>contacts[d.id]=d.data().email||""); if(tab==="people") renderAdmin(); }, ()=>{});
   db.doc("config/notify").onSnapshot(s=>{ notify={email:false, endpoint:"", ...(s.exists?s.data():{})}; if(tab==="people") renderAdmin(); }, ()=>{});
   claude.use("mail").then(x=>mail=x).catch(()=>{});
@@ -1397,6 +1397,7 @@ function filteredSched(){
 function renderAdmin(){
   if(!(ready.sched&&ready.roster&&ready.links)) return;
   seedLists();
+  upgradeItems();
   const pending = claims.filter(c=>c.status==="pending");
   const seasons = uniq(sched.map(m=>seasonOf(m.date))).reverse();
   if(st.season && !seasons.includes(st.season)) st.season="";
@@ -1840,6 +1841,19 @@ function mapUrl(name){ const v=venueOf(name); if(!hasPlace(v)) return ""; if(/^h
 function mapEmbed(name){ const v=venueOf(name); if(!v || !(v.full || v.address || COORD.test(v.map||""))) return ""; return "https://maps.google.com/maps?q="+encodeURIComponent(venueQuery(v))+"&z=15&output=embed"; }
 function venueNames(){ return venues.length ? uniqNorm(venues.map(v=>v.name)) : uniqNorm([...teamList.map(t=>t.venue), ...sched.map(m=>m.venue)]); }
 let listsReady={teams:false,venues:false}, listsSeeded=false;
+/* when the users' copy of an assignment gains new fields (e.g. VAR codes, venue maps), refresh every copy once, silently.
+   Bump ITEM_VERSION whenever itemFor() changes. Runs on the first admin load after an update. */
+const ITEM_VERSION = 3; let itemCheckDone=false;
+async function upgradeItems(){
+  if(itemCheckDone || !ready.sched || !ready.roster || !ready.links || !listsReady.teams || !listsReady.venues) return;
+  itemCheckDone=true;
+  try{
+    const s = await db.doc("config/items").get(); const v = s.exists ? (s.data().version||0) : 0;
+    if(v >= ITEM_VERSION) return;
+    await resync(m=>!m.hidden && (m.sync?.op || m.sync?.as));
+    await w(()=>db.doc("config/items").set({version:ITEM_VERSION, at:Date.now()}));
+  }catch(e){ console.warn("item upgrade", e); }
+}
 async function seedLists(){   // first time only: fill the lists from the programme
   if(listsSeeded || !ready.sched || !listsReady.teams || !listsReady.venues || teamList.length || venues.length || !sched.length) return;
   listsSeeded=true;
