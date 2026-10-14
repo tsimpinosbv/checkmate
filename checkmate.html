@@ -1264,6 +1264,30 @@ const fmtDate = d => { if(!d) return ""; const [y,m,dd]=d.split("-"); return `${
 const dayName = d => d ? DAYS[new Date(d+"T12:00").getDay()] : "";
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
 const uniq = a => [...new Set(a.filter(Boolean))].sort((x,y)=>x.localeCompare(y,"el"));
+/* Match the rows of an imported file to existing matches.
+   Same competition + same home/away = same pairing. A pairing can appear more than once (play-off series),
+   so within a pairing: 1) same date → same match; 2) the rest are paired in date order only when the
+   counts agree (a moved game); anything left over is a new match. Returns Map(rowIndex → existing match). */
+function pairImport(rows){
+  const groups = new Map();
+  const g = k => { if(!groups.has(k)) groups.set(k,{file:[],ex:[]}); return groups.get(k); };
+  rows.forEach((r,i)=>g(matchKey(r)).file.push(i));
+  sched.forEach(m=>g(matchKey(m)).ex.push(m));
+  const out = new Map(), byDate = (a,b)=>(a.date||"").localeCompare(b.date||"")||(a.time||"").localeCompare(b.time||"");
+  for(const {file, ex} of groups.values()){
+    if(!file.length || !ex.length) continue;
+    const freeEx = new Set(ex), freeRows = [];
+    for(const i of file){
+      const r = rows[i], same = r.date && [...freeEx].find(m=>m.date===r.date);
+      if(same){ out.set(i, same); freeEx.delete(same); } else freeRows.push(i);
+    }
+    const leftEx = [...freeEx].sort(byDate);
+    if(freeRows.length && freeRows.length===leftEx.length){
+      freeRows.sort((a,b)=>byDate(rows[a],rows[b])).forEach((i,k)=>out.set(i, leftEx[k]));
+    }
+  }
+  return out;
+}
 const matchKey = m => m.comp ? ["C",norm(m.comp),norm(m.home),norm(m.away)].join("|") : [m.date, m.time||"", norm(m.home), norm(m.away)].join("|");
 const teams = m => esc(m.home) + (m.away ? " – " + esc(m.away) : "");
 const whenMain = m => esc(m.dateText || fmtDate(m.date));
@@ -1936,8 +1960,9 @@ $("frm").addEventListener("submit", async e=>{
   for(const r of ["op","as"]){ const p=$(r==="op"?"iPaidOp":"iPaidAs").checked; d["paid_"+r]=p && !!d[r]; d["paidDate_"+r]=p&&d[r]?(editing?.["paid_"+r]?editing["paidDate_"+r]:today()):""; }
   if(!d.date||!d.home){ $("frmErr").hidden=false; $("frmErr").textContent="Συμπλήρωσε ημερομηνία και αγώνα."; return; }
   d.key = matchKey(d);
-  const dup = sched.find(x=>x.key===d.key && x.id!==editing?.id);
-  if(dup){ $("frmErr").hidden=false; $("frmErr").textContent="Υπάρχει ήδη ο ίδιος αγώνας την ίδια ώρα."; return; }
+  // the same pairing may be played again (play-offs), so only the same pairing on the same day counts as a duplicate
+  const dup = sched.find(x=>x.id!==editing?.id && matchKey(x)===d.key && x.date===d.date);
+  if(dup){ $("frmErr").hidden=false; $("frmErr").textContent="Υπάρχει ήδη ο ίδιος αγώνας την ίδια μέρα."; return; }
   $("btnSave").disabled=true;
   try{
     await ensureRoster([d.op,d.as]);
@@ -1978,13 +2003,14 @@ async function readFile(file){
       const p = P.parseRows(rows); parsed.rows.push(...p.rows); parsed.skipped.push(...p.skipped);
     }
     if(!parsed.rows.length){ $("impErr").hidden=false; $("impErr").textContent="Δεν βρέθηκαν αγώνες στο αρχείο. Έλεγξε ότι η 1η στήλη έχει ημερομηνία (π.χ. 08.04.2026)."; return; }
-    const byKey = Object.fromEntries(sched.map(m=>[m.key||matchKey(m), m]));
     const known = rosterByNorm();
-    const seen = new Set();
-    impRows = parsed.rows.map(r=>{
-      const key=matchKey(r); const ex=byKey[key];
+    const exMap = pairImport(parsed.rows);
+    const seenLine = new Set();
+    impRows = parsed.rows.map((r,i)=>{
+      const key=matchKey(r); const ex=exMap.get(i);
       let status = ex ? (["date","time","dateText","timeText","venue","tv","vc"].some(k=>(ex[k]||"")!==(r[k]||"")) || !!ex.dateTbc!==!!r.dateTbc || norm(ex.op)!==norm(r.op) || norm(ex.as)!==norm(r.as) ? "upd":"same") : "new";
-      if(seen.has(key)) status="dup"; seen.add(key);
+      const line=[key, r.date||r.dateText||"", r.time||r.timeText||""].join("|");
+      if(seenLine.has(line)) status="dup"; seenLine.add(line);
       return {...r, key, ex, status};
     });
     const n = s=>impRows.filter(r=>r.status===s).length;
