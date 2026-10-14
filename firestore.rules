@@ -32,6 +32,11 @@ service cloud.firestore {
     // Each user's display name, shown to the admin when approving accounts.
     match /profiles/{uid} { allow read, write: if isSelf(uid); }
 
+    // Setup guide (odigos.html): every signed-in user reads the steps, tips and venues; only admins change them (rule above).
+    match /guide_steps/{doc} { allow read: if signedIn(); }
+    match /guide_tips/{doc}  { allow read: if signedIn(); }
+    match /venues/{doc}      { allow read: if signedIn(); }
+
     // Shared settings (which mode is active).
     match /config/{doc} { allow read: if signedIn(); }
 
