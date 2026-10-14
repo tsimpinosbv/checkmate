@@ -61,6 +61,10 @@ main.g-main{padding-bottom:calc(var(--tabh) + 70px + env(safe-area-inset-bottom,
 .g-step{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .g-media{background:var(--court);aspect-ratio:16/10;max-width:100%}
 .g-media img,.g-media svg{width:100%;height:100%;display:block;object-fit:cover}
+.g-media.layout{aspect-ratio:1386/916;background:#4ac3dc}
+.g-layout{position:relative;display:block;width:100%;height:100%}
+.g-layout img{object-fit:contain}
+.g-layout span{position:absolute;right:8px;bottom:8px;background:rgba(20,33,58,.85);color:#fff;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px}
 .g-body{padding:14px 16px 16px;display:grid;gap:6px;min-width:0}
 .g-num{font-family:var(--f-mono);font-size:13px;color:var(--accent)}
 .g-step h2,.g-tip h3{font-family:var(--f-display);font-weight:800;font-size:22px;line-height:1.15;margin:0;text-wrap:balance}
@@ -431,7 +435,7 @@ const fmtDate = s => s ? s.split("-").reverse().join("/") : "";
 
 /* first content an admin can load with one tap (edit or delete it afterwards) */
 const START_STEPS = [
-  {title:"Συνολική διάταξη", text:"Ενδεικτικό σχέδιο: κάμερες στους ορθοστάτες του φιλέ που κοιτάνε κατά μήκος της ταινίας, και κάμερες στις γωνίες για τις γραμμές.\nΑντικατάστησέ το με φωτογραφία του δικού σας στησίματος.", diagram:true},
+  {title:"Συνολική διάταξη", text:"• Μαύρες (1–8, C, D): κάμερες γραμμών\n• Πορτοκαλί (Y, T, R και L, K, J): κάμερες block\n• Κίτρινες (A, B): κάμερες φιλέ\n• Μπλε (S): κάμερα σκηνής\n• Server 1 και Server 2 στις δύο πλευρές, Server Main στη μέση, ο καθένας με UPS και πρίζα σούκο\n• Κόκκινο/μπλε: θωρακισμένο καλώδιο Cat6 · Καφέ: καλώδιο USB 3.0", diagram:true},
   {title:"Έλεγχος εξοπλισμού πριν φύγεις", text:"• Κάμερες και φορτισμένες μπαταρίες (+1 εφεδρική)\n• Κάρτες μνήμης, άδειες\n• Σφιγκτήρες / βάσεις, ιμάντες velcro, δεματικά (tie-wraps)\n• Καλώδια, πολύπριζο, router, tablet ελέγχου\n• Ψαλίδι ή κόφτης για τα δεματικά"},
   {title:"Δέσιμο κάμερας στο φιλέ", text:"Στερέωσε την κάμερα σε σταθερό σημείο του ορθοστάτη ή στο πάνω συρματόσχοινο, όχι πάνω στη λευκή ταινία που κουνιέται όταν χτυπάει η μπάλα.\nΧρησιμοποίησε δύο σημεία στήριξης (πάνω και κάτω) ώστε να μη γυρίζει.\nΤράβα ελαφρά την κάμερα με το χέρι: αν κουνιέται, σφίξε ξανά."},
   {title:"Ύψος και γωνία λήψης", text:"Γράψε εδώ το ύψος που ορίζει το πρωτόκολλο (π.χ. πόσα εκ. πάνω από την άνω ταινία).\nΤο κάδρο πρέπει να δείχνει ολόκληρη την ταινία του φιλέ και την αντένα από την πλευρά της κάμερας."},
@@ -461,17 +465,11 @@ const wantVenue = new URLSearchParams(location.search).get("venue");
 if(wantVenue) tab = "venues";
 try{ if(!wantVenue) venueId = localStorage.getItem("cm-guide-venue"); }catch{}
 
+/* the official VideoCheck layout (img/videocheck-layout.jpg); tap opens it full size for zooming */
 function diagram(){
-  const cam=(x,y,r,l)=>`<g transform="translate(${x} ${y})"><g transform="rotate(${r})"><path d="M0 0 L26 -10 L26 10 Z" fill="var(--accent)" opacity=".35"/><rect x="-8" y="-6" width="14" height="12" rx="2" fill="var(--ink)"/></g><text x="0" y="${y<100?-12:22}" text-anchor="middle" font-size="11" font-family="var(--f-mono)" fill="var(--ink)">${l}</text></g>`;
-  return `<svg viewBox="0 0 400 250" role="img" aria-label="Ενδεικτική κάτοψη γηπέδου με θέσεις καμερών">
-  <rect width="400" height="250" fill="var(--court)"/>
-  <rect x="56" y="62" width="288" height="144" fill="none" stroke="var(--court-line)" stroke-width="3"/>
-  <line x1="152" y1="62" x2="152" y2="206" stroke="var(--court-line)" stroke-width="2"/><line x1="248" y1="62" x2="248" y2="206" stroke="var(--court-line)" stroke-width="2"/>
-  <line x1="200" y1="44" x2="200" y2="224" stroke="var(--ink)" stroke-width="4"/>
-  <circle cx="200" cy="44" r="5" fill="var(--bad)"/><circle cx="200" cy="224" r="5" fill="var(--bad)"/>
-  <text x="208" y="240" font-size="10" fill="var(--muted)" font-family="var(--f-body)">φιλέ / αντένες</text>
-  ${cam(200,30,90,"C1")}${cam(200,238,-90,"C2")}${cam(40,48,35,"C3")}${cam(360,220,-145,"C4")}
-  <text x="12" y="20" font-size="11" font-weight="600" fill="var(--muted)" font-family="var(--f-body)" letter-spacing="1">ΕΝΔΕΙΚΤΙΚΟ</text></svg>`;
+  return `<a class="g-layout" href="img/videocheck-layout.jpg" target="_blank" rel="noopener" title="Άνοιγμα σε πλήρες μέγεθος">
+    <img src="img/videocheck-layout.jpg" width="1386" height="916" alt="Διάταξη VideoCheck: κάμερες γραμμών 1–8, C, D, κάμερες block Y, T, R, L, K, J, κάμερες φιλέ A, B, E, W, κάμερες U, I, κάμερα σκηνής S, Server 1, Server 2 και Server Main με UPS και πρίζα σούκο">
+    <span>Πάτα για μεγέθυνση</span></a>`;
 }
 
 function mapsUrl(v){
@@ -498,7 +496,7 @@ function viewSetup(){
     : emptyBox("Δεν υπάρχουν βήματα ακόμα", "Ο διαχειριστής θα τα προσθέσει σύντομα.");
   return `<h1 class="g-h1">Στήσιμο video check</h1><p class="g-lede">Τα βήματα με τη σειρά, από τον εξοπλισμό ως τη δοκιμαστική λήψη.</p>
   <div class="g-list">${n ? steps.map((s,i)=>`<article class="g-step">
-    ${s.img?`<div class="g-media"><img src="${s.img}" alt="${esc(s.title)}" loading="lazy"></div>`:s.diagram?`<div class="g-media">${diagram()}</div>`:""}
+    ${s.img?`<div class="g-media"><img src="${s.img}" alt="${esc(s.title)}" loading="lazy"></div>`:s.diagram?`<div class="g-media layout">${diagram()}</div>`:""}
     <div class="g-body"><span class="g-num">ΒΗΜΑ ${i+1} / ${n}</span><h2>${esc(s.title)}</h2><p class="g-txt">${esc(s.text)}</p>${tools("steps",i,n)}</div></article>`).join("") : empty}
   ${edit?`<button class="g-add" data-act="new" data-k="steps">+ Νέο βήμα</button>`:""}</div>`;
 }
@@ -579,7 +577,7 @@ function render(){
   $("gapp").innerHTML = `<header class="g-top"><div class="g-wrap">
       <a class="g-brand" href="checkmate.html" title="Πίσω στο Check Mate"><div><b>Check <span>Mate</span></b><small>Οδηγός στησίματος</small></div></a><span class="g-sp"></span>
       ${isAdmin?`<button class="g-pill" data-act="toggle" aria-pressed="${edit}">${edit?"Τέλος":"✎ Επεξεργασία"}</button>`:""}
-      <a class="g-pill" href="checkmate.html">Αναθέσεις</a></div></header>
+</div></header>
     <main class="g-main g-wrap">${tab==="setup"?viewSetup():tab==="tips"?viewTips():viewVenues()}</main>
     <nav class="g-tabs" aria-label="Ενότητες"><div class="in">${TABS.map(([k,l])=>`<a href="#${k}" data-act="tab" data-t="${k}" ${tab===k?'aria-current="page"':""}>${ICON[k]}${l}</a>`).join("")}</div></nav>
     ${viewSheet()}`;
