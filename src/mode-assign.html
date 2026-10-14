@@ -148,7 +148,8 @@ button.pay:hover{border-color:currentColor}
 .card .venue{font-weight:600}
 .card .venue a{color:inherit;text-decoration:none;border-bottom:1px dashed currentColor}
 .card .tfull{font-size:13.5px;color:var(--muted);margin-top:-4px;letter-spacing:.02em}
-.card .teams.full{font-size:19px;text-transform:none}
+.vtag{display:inline-block;font:700 10.5px var(--f-body);letter-spacing:.06em;border:1px solid currentColor;border-radius:4px;padding:0 4px;margin-right:4px;vertical-align:1px}
+.card .tfull{font-family:var(--f-mono)}
 .match .tfull{font-size:12.5px}
 .card .vfull{font-size:13px;color:var(--muted);margin-top:-4px}
 details.map summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--blue);list-style:none;display:inline-flex;gap:4px;align-items:center}
@@ -373,7 +374,8 @@ const seasonOf = d => { if(!d) return ""; const [y,m]=d.split("-").map(Number); 
 const matchKey = m => m.comp ? ["C",norm(m.comp),norm(m.home),norm(m.away)].join("|") : [m.date, m.time||"", norm(m.home), norm(m.away)].join("|");
 const teams = m => esc(m.home) + (m.away ? " – " + esc(m.away) : "");
 /* teams: name = as written in the programme (often an acronym, e.g. ΟΣΦΠ), full = full team name */
-const teamFull = name => { const k=norm(name); const t = k ? teamList.find(x=>norm(x.name)===k) : null; return t?.full || ""; };
+/* teams: name = as written in the programme, var = the short code used in the challenge/VAR system */
+const teamVar = name => { const k=norm(name); const t = k ? teamList.find(x=>norm(x.name)===k) : null; return t?.var || ""; };
 const whenMain = m => esc(m.dateText || fmtDate(m.date));
 const whenSub = m => [m.dateText?"":dayName(m.date), m.time||m.timeText||"", m.dateTbc?"ημ. αγωνιστικής":""].filter(Boolean).map(esc).join(" · ");
 const ls = {get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch{return d}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
@@ -504,7 +506,7 @@ function renderSched(months, people, seasons=[]){
       if((m.comp||"")!==lastComp){ lastComp=m.comp||""; if(lastComp) html+=`<div class="comp-head">${esc(lastComp)}</div>`; }
       html += `<div class="row${m.hidden?" is-hidden":""}">
         <div class="date c-date">${whenMain(m)}<small>${whenSub(m)}</small><button type="button" class="vis${m.hidden?" off":""}" data-act="vis" data-id="${m.id}" title="${m.hidden?"Οι χρήστες δεν τη βλέπουν. Πάτα για εμφάνιση.":"Τη βλέπουν τα άτομα της ανάθεσης. Πάτα για απόκρυψη."}">${m.hidden?"Κρυφή":"Ορατή"}</button></div>
-        <div class="match c-match"><b>${teams(m)}</b>${(teamFull(m.home)||teamFull(m.away))?`<div class="meta tfull">${esc([teamFull(m.home)||m.home, teamFull(m.away)||m.away].filter(Boolean).join(" – "))}</div>`:""}<div class="meta">${[m.venue?(mapUrl(m.venue)?`<a class="mlink" href="${esc(mapUrl(m.venue))}" target="_blank" rel="noopener" title="${esc(venueOf(m.venue)?.full||"Χάρτης")}">📍 ${esc(m.venue)}</a>`:esc(m.venue)):"",esc(m.tv||""),esc(m.vc||"")].filter(Boolean).join(" · ")||"&nbsp;"}</div></div>
+        <div class="match c-match"><b>${teams(m)}</b>${(teamVar(m.home)||teamVar(m.away))?`<div class="meta tfull">VAR: ${esc([teamVar(m.home)||"—", m.away?(teamVar(m.away)||"—"):""].filter(Boolean).join(" – "))}</div>`:""}<div class="meta">${[m.venue?(mapUrl(m.venue)?`<a class="mlink" href="${esc(mapUrl(m.venue))}" target="_blank" rel="noopener" title="${esc(venueOf(m.venue)?.full||"Χάρτης")}">📍 ${esc(m.venue)}</a>`:esc(m.venue)):"",esc(m.tv||""),esc(m.vc||"")].filter(Boolean).join(" · ")||"&nbsp;"}</div></div>
         ${slotHtml(m,"op")}${slotHtml(m,"as")}
         <div class="c-edit"><button class="more" data-act="edit" data-id="${m.id}" aria-label="Επεξεργασία">✎</button></div>
       </div>`;
@@ -555,12 +557,12 @@ function renderLists(){
       ${missT.length?`<div class="pbody note" style="border-top:1px solid var(--line)">${missT.length} ομάδες του προγράμματος δεν είναι στη λίστα: ${missT.slice(0,6).map(esc).join(", ")}${missT.length>6?"…":""} <button class="btn small" type="button" data-act="addmissing" data-kind="teams">Προσθήκη όλων</button></div>`:""}
       <div class="scroll" style="max-height:560px">
       ${teamList.length? teamList.map(x=>`<div class="prow"><div class="who" style="width:150px"><b>${esc(x.name)}</b><span class="note">${cnt(cTeam[norm(x.name)]||0)}</span></div>
-        <input class="tfin" id="tf-full-${x.id}" data-tf="full" data-id="${x.id}" value="${esc(x.full||"")}" placeholder="Πλήρες όνομα" aria-label="Πλήρες όνομα ${esc(x.name)}">
+        <label class="pmail" style="max-width:200px" title="Το αρκτικόλεξο της ομάδας στο σύστημα challenge (VAR)"><span style="font:700 11px var(--f-body)">VAR</span><input id="tf-var-${x.id}" data-tf="var" data-id="${x.id}" value="${esc(x.var||"")}" placeholder="π.χ. ΟΣΦ" aria-label="VAR ${esc(x.name)}"></label>
         <div class="ulink"><label class="pmail" title="Συμπληρώνεται αυτόματα ως γήπεδο όταν η ομάδα είναι γηπεδούχος"><span aria-hidden="true">🏟</span><input data-teamvenue="${x.id}" list="dlVenues" value="${esc(x.venue||"")}" placeholder="έδρα" aria-label="Έδρα ${esc(x.name)}"></label>
         <button class="btn small danger" type="button" data-act="dellist" data-kind="teams" data-id="${x.id}" aria-label="Διαγραφή ${esc(x.name)}">✕</button></div></div>`).join("")
       : `<div class="empty"><strong>Καμία ομάδα ακόμα</strong><div>Προστίθενται και αυτόματα όταν γράφεις νέα ομάδα σε ανάθεση ή στο Excel.</div></div>`}
       </div>
-      <div class="pbody note" style="border-top:1px solid var(--line);display:block">Γράψτε την ομάδα όπως εμφανίζεται στο πρόγραμμα (π.χ. το αρκτικόλεξο) και δίπλα το <b>πλήρες όνομα</b>. Οι χρήστες βλέπουν τότε το πλήρες όνομα κάτω από τον αγώνα, και μπαίνει και στα email. Για όλες μαζί: <b>⬇ Excel ομάδων</b>, συμπληρώστε τις στήλες Αρκτικόλεξο · Πλήρες όνομα · Έδρα, και ανεβάστε το με <b>⬆ Excel ομάδων</b>.</div>
+      <div class="pbody note" style="border-top:1px solid var(--line);display:block">Δίπλα σε κάθε ομάδα γράψτε στο <b>VAR</b> το αρκτικόλεξο που χρησιμοποιείται στο challenge. Οι χρήστες βλέπουν το όνομα της ομάδας και από κάτω το αρκτικόλεξο VAR, και μπαίνει και στα email. Για όλες μαζί: <b>⬇ Excel ομάδων</b>, συμπληρώστε τη στήλη VAR (στήλες Ομάδα · VAR · Έδρα) και ανεβάστε το με <b>⬆ Excel ομάδων</b>.</div>
     </section>
     <section class="panel" style="grid-column:1/-1">
       <div class="ph"><h2 class="sec">Γήπεδα<span class="count">${venues.length}</span></h2>
@@ -595,7 +597,7 @@ document.addEventListener("change", async e => {
   const tf = e.target.closest?.("[data-tf]");
   if(tf && isAdmin){
     const id=tf.dataset.id, val=tf.value.trim();
-    try{ await w(()=>db.doc(`teams/${id}`).update({full:val})); const t=teamList.find(x=>x.id===id); if(t){ t.full=val; await resyncTeams([t.name]); } toast("Αποθηκεύτηκε"); }catch{ toast("Η αποθήκευση απέτυχε"); }
+    try{ await w(()=>db.doc(`teams/${id}`).update({var:val})); const t=teamList.find(x=>x.id===id); if(t){ t.var=val; await resyncTeams([t.name]); } toast("Αποθηκεύτηκε"); }catch{ toast("Η αποθήκευση απέτυχε"); }
     return;
   }
   const vf = e.target.closest?.("[data-vf]");
@@ -786,7 +788,7 @@ const DEFAULT_FOOTER = "Παρακαλούμε, μην απαντάτε σε α�
 const EV_TITLE = {added:"Νέα ανάθεση", removed:"Ακύρωση ανάθεσης", changed:"Αλλαγή στην ανάθεση", paid:"Πληρώθηκε", unpaid:"Η πληρωμή αναιρέθηκε", test:"Δοκιμαστικό μήνυμα"};
 const EV_COLOR = {added:"#1d8a52", removed:"#c43a2c", changed:"#2a7fd4", paid:"#1d8a52", unpaid:"#b4530b", test:"#2a7fd4"};
 const fmtVal = (k, v) => k==="date" ? (v ? `${dayName(v)} ${fmtDate(v)}` : "—") : k==="fee" ? eur(v) : (v || "—");
-function evMatch(i){ const f=[i.homeFull,i.awayFull].some(Boolean) ? ` (${[i.homeFull||i.home, i.awayFull||i.away].filter(Boolean).join(" – ")})` : ""; return `${i.home||""}${i.away?" – "+i.away:""}${f}`; }
+function evMatch(i){ const v=[i.homeVar,i.awayVar].some(Boolean) ? ` (VAR: ${[i.homeVar||"—", i.away?(i.awayVar||"—"):""].filter(Boolean).join(" – ")})` : ""; return `${i.home||""}${i.away?" – "+i.away:""}${v}`; }
 function venueMailHtml(name){
   const v = venueOf(name), url = mapUrl(name);
   return esc(name) + (v?.full ? ` – ${esc(v.full)}` : "") + (v?.address ? `<br><span style="color:#5d6b84">${esc(v.address)}</span>` : "") + (url ? ` <a href="${esc(url)}" style="color:#2a7fd4">📍 Χάρτης</a>` : "");
@@ -837,7 +839,7 @@ function itemFor(m, r){
   const o = r==="op"?"as":"op";
   return {match:m.id, date:m.date||"", time:m.time||"", dateText:m.dateText||"", timeText:m.timeText||"", dateTbc:!!m.dateTbc, comp:m.comp||"", venue:m.venue||"", home:m.home||"", away:m.away||"",
     tv:m.tv||"", vc:m.vc||"", role:r, partner:m[o]||"", fee:+m["fee_"+r]||0, paid:!!m["paid_"+r], paidDate:m["paidDate_"+r]||"", notes:m.notes||"",
-    ...venueExtra(m.venue), homeFull:teamFull(m.home), awayFull:teamFull(m.away)};
+    ...venueExtra(m.venue), homeVar:teamVar(m.home), awayVar:teamVar(m.away)};
 }
 /* venue details travel with each user's copy of the assignment (users cannot read the venues list itself) */
 function venueExtra(name){
@@ -1015,8 +1017,8 @@ document.addEventListener("click", async e => {
   }
   if(act==="timport"){ const f=$("tFile"); f.value=""; f.onchange=()=>{ if(f.files[0]) importTeams(f.files[0]); }; f.click(); }
   if(act==="texport"){
-    try{ const X=await loadXLSX(); const aoa=[["Αρκτικόλεξο","Πλήρες όνομα","Έδρα"], ...teamList.map(t=>[t.name, t.full||"", t.venue||""])];
-      const ws=X.utils.aoa_to_sheet(aoa); ws["!cols"]=[{wch:16},{wch:45},{wch:22}]; const wb=X.utils.book_new(); X.utils.book_append_sheet(wb, ws, "Ομάδες"); X.writeFile(wb, "CheckMate_Omades.xlsx"); }
+    try{ const X=await loadXLSX(); const aoa=[["Ομάδα","VAR","Έδρα"], ...teamList.map(t=>[t.name, t.var||"", t.venue||""])];
+      const ws=X.utils.aoa_to_sheet(aoa); ws["!cols"]=[{wch:24},{wch:12},{wch:22}]; const wb=X.utils.book_new(); X.utils.book_append_sheet(wb, ws, "Ομάδες"); X.writeFile(wb, "CheckMate_Omades.xlsx"); }
     catch{ toast("Η εξαγωγή απέτυχε"); }
   }
   if(act==="vimport"){ const f=$("vFile"); f.value=""; f.onchange=()=>{ if(f.files[0]) importVenues(f.files[0]); }; f.click(); }
@@ -1199,24 +1201,24 @@ $("frm").addEventListener("submit", async e=>{
 
 /* ---------- Excel import ---------- */
 let impRows=[];
-/* Excel with teams: Αρκτικόλεξο | Πλήρες όνομα | Έδρα (header row optional; columns found by their titles when present) */
+/* Excel with teams: Ομάδα | VAR | Έδρα (header row optional; columns found by their titles when present) */
 async function importTeams(file){
   try{
     const X = await loadXLSX();
     const wb = X.read(await file.arrayBuffer(), {type:"array"});
     const rows = X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, defval:"", raw:false}).map(r=>r.map(c=>String(c??"").trim())).filter(r=>r.some(Boolean));
     if(!rows.length){ toast("Το αρχείο είναι άδειο"); return; }
-    let ci = {name:0, full:1, venue:2}, start = 0;
+    let ci = {name:0, var:1, venue:2}, start = 0;
     const head = rows[0].map(c=>c.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase());
-    if(head.some(c=>/ΑΡΚΤΙΚ|ΣΥΝΤΟΜ|ΟΜΑΔ|ΟΝΟΜΑ|ΕΔΡΑ|ΓΗΠΕΔ|ΚΩΔ/.test(c))){
+    if(head.some(c=>/VAR|ΑΡΚΤΙΚ|ΣΥΝΤΟΜ|ΟΜΑΔ|ΟΝΟΜΑ|ΕΔΡΑ|ΓΗΠΕΔ|ΚΩΔ/.test(c))){
       start = 1; const f = re => head.findIndex(c=>re.test(c));
-      const n=f(/ΑΡΚΤΙΚ|ΣΥΝΤΟΜ|ΚΩΔ/), fu=f(/ΠΛΗΡ|ΟΝΟΜΑΣΙΑ|ΕΠΩΝΥΜ|ΟΝΟΜΑ/), ve=f(/ΕΔΡΑ|ΓΗΠΕΔ/);
-      if(n>=0) ci.name=n; if(fu>=0 && fu!==ci.name) ci.full=fu; if(ve>=0) ci.venue=ve;
+      const n=f(/ΟΜΑΔ|ΟΝΟΜΑ/), va=f(/VAR|ΒΑΡ|ΑΡΚΤΙΚ|ΣΥΝΤΟΜ|ΚΩΔ|CHALLENGE/), ve=f(/ΕΔΡΑ|ΓΗΠΕΔ/);
+      if(n>=0) ci.name=n; if(va>=0 && va!==ci.name) ci.var=va; if(ve>=0) ci.venue=ve;
     }
     let added=0, updated=0; const touched=[], newVenues=[];
     for(const r of rows.slice(start)){
       const name = r[ci.name]; if(!name) continue;
-      const d = {}; if(r[ci.full]) d.full=r[ci.full]; if(r[ci.venue]){ d.venue=r[ci.venue]; newVenues.push(d.venue); }
+      const d = {}; if(r[ci.var]) d.var=r[ci.var]; if(r[ci.venue]){ d.venue=r[ci.venue]; newVenues.push(d.venue); }
       const ex = teamList.find(t=>norm(t.name)===norm(name));
       if(ex){ if(Object.entries(d).some(([k,v])=>ex[k]!==v)){ await w(()=>db.doc(`teams/${ex.id}`).update(d)); Object.assign(ex,d); updated++; touched.push(name); } }
       else { const ref = await w(()=>db.collection("teams").add({name, ...d})); if(!teamList.some(x=>x.id===ref.id)) teamList.push({id:ref.id, name, ...d}); added++; touched.push(name); }
@@ -1506,9 +1508,7 @@ function renderUser(){
   const total=items.reduce((a,i)=>a+(+i.fee||0),0), paid=items.filter(i=>i.paid).reduce((a,i)=>a+(+i.fee||0),0);
   const card=(i,first)=>`<article class="card ${i.role} ${i.date<t?"past":""}">
     <div class="top"><div class="when">${whenMain(i)} <small>${whenSub(i)}</small></div>${first?`<span class="next">Επόμενη</span>`:""}</div>
-    ${(i.homeFull||i.awayFull)
-      ? `<div class="teams full">${esc([i.homeFull||i.home, i.awayFull||i.away].filter(Boolean).join(" – "))}</div><div class="tfull">${teams(i)}</div>`
-      : `<div class="teams">${teams(i)}</div>`}
+    <div class="teams">${teams(i)}</div>${(i.homeVar||i.awayVar)?`<div class="tfull"><span class="vtag">VAR</span> ${esc([i.homeVar||"—", i.away?(i.awayVar||"—"):""].filter(Boolean).join(" – "))}</div>`:""}
     ${venueCard(i)}
     <dl>${i.comp?`<dt>Διοργάνωση</dt><dd>${esc(i.comp)}</dd>`:""}<dt>Θέση</dt><dd><span class="role ${i.role}">${ROLE[i.role]}</span></dd>
       ${i.partner?`<dt>${i.role==="op"?"Βοηθός":"Χειριστής"}</dt><dd>${esc(i.partner)}</dd>`:""}${i.vc?`<dt>VAR</dt><dd>${esc(i.vc)}</dd>`:""}${i.tv?`<dt>Κάλυψη</dt><dd>${esc(i.tv)}</dd>`:""}${i.dateTbc?`<dt>Σημ.</dt><dd>Η ημέρα/ώρα θα επιβεβαιωθεί</dd>`:""}
