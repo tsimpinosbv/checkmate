@@ -39,6 +39,7 @@
 | `src/mode-assign.html` | Λειτουργία «Αναθέσεις διαχειριστή» (η κύρια) |
 | `imerologio.html` | Το προσωπικό Ημερολόγιο (δημιουργείται από το `build.py`) |
 | `src/mode-diary.html` | Πηγή του προσωπικού Ημερολογίου |
+| `help/diaxeiristis.html`, `help/Check-Mate-Odigies-Diaxeiristi.pdf` | Οδηγίες με εικόνες για τους διαχειριστές (σελίδα και PDF) |
 | `help/imerologio.html`, `help/Check-Mate-Imerologio-Odigies.pdf` | Οδηγίες μόνο για το Ημερολόγιο (σελίδα και PDF) |
 | `imerologio.webmanifest`, `icons/diary-*` | Εγκατάσταση του Ημερολογίου ως ξεχωριστής εφαρμογής |
 | `src/mode-log.html` | Λειτουργία «Ημερολόγιο αγώνων» (κρυφή, εναλλακτική) |

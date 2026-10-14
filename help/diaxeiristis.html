@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="el"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check Mate · Οδηγίες διαχειριστή</title>
+<meta name="theme-color" content="#14213a">
+<link rel="icon" type="image/png" sizes="32x32" href="../icons/favicon-32.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans+Extra+Condensed:wght@800&family=Commissioner:wght@400;600&display=swap&subset=greek">
+<style>
+:root{--ink:#14213a;--bg:#f3f5f9;--surface:#fff;--line:#d9dfea;--muted:#5d6b84;--accent:#f0821e;--blue:#2a7fd4;--warn-bg:#fdeedd}
+@media (prefers-color-scheme: dark){:root{--ink:#eef2f8;--bg:#0f1729;--surface:#1b2436;--line:#33405a;--muted:#a9b4c8;--warn-bg:#3a2a17}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Commissioner",system-ui,-apple-system,"Segoe UI",sans-serif}
+header{background:#14213a;color:#fff;padding:12px 16px}
+@media (max-width:520px){.brand{min-width:0;flex:1 1 100%}.btn{flex:1;justify-content:center}}
+.hwrap{max-width:860px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;flex:1;min-width:200px;color:#fff;text-decoration:none}
+.brand img{width:38px;height:38px}
+.brand b{font:800 22px "Fira Sans Extra Condensed",system-ui,sans-serif;letter-spacing:.01em;text-transform:uppercase}
+.brand b span{color:#f0821e}
+.brand small{display:block;font-size:12px;opacity:.75;font-weight:400;text-transform:none}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none;border:1px solid rgba(255,255,255,.3);color:#fff}
+.btn.primary{background:#f0821e;border-color:#f0821e}
+main{max-width:860px;margin:0 auto;padding:20px 16px 60px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 18px 8px;margin:0 0 16px}
+h2{font:800 22px "Fira Sans Extra Condensed",system-ui,sans-serif;text-transform:uppercase;margin:4px 0 8px;letter-spacing:.01em}
+h3{font-size:17px;color:var(--blue);margin:16px 0 6px}
+p{margin:8px 0} ul,ol{margin:6px 0 10px;padding-left:22px} li{margin:4px 0}
+img{max-width:100%;height:auto}
+.pair{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:12px 0}
+.pair img{width:min(260px,100%);border:1px solid var(--line);border-radius:12px}
+.side{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;margin:12px 0}
+.side img{width:min(260px,100%);border:1px solid var(--line);border-radius:12px;display:block}
+.side img.wide{width:min(340px,100%)}
+.side>p:first-child{flex:none;margin:0;width:min(260px,100%)}
+.side>p:first-child:has(img.wide){width:min(340px,100%)}
+a{overflow-wrap:anywhere}
+.side>div{flex:1 1 260px;min-width:0}
+img.strip{display:block;width:min(360px,100%);margin:10px auto;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:15px;margin:8px 0}
+th{background:#14213a;color:#fff;text-align:left;padding:8px 10px}
+td{border-bottom:1px solid var(--line);padding:8px 10px;vertical-align:top}
+.note{color:var(--muted);font-style:italic;font-size:13px}
+.lead{font-size:17px}
+img.full{display:block;width:100%;border:1px solid var(--line);border-radius:12px;margin:10px 0}
+.pair img{width:min(380px,100%)}
+.tip{background:#e8f1fb;color:#14213a;border-left:4px solid #2a7fd4;border-radius:8px;padding:2px 14px;margin:10px 0}
+.side>p:first-child:has(img.wide){width:min(420px,100%)}
+.side img.wide{width:min(420px,100%)}
+</style></head>
+<body>
+<header><div class="hwrap">
+  <a class="brand" href="../checkmate.html"><img src="../icons/icon-192.png" alt=""><span><b>Check <span>Mate</span></b><small>Οδηγίες για διαχειριστές</small></span></a>
+  <a class="btn" href="Check-Mate-Odigies-Diaxeiristi.pdf" download>⬇ PDF</a>
+  <a class="btn primary" href="../checkmate.html">← Στην εφαρμογή</a>
+</div></header>
+<main><section class="card lead"><p>Ο <strong>διαχειριστής</strong> φτιάχνει το πρόγραμμα, ορίζει ποιος δουλεύει σε κάθε αγώνα ως <strong>Χειριστής</strong> ή <strong>Βοηθός</strong>, αποφασίζει τι βλέπουν οι χρήστες και σημειώνει τις πληρωμές. Οι χρήστες βλέπουν μόνο τις δικές τους αναθέσεις και παίρνουν email όταν κάτι αλλάζει.</p>
+<p>Μπαίνετε στο Check Mate με τον λογαριασμό διαχειριστή. Υπάρχουν τρεις καρτέλες: <strong>Πρόγραμμα</strong>, <strong>Ομάδες &amp; γήπεδα</strong> και <strong>Άτομα</strong>. Ο αριθμός δίπλα στα «Άτομα» δείχνει πόσα αιτήματα χρηστών περιμένουν έγκριση.</p>
+</section><section class="card"><h2>1 · Το πρόγραμμα</h2>
+<p><img src="img/adm-a01-programma.png" loading="lazy" alt="" class="full"></p>
+<ul>
+<li><strong>Στην κορυφή:</strong> αγώνες, αναθέσεις, σύνολο αμοιβών, πληρωμένα και εκκρεμή, για ό,τι δείχνουν τα φίλτρα.</li>
+<li><strong>Φίλτρα:</strong> Σεζόν, Μήνας, Άτομο, Πληρωμή, «Στους χρήστες» (ορατές/κρυφές) και αναζήτηση.</li>
+<li><strong>Σε κάθε αγώνα:</strong> ημερομηνία, ομάδες με το αρκτικόλεξο VAR από κάτω, γήπεδο (📍 ανοίγει τον χάρτη), χειριστής και βοηθός με αμοιβή και πληρωμή.</li>
+<li>Η <strong>πράσινη τελεία</strong> δίπλα σε όνομα σημαίνει ότι το άτομο έχει συνδεδεμένο λογαριασμό και βλέπει την ανάθεση.</li>
+<li><strong>● Εκκρεμεί / ✓ Πληρώθηκε:</strong> ένα πάτημα αλλάζει την πληρωμή.</li>
+<li><strong>✎</strong> ανοίγει τον αγώνα για αλλαγές ή διαγραφή.</li>
+</ul>
+</section><section class="card"><h2>2 · Νέα ανάθεση ή αλλαγή</h2>
+<div class="pair"><img src="img/adm-a02-forma.png" loading="lazy" alt=""><img src="img/adm-a03-combo.png" loading="lazy" alt=""></div>
+
+<ol>
+<li>Πατήστε <strong>+ Νέα ανάθεση</strong> (ή ✎ σε υπάρχοντα αγώνα).</li>
+<li>Συμπληρώστε ημερομηνία, ώρα, διοργάνωση, ομάδες, γήπεδο, κάλυψη και VAR.</li>
+<li>Στις θέσεις <strong>Χειριστής</strong> και <strong>Βοηθός</strong> διαλέξτε άτομο από τη λίστα ή γράψτε νέο όνομα. Η ένδειξη «⚠ ίδια μέρα» δείχνει ότι το άτομο έχει ήδη αγώνα εκείνη τη μέρα.</li>
+<li>Η <strong>αμοιβή</strong> μπαίνει αυτόματα (80 € / 40 €) και αλλάζει αν χρειαστεί.</li>
+<li>Τσεκάρετε <strong>Ορατή στους χρήστες</strong> για να τη δουν τα άτομα της ανάθεσης.</li>
+<li><strong>Αποθήκευση.</strong></li>
+</ol>
+<p>Όταν διαλέγετε γηπεδούχο, το γήπεδο συμπληρώνεται από την έδρα της ομάδας. Αν υπάρχει ήδη ο ίδιος αγώνας την ίδια μέρα, η εφαρμογή σας το λέει.</p>
+</section><section class="card"><h2>3 · Εισαγωγή προγράμματος από Excel</h2>
+<p><img src="img/adm-a04-eisagogi.png" loading="lazy" alt="" class="full"></p>
+<ol>
+<li><strong>⬆ Εισαγωγή Excel</strong> και διαλέξτε το αρχείο. Στήλες: ΗΜΕΡΟΜΗΝΙΑ · ΩΡΑ · ΓΗΠΕΔΟ · ΑΓΩΝΑΣ · ΚΑΛΥΨΗ · VAR · ΣΥΝΕΡΓΑΤΕΣ.</li>
+<li>Στους ΣΥΝΕΡΓΑΤΕΣ ο <strong>1ος</strong> είναι ο Χειριστής και ο <strong>2ος</strong> ο Βοηθός. Οι γραμμές-τίτλοι (π.χ. «3Η ΑΓΩΝΙΣΤΙΚΗ…») γίνονται η διοργάνωση.</li>
+<li>Η προεπισκόπηση δείχνει τι είναι <strong>ΝΕΟ</strong>, τι <strong>ΑΛΛΑΖΕΙ</strong> και τι μένει <strong>ΙΔΙΟ</strong>. Ελέγξτε τις αμοιβές και, αν θέλετε, τσεκάρετε «να μείνουν κρυφοί».</li>
+<li>Πατήστε <strong>Εισαγωγή</strong>.</li>
+</ol>
+<div class="tip">
+<p><strong>Το νέο αρχείο δεν αντικαθιστά το παλιό.</strong> Συγχωνεύεται: οι νέοι αγώνες προστίθενται, όσοι άλλαξαν (ώρα, γήπεδο, άτομα) ενημερώνονται, και οι πληρωμές μένουν. Στα <strong>πλέι οφ</strong> κάθε αγώνας της σειράς ξεχωρίζει από την ημερομηνία του. Το πρόγραμμα της <strong>νέας σεζόν</strong> δεν αγγίζει ποτέ τους περσινούς αγώνες.</p>
+</div>
+</section><section class="card"><h2>4 · Τι βλέπουν οι χρήστες: Ορατή / Κρυφή</h2>
+<p><img src="img/adm-a05-kryfes.png" loading="lazy" alt="" class="full"></p>
+<ul>
+<li>Κάθε χρήστης βλέπει <strong>μόνο τις δικές του</strong> αναθέσεις και <strong>μόνο τις Ορατές</strong>.</li>
+<li>Το κουμπί <strong>● Ορατή / ● Κρυφή</strong> κάτω από την ημερομηνία αλλάζει μία ανάθεση.</li>
+<li><strong>Πολλές μαζί:</strong> βάλτε φίλτρα (π.χ. Μήνας) και πατήστε <strong>Εμφάνιση όλων</strong> ή <strong>Απόκρυψη όλων</strong>.</li>
+<li><strong>Τέλος σεζόν:</strong> διαλέξτε την περσινή στο φίλτρο <strong>Σεζόν</strong> → <strong>Απόκρυψη όλης της σεζόν</strong>. Δεν σβήνεται τίποτα και δεν στέλνεται email.</li>
+</ul>
+</section><section class="card"><h2>5 · Ομάδες &amp; γήπεδα</h2>
+<p><img src="img/adm-a06-listes.png" loading="lazy" alt="" class="full"></p>
+<ul>
+<li><strong>Ομάδες:</strong> δίπλα σε κάθε ομάδα γράψτε το <strong>VAR</strong>, το αρκτικόλεξο που μπαίνει στο challenge, και την <strong>έδρα</strong> (🏟). Οι χρήστες βλέπουν το όνομα της ομάδας και από κάτω το VAR.</li>
+<li><strong>Γήπεδα:</strong> γράψτε <strong>πλήρες όνομα</strong>, <strong>διεύθυνση</strong> ή σύνδεσμο <strong>Google Maps</strong>. Οι χρήστες βλέπουν τότε τον χάρτη στην ανάθεσή τους.</li>
+<li><strong>Όλα μαζί με Excel:</strong> <strong>⬇ Excel</strong> κατεβάζει τη λίστα, τη συμπληρώνετε και την ανεβάζετε με <strong>⬆ Excel</strong>. Ομάδες: <em>Ομάδα · VAR · Έδρα</em>. Γήπεδα: <em>Γήπεδο · Πλήρες όνομα · Διεύθυνση · Χάρτης</em>.</li>
+<li>Πατήστε <strong>Tab</strong> μετά από κάθε αλλαγή για να αποθηκευτεί. Οι αναθέσεις των χρηστών ενημερώνονται αμέσως, χωρίς email.</li>
+</ul>
+</section><section class="card"><h2>6 · Άτομα και χρήστες</h2>
+<p><img src="img/adm-a07a-atoma.png" loading="lazy" alt="" class="full"></p>
+<p><strong>Πώς αποκτά πρόσβαση ένας συνεργάτης:</strong></p>
+<ol>
+<li>Του στέλνετε τον σύνδεσμο της εφαρμογής.</li>
+<li>Κάνει <strong>εγγραφή</strong> και διαλέγει το όνομά του όπως είναι στο πρόγραμμα.</li>
+<li>Στο <strong>Αιτήματα σύνδεσης</strong> πατάτε <strong>Έγκριση</strong>. Από εκεί και πέρα βλέπει τις αναθέσεις του.</li>
+</ol>
+<p><strong>Στη σελίδα:</strong></p>
+<ul>
+<li><strong>Άτομα (αριστερά):</strong> όλα τα ονόματα του προγράμματος. «✓ Βλέπει τις αναθέσεις του» σημαίνει συνδεδεμένο λογαριασμό. <strong>Αποσύνδεση</strong> κόβει την πρόσβαση.</li>
+<li><strong>✉:</strong> για όποιον δεν έχει λογαριασμό, γράψτε email για να παίρνει ειδοποιήσεις.</li>
+<li><strong>Εγγεγραμμένοι χρήστες:</strong> όλοι οι λογαριασμοί. Με <strong>Σύνδεση με όνομα…</strong> συνδέετε κάποιον χωρίς να περιμένετε αίτημα. Η <strong>Διαγραφή</strong> εμφανίζεται για όσους δεν είναι συνδεδεμένοι.</li>
+</ul>
+<h3>⇄ Συγχώνευση: το ίδιο άτομο με δύο ονόματα</h3>
+<div class="side">
+<p><img src="img/adm-a08-sygxwneusi.png" loading="lazy" alt="" class="wide"><div markdown="1"></p>
+<p>Αν ένα άτομο υπάρχει με δύο ονόματα (π.χ. «ΠΑΠΑΔΟΠΟΥΛΟΣ Γ.» και «ΠΑΠΑΔΟΠΟΥΛΟΣ Ι.»):</p>
+<ol>
+<li>Πατήστε <strong>⇄ Συγχώνευση</strong> στο λάθος όνομα.</li>
+<li>Διαλέξτε το σωστό όνομα.</li>
+<li>Διαλέξτε <strong>ποιος λογαριασμός</strong> θα βλέπει τις αναθέσεις.</li>
+<li><strong>Συγχώνευση.</strong></li>
+</ol>
+<p>Όλες οι αναθέσεις περνούν στο σωστό όνομα και το λάθος διαγράφεται. Δεν στέλνεται email.</p>
+</div>
+</div>
+</section><section class="card"><h2>7 · Αμοιβές και ειδοποιήσεις email</h2>
+<div class="side">
+<p><img src="img/adm-a07b-email.png" loading="lazy" alt="" class="wide"><div markdown="1"></p>
+<p><strong>Προεπιλεγμένες αμοιβές:</strong> Χειριστής 80 €, Βοηθός 40 €. Μπαίνουν σε κάθε νέα ανάθεση. Η <strong>Εφαρμογή στις υπάρχουσες αναθέσεις</strong> αλλάζει τα απλήρωτα.</p>
+<p><strong>Ειδοποιήσεις email:</strong> όταν αλλάζει μια <strong>ορατή</strong> ανάθεση (νέα, ώρα, γήπεδο, συνεργάτης, ακύρωση, πληρωμή), τα άτομα παίρνουν <strong>ένα email</strong> με όλες τις αλλαγές μαζί.</p>
+<ul>
+<li>Εδώ αλλάζετε <strong>όνομα αποστολέα</strong>, <strong>απαντήσεις στο email</strong> και το <strong>κείμενο στο τέλος</strong> κάθε email.</li>
+<li><strong>Δοκιμαστικό email σε εμένα</strong> ελέγχει ότι όλα λειτουργούν.</li>
+<li>Για αγώνες που <strong>έχουν γίνει</strong> στέλνεται email μόνο για πληρωμή. Η απόκρυψη πολλών μαζί και οι συγχωνεύσεις δεν στέλνουν email.</li>
+<li>Όριο: περίπου <strong>100 email την ημέρα</strong>.</li>
+</ul>
+</div>
+</div>
+</section><section class="card"><h2>8 · Εξαγωγή σε Excel</h2>
+<p>Το <strong>⬇ Excel</strong> κατεβάζει τις αναθέσεις <strong>με τα τρέχοντα φίλτρα</strong> (π.χ. μία σεζόν ή έναν μήνα), σε φύλλα: <strong>Σύνοψη</strong>, <strong>Αναθέσεις</strong>, <strong>Ανά άτομο</strong>, <strong>Ανά μήνα</strong>, <strong>Ανά διοργάνωση</strong>, με σύνολα και πληρωμές. Το <strong>⬇ CSV</strong> δίνει απλή λίστα.</p>
+</section><section class="card"><h2>9 · Τι βλέπει ο χρήστης</h2>
+<div class="side">
+<p><img src="img/adm-a09-xristis.png" loading="lazy" alt=""><div markdown="1"></p>
+<ul>
+<li>Τις <strong>επόμενες αναθέσεις</strong> του, με την πιο κοντινή σημειωμένη <strong>ΕΠΟΜΕΝΗ</strong>.</li>
+<li>Ομάδες με το <strong>VAR</strong> από κάτω, γήπεδο με πλήρες όνομα, διεύθυνση και <strong>🗺 Χάρτη</strong>.</li>
+<li>Θέση, συνεργάτη, διοργάνωση, κάλυψη, σημειώσεις.</li>
+<li>Αμοιβή και αν <strong>πληρώθηκε</strong>, με σύνολα στην κορυφή.</li>
+<li>Τις παλιές αναθέσεις με «Προβολή προηγούμενων».</li>
+</ul>
+<p>Δεν μπορεί να αλλάξει τίποτα. Για τον εαυτό του υπάρχει και το προσωπικό <strong>Ημερολόγιο</strong>, ξεχωριστή εφαρμογή που δεν συνδέεται με το Check Mate και δεν τη βλέπει ο διαχειριστής.</p>
+</div>
+</div>
+</section><section class="card"><h2>Συχνές ερωτήσεις</h2>
+<table>
+<thead>
+<tr>
+<th>Ερώτηση</th>
+<th>Απάντηση</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ο χρήστης δεν βλέπει μια ανάθεση</td>
+<td>Είναι <strong>Ορατή</strong>; Έχει εγκριθεί και είναι συνδεδεμένος με το σωστό όνομα (πράσινη τελεία);</td>
+</tr>
+<tr>
+<td>Δεν πήγε email</td>
+<td>Έχει ο χρήστης λογαριασμό ή ✉ email; Είναι η ανάθεση ορατή; Δοκιμάστε «Δοκιμαστικό email». Κοιτάξτε και στα ανεπιθύμητα.</td>
+</tr>
+<tr>
+<td>Το ίδιο άτομο με δύο ονόματα</td>
+<td><strong>⇄ Συγχώνευση</strong> στα Άτομα.</td>
+</tr>
+<tr>
+<td>Λάθος όνομα ομάδας ή γηπέδου</td>
+<td>Διορθώστε τον αγώνα με ✎ και σβήστε το λάθος από τη λίστα (✕).</td>
+</tr>
+<tr>
+<td>Ανέβασα ξανά το Excel</td>
+<td>Δεν διπλασιάζεται τίποτα· ελέγξτε την προεπισκόπηση.</td>
+</tr>
+<tr>
+<td>Τέλος σεζόν</td>
+<td>Φίλτρο <strong>Σεζόν</strong> → <strong>Απόκρυψη όλης της σεζόν</strong>. Τα δεδομένα μένουν.</td>
+</tr>
+</tbody>
+</table>
+<p class="note">Οι εικόνες είναι παραδείγματα με φανταστικά στοιχεία.</p></section></main>
+</body></html>
