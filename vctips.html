@@ -18,7 +18,7 @@
 <style>
 #boot{padding:60px 16px;text-align:center;font:15px "Commissioner",system-ui,sans-serif;color:#5d6b84}
 
-/* V.C. Tips — separate app on the Check Mate site: same accounts, read-only venue/team lists from Check Mate, edited only by the owner.
+/* V.C. Tips — separate app on the Check Mate site: same accounts, own content (steps, tips, venues), edited only by the owner.
    Layout: phone app — sticky header, one column of steps / tips / venue card, fixed bottom tab bar. Same palette as Check Mate. */
 :root{
   --ink:#14213a; --bg:#f3f5f9; --surface:#ffffff; --line:#d9dfea; --muted:#5d6b84;
@@ -99,17 +99,12 @@ textarea.g-in{min-height:120px;resize:vertical}
 .g-court{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
 .g-court .hd{background:var(--head);color:var(--head-ink);padding:16px;display:flex;gap:14px;align-items:center}
 .g-code{max-width:55%;overflow-wrap:anywhere;font-family:var(--f-mono);font-size:22px;letter-spacing:.06em;background:var(--accent);color:#fff;border-radius:8px;padding:4px 10px;line-height:1.2;flex:none}
-.g-court .hd h2{font-family:var(--f-display);font-weight:800;font-size:22px;line-height:1.1;margin:0;text-transform:uppercase;text-wrap:balance;overflow-wrap:anywhere}
+.g-court .hd h2{font-family:var(--f-display);font-weight:800;font-size:22px;line-height:1.1;margin:0;text-transform:uppercase;text-wrap:balance;overflow-wrap:break-word;min-width:0}
 .g-court .hd p{margin:2px 0 0;opacity:.75;font-size:14px}
 .g-court .bd{padding:16px;display:grid;gap:12px}
 .g-kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:baseline;margin:0}
 .g-kv dt{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .g-kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
-.g-teams{display:grid;gap:8px}
-.g-teams .g-tag{justify-self:start}
-.g-teams dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:baseline;margin:0}
-.g-teams dt{font-family:var(--f-mono);font-size:17px;color:var(--accent)}
-.g-teams dd{margin:0;font-weight:600;min-width:0;overflow-wrap:anywhere}
 .g-row{display:flex;flex-wrap:wrap;gap:10px}
 .g-row .g-btn{flex:1 1 180px}
 .g-mini{display:grid;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:18px}
@@ -469,7 +464,7 @@ const TABS = [["setup","Στήσιμο"],["tips","Tips"],["venues","Γήπεδα
 
 const OWNER = "tsimpinosbv@gmail.com";   // the only account that edits steps and tips (also enforced in firestore.rules)
 let db=null, me=null, isAdmin=false, edit=false;
-let steps=[], tips=[], venues=[], teams=[], ready={steps:false,tips:false,venues:false};
+let steps=[], tips=[], venues=[], ready={steps:false,tips:false,venues:false};
 let tab = (location.hash||"").slice(1); if(!TABS.some(t=>t[0]===tab)) tab = "setup";
 let tipCat = "Όλα", venueId = null, filter = "", sheet = null;
 try{ venueId = localStorage.getItem("vct-venue"); }catch{}
@@ -481,19 +476,18 @@ function diagram(){
     <span>Πάτα για μεγέθυνση</span></a>`;
 }
 
-/* Check Mate venues: name = as written in the programme (often an acronym, e.g. ΣΕΦ), full, address, map (Google Maps link or "lat,lng") */
+/* V.C. Tips venues (own list, collection vct_venues): code (acronym), name, city, address, map (Google Maps link or "lat,lng"), notes */
 const COORD = /^\s*-?\d{1,2}\.\d+\s*,\s*-?\d{1,3}\.\d+\s*$/;
-function venueQuery(v){ if(v.map && COORD.test(v.map)) return v.map.replace(/\s/g,""); return [v.full||v.name, v.address].filter(Boolean).join(", "); }
 function mapsUrl(v){
   if(/^https?:\/\//i.test(v.map||"")) return v.map;
-  return "https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(venueQuery(v));
+  const q = COORD.test(v.map||"") ? v.map.replace(/\s/g,"") : (v.address ? [v.name, v.address].filter(Boolean).join(", ") : [v.name, v.city].filter(Boolean).join(", "));
+  return "https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(q);
 }
-const homeTeams = v => teams.filter(t => norm(t.venue) === norm(v.name)).sort((a,b)=>a.name.localeCompare(b.name,"el"));
-const venueFor = name => venues.find(v => norm(v.name) === norm(name));
+const venueKey = v => norm(v.code || v.name);
 
 function tools(kind, i, len){
   if(!edit) return "";
-  const mv = `<button class="g-tb" data-act="up" data-k="${kind}" data-i="${i}" ${i===0?"disabled":""} aria-label="Μετακίνηση πάνω">↑</button>
+  const mv = kind==="venues" ? "" : `<button class="g-tb" data-act="up" data-k="${kind}" data-i="${i}" ${i===0?"disabled":""} aria-label="Μετακίνηση πάνω">↑</button>
     <button class="g-tb" data-act="down" data-k="${kind}" data-i="${i}" ${i===len-1?"disabled":""} aria-label="Μετακίνηση κάτω">↓</button>`;
   return `<div class="g-tools"><button class="g-tb" data-act="edit" data-k="${kind}" data-i="${i}">✎ Επεξεργασία</button>${mv}
     <button class="g-tb del" data-act="del" data-k="${kind}" data-i="${i}">Διαγραφή</button></div>`;
@@ -531,39 +525,45 @@ function viewTips(){
 
 function viewVenues(){
   if(!ready.venues) return `<h1 class="g-h1">Γήπεδα</h1><p class="g-lede">Φόρτωση…</p>`;
-  const sorted = venues.slice().sort((a,b)=>a.name.localeCompare(b.name,"el"));
+  const sorted = venues.slice().sort((a,b)=>(a.code||"~").localeCompare(b.code||"~","el") || (a.name||"").localeCompare(b.name||"","el"));
   const f = norm(filter);
-  const shown = f ? sorted.filter(v=>norm([v.name, v.full, v.address, ...homeTeams(v).flatMap(t=>[t.name,t.var])].join(" ")).includes(f)) : sorted;
+  const shown = f ? sorted.filter(v=>norm([v.code,v.name,v.city,v.address].join(" ")).includes(f)) : sorted;
   const cur = venues.find(v=>v.id===venueId);
-  const ht = cur ? homeTeams(cur) : [];
-  const where = cur ? (cur.address||"") : "";
-  return `<h1 class="g-h1">Γήπεδα</h1><p class="g-lede">Διάλεξε γήπεδο για να δεις το πλήρες όνομα, τις ομάδες με τα αρκτικόλεξα VAR και οδηγίες στο Google Maps.</p>
-  <div class="g-picker">
-    <div class="g-field"><label for="gq">Αναζήτηση</label><input class="g-in" id="gq" type="search" placeholder="Γήπεδο, ομάδα ή αρκτικόλεξο" value="${esc(filter)}" autocomplete="off"></div>
+  const ci = cur ? venues.indexOf(cur) : -1;
+  const emptyAll = isAdmin
+    ? emptyBox("Δεν υπάρχουν γήπεδα ακόμα", "Πάτα ✎ Επεξεργασία για να τα προσθέσεις ένα-ένα ή όλα μαζί.", edit?`<button class="g-btn" data-act="copycm">Αντιγραφή λίστας από το Check Mate (μία φορά)</button>`:"")
+    : emptyBox("Δεν υπάρχουν γήπεδα ακόμα", "Θα προστεθούν σύντομα.");
+  return `<h1 class="g-h1">Γήπεδα</h1><p class="g-lede">Διάλεξε γήπεδο για να δεις το αρκτικόλεξό του και να ανοίξεις οδηγίες στο Google Maps.</p>
+  ${venues.length?`<div class="g-picker">
+    <div class="g-field"><label for="gq">Αναζήτηση</label><input class="g-in" id="gq" type="search" placeholder="Αρκτικόλεξο, όνομα ή πόλη" value="${esc(filter)}" autocomplete="off"></div>
     <div class="g-field"><label for="gsel">Γήπεδο (${shown.length})</label><select class="g-in" id="gsel"><option value="">— Επίλεξε γήπεδο —</option>
-      ${shown.map(v=>`<option value="${v.id}" ${v.id===venueId?"selected":""}>${esc(v.name)}${v.full&&norm(v.full)!==norm(v.name)?" — "+esc(v.full):""}</option>`).join("")}</select></div>
-  </div>
-  ${cur?`<article class="g-court"><div class="hd"><span class="g-code">${esc(cur.name)}</span><div><h2>${esc(cur.full||cur.name)}</h2>${where?`<p>${esc(where)}</p>`:""}</div></div>
-    <div class="bd">
-    ${ht.length?`<div class="g-teams"><span class="g-tag">Ομάδες έδρας · VAR</span><dl>${ht.map(t=>`<dt>${esc(t.var||"—")}</dt><dd>${esc(t.name)}</dd>`).join("")}</dl></div>`:`<p class="g-lede" style="margin:0">Δεν υπάρχουν ομάδες με έδρα αυτό το γήπεδο.</p>`}
+      ${shown.map(v=>`<option value="${v.id}" ${v.id===venueId?"selected":""}>${v.code?esc(v.code)+" — ":""}${esc(v.name)}</option>`).join("")}</select></div>
+  </div>`:""}
+  ${cur?`<article class="g-court"><div class="hd">${cur.code && norm(cur.code)!==norm(cur.name)?`<span class="g-code">${esc(cur.code)}</span>`:""}<div><h2>${esc(cur.name)}</h2>${cur.city?`<p>${esc(cur.city)}</p>`:""}</div></div>
+    <div class="bd">${cur.address||cur.notes?`<dl class="g-kv">${cur.address?`<dt>Διεύθυνση</dt><dd>${esc(cur.address)}</dd>`:""}${cur.notes?`<dt>Σημειώσεις</dt><dd class="g-txt">${esc(cur.notes)}</dd>`:""}</dl>`:""}
     <div class="g-row"><a class="g-btn" href="${esc(mapsUrl(cur))}" target="_blank" rel="noopener">${ICON.venues} Οδηγίες Google Maps</a>${cur.address?`<button class="g-btn ghost" data-act="copy">Αντιγραφή διεύθυνσης</button>`:""}</div>
-    ${isAdmin&&(!cur.full||!cur.address)?`<p class="g-lede" style="margin:0">Λείπει ${!cur.full&&!cur.address?"πλήρες όνομα και διεύθυνση":!cur.full?"το πλήρες όνομα":"η διεύθυνση"}. Συμπληρώνεται στο Check Mate → Ομάδες &amp; γήπεδα.</p>`:""}
-    </div></article>`
-   : venues.length ? emptyBox("Επίλεξε γήπεδο από τη λίστα","") : emptyBox("Δεν υπάρχουν γήπεδα ακόμα", "Τα γήπεδα έρχονται από τη λίστα του Check Mate.")}
-  <div class="g-mini">${shown.map(v=>`<button data-act="pick" data-id="${v.id}" aria-current="${v.id===venueId}"><span class="c">${esc(v.name)}</span><span class="n">${esc(v.full||homeTeams(v).map(t=>t.name).join(", ")||"")}</span></button>`).join("")}</div>
-  ${isAdmin?`<p class="g-lede" style="margin-top:14px">Τα γήπεδα, οι ομάδες και τα αρκτικόλεξα VAR αλλάζουν στο Check Mate → Ομάδες &amp; γήπεδα και εμφανίζονται εδώ αυτόματα.</p>`:""}`;
+    ${tools("venues",ci,venues.length)}</div></article>`
+   : venues.length ? emptyBox("Επίλεξε γήπεδο από τη λίστα","") : emptyAll}
+  ${venues.length?`<div class="g-mini">${shown.map(v=>`<button data-act="pick" data-id="${v.id}" aria-current="${v.id===venueId}"><span class="c ${v.code?"":"none"}">${esc(v.code||"—")}</span><span class="n">${esc(v.name)}</span></button>`).join("")}</div>`:""}
+  ${edit?`<div class="g-list" style="margin-top:14px"><button class="g-add" data-act="new" data-k="venues">+ Νέο γήπεδο</button><button class="g-add" data-act="import">Εισαγωγή λίστας γηπέδων</button></div>`:""}`;
 }
 
 const FORMS = {
   steps:[["title","Τίτλος βήματος","input"],["text","Οδηγίες","textarea"],["img","Φωτογραφία","image"]],
   tips:[["cat","Κατηγορία","input"],["title","Τίτλος","input"],["text","Κείμενο","textarea"],["img","Φωτογραφία (προαιρετική)","image"]],
+  venues:[["code","Αρκτικόλεξο","input"],["name","Όνομα γηπέδου","input"],["city","Πόλη / περιοχή","input"],["address","Διεύθυνση (για το Google Maps)","input"],["map","Σύνδεσμος Google Maps ή συντεταγμένες (προαιρετικό)","input"],["notes","Σημειώσεις (πρόσβαση, πάρκινγκ, υπεύθυνος γηπέδου)","textarea"]],
 };
-const NAMES = {steps:"βήμα", tips:"tip"};
-const LIST = k => k==="steps"?steps:tips;
-const COL = k => k==="steps"?"guide_steps":"guide_tips";
+const NAMES = {steps:"βήμα", tips:"tip", venues:"γήπεδο"};
+const LIST = k => k==="steps"?steps:k==="tips"?tips:venues;
+const COL = k => k==="steps"?"guide_steps":k==="tips"?"guide_tips":"vct_venues";
 
 function viewSheet(){
   if(!sheet) return "";
+  if(sheet.kind==="import") return `<div class="g-sheet" data-act="closebg"><div class="g-pane" role="dialog" aria-modal="true" aria-labelledby="gsh">
+    <h2 id="gsh">Εισαγωγή λίστας γηπέδων</h2>
+    <p class="g-lede" style="margin:0">Ένα γήπεδο ανά γραμμή: <b>Αρκτικόλεξο ; Όνομα ; Πόλη ; Διεύθυνση</b>. Μπορείς να επικολλήσεις στήλες από Excel. Αν το αρκτικόλεξο υπάρχει ήδη, το γήπεδο ενημερώνεται· αλλιώς προστίθεται.</p>
+    <textarea class="g-in" id="gimp" style="min-height:200px" placeholder="ΣΕΦ ; Στάδιο Ειρήνης και Φιλίας ; Νέο Φάληρο ; Εθνάρχου Μακαρίου"></textarea>
+    <div class="g-row"><button class="g-btn" data-act="doimport">Αποθήκευση</button><button class="g-btn ghost" data-act="close">Άκυρο</button></div></div></div>`;
   const it = sheet.item;
   return `<div class="g-sheet" data-act="closebg"><div class="g-pane" role="dialog" aria-modal="true" aria-labelledby="gsh">
     <h2 id="gsh">${sheet.id?"Επεξεργασία: ":"Νέο "}${NAMES[sheet.kind]}</h2>
@@ -619,14 +619,46 @@ async function onClick(ev){
     case "rmimg": readSheet(); sheet.item.img=""; sheet.item.diagram=false; render(); break;
     case "saveitem": {
       readSheet(); const it=sheet.item, kind=sheet.kind;
-      if(!(it.title||it.name)){ toast("Συμπλήρωσε τίτλο"); break; }
+      if(!(it.title||it.name)){ toast(kind==="venues"?"Συμπλήρωσε το όνομα του γηπέδου":"Συμπλήρωσε τίτλο"); break; }
       const data={...it}; delete data.id;
       el.disabled=true;
       try{
         if(sheet.id) await db.doc(`${COL(kind)}/${sheet.id}`).set(data);
-        else { data.order=LIST(kind).length; await db.collection(COL(kind)).add(data); }
+        else { if(kind!=="venues") data.order=LIST(kind).length; const ref=await db.collection(COL(kind)).add(data); if(kind==="venues"){ venueId=ref.id; try{ localStorage.setItem("vct-venue", venueId); }catch{} } }
         sheet=null; toast("Αποθηκεύτηκε"); render();
       }catch(e){ el.disabled=false; toast(/size|large|exceed/i.test(e?.message||"")?"Η φωτογραφία είναι πολύ μεγάλη. Δοκίμασε μικρότερη.":"Η αποθήκευση απέτυχε. Δοκίμασε ξανά."); }
+      break; }
+    case "import": sheet={kind:"import"}; render(); break;
+    case "doimport": {
+      const rows=$("gimp").value.split("\n").map(l=>l.trim()).filter(Boolean).map(l=>l.split(/\t|;/).map(x=>x.trim())).filter(p=>p[0]||p[1]);
+      if(!rows.length){ toast("Η λίστα είναι κενή"); break; }
+      el.disabled=true; let added=0, updated=0;
+      try{
+        for(let a=0; a<rows.length; a+=400){
+          const b=db.batch();
+          for(const p of rows.slice(a,a+400)){
+            const d={}; if(p[0]) d.code=p[0]; if(p[1]) d.name=p[1]; if(p[2]) d.city=p[2]; if(p[3]) d.address=p[3];
+            const ex=venues.find(v=>venueKey(v)===norm(p[0]||p[1]));
+            if(ex){ b.set(db.doc(`vct_venues/${ex.id}`), d, {merge:true}); updated++; }
+            else { if(!d.name) d.name=d.code; b.set(db.collection("vct_venues").doc(), d); added++; }
+          }
+          await b.commit();
+        }
+        sheet=null; toast(`Ενημερώθηκαν ${updated}, προστέθηκαν ${added}`); render();
+      }catch{ el.disabled=false; fail(); }
+      break; }
+    /* one-off copy of Check Mate's venue list (owner is a Check Mate admin); afterwards the two lists are independent */
+    case "copycm": {
+      el.disabled=true;
+      try{
+        const snap=await db.collection("venues").get();
+        const b=db.batch(); let n=0;
+        snap.docs.forEach(d=>{ const v=d.data(); if(!v.name) return;
+          const o={code:v.name, name:v.full||v.name}; if(v.address) o.address=v.address; if(v.map) o.map=v.map;
+          b.set(db.collection("vct_venues").doc(), o); n++; });
+        if(!n){ el.disabled=false; toast("Η λίστα του Check Mate είναι κενή"); break; }
+        await b.commit(); toast(`Αντιγράφηκαν ${n} γήπεδα. Από εδώ και πέρα αλλάζουν μόνο στο V.C. Tips.`);
+      }catch{ el.disabled=false; toast("Η αντιγραφή απέτυχε. Χρειάζεται λογαριασμός διαχειριστή του Check Mate."); }
       break; }
     case "seed": {
       const src=k==="steps"?START_STEPS:START_TIPS; el.disabled=true;
@@ -655,11 +687,7 @@ async function onClick(ev){
   const denied = name => () => { ready[name]=true; render(); };
   db.collection("guide_steps").onSnapshot(s=>{ steps=byOrder(s); ready.steps=true; render(); }, denied("steps"));
   db.collection("guide_tips").onSnapshot(s=>{ tips=byOrder(s); ready.tips=true; render(); }, denied("tips"));
-  db.collection("venues").limit(1000).onSnapshot(s=>{
-    venues=s.docs.map(d=>({id:d.id,...d.data()})); ready.venues=true;
-    render();
-  }, denied("venues"));
-  db.collection("teams").limit(1000).onSnapshot(s=>{ teams=s.docs.map(d=>({id:d.id,...d.data()})); render(); }, ()=>{});
+  db.collection("vct_venues").limit(2000).onSnapshot(s=>{ venues=s.docs.map(d=>({id:d.id,...d.data()})); ready.venues=true; render(); }, denied("venues"));
 })();
 
   })();
