@@ -162,3 +162,54 @@ diary=f'''<!doctype html>
 </html>
 '''
 open('imerologio.html','w').write(diary)
+
+
+# ---------- third app: V.C. Tips (vctips.html) — setup guide, separate from Check Mate; same accounts, edited only by the owner ----------
+s5,m5,j5=split(open('src/mode-vctips.html').read())
+vct=f'''<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>V.C. Tips</title>
+<meta name="theme-color" content="#14213a">
+<meta name="description" content="Στήσιμο video check, tips και γήπεδα με οδηγίες Google Maps.">
+<link rel="manifest" href="vctips.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/vct-32.png">
+<link rel="apple-touch-icon" href="icons/vct-apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="V.C. Tips">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+{fonts}
+<style>
+#boot{{padding:60px 16px;text-align:center;font:15px "Commissioner",system-ui,sans-serif;color:#5d6b84}}
+{s5}
+</style>
+</head>
+<body>
+<div id="root" lang="el"><div id="boot">Φόρτωση…</div></div>
+<template id="tpl-vct">{m5}</template>
+
+<script>window.CM_APP = "vctips";</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+{backend}
+</script>
+<script>
+/* mount V.C. Tips once signed in (the sign-in screen is drawn into #root until then) */
+(async () => {{
+  await claude.use("db");
+  document.getElementById("root").replaceChildren(document.getElementById("tpl-vct").content.cloneNode(true));
+  (function(){{
+{j5[-1]}
+  }})();
+}})();
+</script>
+</body>
+</html>
+'''
+open('vctips.html','w').write(vct)

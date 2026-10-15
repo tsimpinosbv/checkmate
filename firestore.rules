@@ -19,8 +19,16 @@ service cloud.firestore {
     // Admins can read and write everything (incl. contacts/<rosterId>: notification emails, admin-only),
     // EXCEPT the personal diaries: diary/<uid>/... belongs only to that user.
     match /{col}/{document=**} {
-      allow read, write: if isAdmin() && col != 'diary';
+      allow read, write: if isAdmin() && col != 'diary' && col != 'guide_steps' && col != 'guide_tips';
     }
+
+    // V.C. Tips (vctips.html): every signed-in user reads the setup steps, tips, venues and teams;
+    // only the owner account changes steps and tips (venues and teams are changed by admins in Check Mate).
+    function isOwner() { return signedIn() && request.auth.token.email_verified == true && myEmail() == 'tsimpinosbv@gmail.com'; }
+    match /guide_steps/{doc} { allow read: if signedIn(); allow write: if isOwner(); }
+    match /guide_tips/{doc}  { allow read: if signedIn(); allow write: if isOwner(); }
+    match /venues/{doc}      { allow read: if signedIn(); }
+    match /teams/{doc}       { allow read: if signedIn(); }
 
     // Personal diary app (imerologio.html): each user's own matches, private to them.
     match /diary/{uid}/{rest=**} { allow read, write: if isSelf(uid); }
