@@ -149,7 +149,8 @@ const ICON = {
 };
 const TABS = [["setup","Στήσιμο"],["tips","Tips"],["venues","Γήπεδα"]];
 
-const OWNER = "tsimpinosbv@gmail.com";   // the only account that edits steps and tips (also enforced in firestore.rules)
+const OWNER = "tsimpinosbv@gmail.com";   // owner: edits everything and chooses who else may edit (also enforced in firestore.rules)
+let isOwner = false, editors = [];        // editors: vct_editors/<email>, managed by the owner only
 let db=null, me=null, isAdmin=false, edit=false;
 let steps=[], tips=[], venues=[], ready={steps:false,tips:false,venues:false};
 let tab = (location.hash||"").slice(1); if(!TABS.some(t=>t[0]===tab)) tab = "setup";
@@ -181,6 +182,14 @@ function tools(kind, i, len){
 }
 function emptyBox(title, sub, extra=""){ return `<div class="g-empty"><strong>${title}</strong><div>${sub}</div>${extra}</div>`; }
 
+function viewEditors(){
+  return `<section class="g-tip" style="margin-top:22px;border-left-color:var(--blue)"><h3>Ποιοι κάνουν αλλαγές</h3>
+    <p class="g-txt" style="color:var(--muted)">Εκτός από εσένα. Βάλε το email με το οποίο μπαίνει στο Check Mate. Για να κάνει αλλαγές πρέπει να συνδέεται με «Συνέχεια με Google».</p>
+    <dl class="g-kv">${editors.length?editors.map(e=>`<dt>✎</dt><dd style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap"><span>${esc(e.id)}</span><button class="g-tb del" data-act="deleditor" data-id="${esc(e.id)}">Αφαίρεση</button></dd>`).join(""):`<dt></dt><dd style="color:var(--muted)">Κανείς ακόμα.</dd>`}</dl>
+    <div class="g-row"><input class="g-in" id="geditor" type="email" inputmode="email" placeholder="email@gmail.com" autocomplete="off" style="flex:1 1 200px"><button class="g-btn" data-act="addeditor">Προσθήκη</button></div>
+  </section>`;
+}
+
 function viewSetup(){
   if(!ready.steps) return `<h1 class="g-h1">Στήσιμο video check</h1><p class="g-lede">Φόρτωση…</p>`;
   const n = steps.length;
@@ -191,7 +200,8 @@ function viewSetup(){
   <div class="g-list">${n ? steps.map((s,i)=>`<article class="g-step">
     ${s.img?`<div class="g-media"><img src="${s.img}" alt="${esc(s.title)}" loading="lazy"></div>`:s.diagram?`<div class="g-media layout">${diagram()}</div>`:""}
     <div class="g-body"><span class="g-num">ΒΗΜΑ ${i+1} / ${n}</span><h2>${esc(s.title)}</h2><p class="g-txt">${esc(s.text)}</p>${tools("steps",i,n)}</div></article>`).join("") : empty}
-  ${edit?`<button class="g-add" data-act="new" data-k="steps">+ Νέο βήμα</button>`:""}</div>`;
+  ${edit?`<button class="g-add" data-act="new" data-k="steps">+ Νέο βήμα</button>`:""}</div>
+  ${edit&&isOwner?viewEditors():""}`;
 }
 
 function viewTips(){
@@ -347,6 +357,16 @@ async function onClick(ev){
         await b.commit(); toast(`Αντιγράφηκαν ${n} γήπεδα. Από εδώ και πέρα αλλάζουν μόνο στο V.C. Tips.`);
       }catch{ el.disabled=false; toast("Η αντιγραφή απέτυχε. Χρειάζεται λογαριασμός διαχειριστή του Check Mate."); }
       break; }
+    case "addeditor": {
+      const em=($("geditor").value||"").trim().toLowerCase();
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){ toast("Γράψε ένα σωστό email"); break; }
+      if(em===OWNER || editors.some(e=>e.id===em)){ toast("Υπάρχει ήδη"); break; }
+      try{ await db.doc(`vct_editors/${em}`).set({addedAt:Date.now()}); toast("Προστέθηκε. Θα δει το ✎ μόλις ξανανοίξει την εφαρμογή."); }catch{ fail(); }
+      break; }
+    case "deleditor":
+      if(!el.classList.contains("armed")){ el.classList.add("armed"); el.textContent="Σίγουρα;"; setTimeout(()=>{ if(el.isConnected){ el.classList.remove("armed"); el.textContent="Αφαίρεση"; } },3000); }
+      else { try{ await db.doc(`vct_editors/${el.dataset.id}`).delete(); toast("Αφαιρέθηκε"); }catch{ fail(); } }
+      break;
     case "seed": {
       const src=k==="steps"?START_STEPS:START_TIPS; el.disabled=true;
       try{ const b=db.batch(); src.forEach((x,n)=>b.set(db.collection(COL(k)).doc(), {...x, order:n})); await b.commit(); toast("Φορτώθηκε. Άλλαξέ το από το ✎ Επεξεργασία."); }
@@ -359,7 +379,11 @@ async function onClick(ev){
   db = await claude.use("db");
   const u = await claude.use("user");
   me = u ? await u.me() : null;
-  isAdmin = !!(me && (me.email||"").toLowerCase() === OWNER);
+  const myEmail = (me && me.email || "").toLowerCase();
+  isOwner = myEmail === OWNER;
+  isAdmin = isOwner;
+  if(!isOwner && myEmail){ try{ isAdmin = (await db.doc(`vct_editors/${myEmail}`).get()).exists; }catch{} }
+  if(isOwner) db.collection("vct_editors").onSnapshot(s=>{ editors=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.id.localeCompare(b.id)); render(); }, ()=>{});
   const g = $("gapp");
   g.addEventListener("click", onClick);
   g.addEventListener("change", async ev => {
