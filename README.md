@@ -4,8 +4,6 @@
 
 **Εφαρμογή:** https://tsimpinosbv.github.io/checkmate
 
-**V.C. Tips** (ξεχωριστή εφαρμογή, οδηγός στησίματος): https://tsimpinosbv.github.io/checkmate/vctips.html
-
 **Προσωπικό Ημερολόγιο** (ξεχωριστή εφαρμογή): https://tsimpinosbv.github.io/checkmate/imerologio.html
 
 ## Οδηγίες
@@ -40,8 +38,6 @@
 | `index.html` | Ανακατεύθυνση στο `checkmate.html` |
 | `src/mode-assign.html` | Λειτουργία «Αναθέσεις διαχειριστή» (η κύρια) |
 | `imerologio.html` | Το προσωπικό Ημερολόγιο (δημιουργείται από το `build.py`) |
-| `vctips.html` | Το V.C. Tips: βήματα στησίματος, tips, δική του λίστα γηπέδων με αρκτικόλεξα και Google Maps (δημιουργείται από το `build.py`). Ξεχωριστό από τη διαχείριση του Check Mate, το επεξεργάζεται μόνο ο λογαριασμός tsimpinosbv@gmail.com |
-| `src/mode-vctips.html`, `vctips.webmanifest`, `icons/vct-*`, `img/videocheck-layout.jpg` | Πηγή, εγκατάσταση και εικόνες του V.C. Tips |
 | `src/mode-diary.html` | Πηγή του προσωπικού Ημερολογίου |
 | `help/diaxeiristis.html`, `help/Check-Mate-Odigies-Diaxeiristi.pdf` | Οδηγίες με εικόνες για τους διαχειριστές (σελίδα και PDF) |
 | `help/imerologio.html`, `help/Check-Mate-Imerologio-Odigies.pdf` | Οδηγίες μόνο για το Ημερολόγιο (σελίδα και PDF) |

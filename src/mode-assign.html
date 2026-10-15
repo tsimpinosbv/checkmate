@@ -791,8 +791,8 @@ const EV_COLOR = {added:"#1d8a52", removed:"#c43a2c", changed:"#2a7fd4", paid:"#
 const fmtVal = (k, v) => k==="date" ? (v ? `${dayName(v)} ${fmtDate(v)}` : "—") : k==="fee" ? eur(v) : (v || "—");
 function evMatch(i){ const v=[i.homeVar,i.awayVar].some(Boolean) ? ` (VAR: ${[i.homeVar||"—", i.away?(i.awayVar||"—"):""].filter(Boolean).join(" – ")})` : ""; return `${i.home||""}${i.away?" – "+i.away:""}${v}`; }
 function venueMailHtml(name){
-  const v = venueOf(name);   // no map link in users' emails
-  return esc(name) + (v?.full ? ` – ${esc(v.full)}` : "") + (v?.address ? `<br><span style="color:#5d6b84">${esc(v.address)}</span>` : "");
+  const v = venueOf(name), url = mapUrl(name);
+  return esc(name) + (v?.full ? ` – ${esc(v.full)}` : "") + (v?.address ? `<br><span style="color:#5d6b84">${esc(v.address)}</span>` : "") + (url ? ` <a href="${esc(url)}" style="color:#2a7fd4">📍 Χάρτης</a>` : "");
 }
 function mailHtml(p, evs){
   const h = s => esc(s);
@@ -1486,11 +1486,11 @@ async function startUser(){
   db.collection("roster").limit(1000).onSnapshot(s=>{ uRoster=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); renderUser(); }, ()=>{});
   db.collection(`mine/${uid}/items`).limit(2000).onSnapshot(s=>{ myItems=s.docs.map(d=>({id:d.id,...d.data()})); renderUser(); }, ()=>{});
 }
-/* users' cards show the venue without a map (directions live in the separate V.C. Tips app) */
 function venueCard(i){
-  const name = i.venue, v = {full:i.venueFull, address:i.venueAddr};
-  return `<div class="venue">📍 ${esc(name||"—")}</div>`
-    + (v?.full || v?.address ? `<div class="vfull">${esc([v.full, v.address].filter(Boolean).join(" · "))}</div>` : "");
+  const name = i.venue, v = {full:i.venueFull, address:i.venueAddr}, url = i.venueMap||"", emb = i.venueEmbed||"";
+  return `<div class="venue">📍 ${url?`<a href="${esc(url)}" target="_blank" rel="noopener">${esc(name||"—")}</a>`:esc(name||"—")}</div>`
+    + (v?.full || v?.address ? `<div class="vfull">${esc([v.full, v.address].filter(Boolean).join(" · "))}</div>` : "")
+    + (emb ? `<details class="map"><summary>🗺 Χάρτης</summary><iframe src="${esc(emb)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Χάρτης ${esc(name)}"></iframe><a class="go" href="${esc(url)}" target="_blank" rel="noopener">Άνοιγμα στο Google Maps ↗</a></details>` : "");
 }
 function renderUser(){
   if(myClaim===undefined) return;
