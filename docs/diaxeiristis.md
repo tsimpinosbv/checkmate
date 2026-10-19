@@ -242,6 +242,17 @@
 - **Android:** κουμπί **📲 Εγκατάσταση** κάτω δεξιά, ή Chrome ⋮ → Εγκατάσταση εφαρμογής.
 - **iPhone/iPad:** Safari → κουμπί Κοινοποίηση → **Προσθήκη στην οικία**.
 
+## 12α. Οι εφαρμογές μας
+
+| Εφαρμογή | Σύνδεσμος | Repository |
+|---|---|---|
+| **Check Mate** | https://tsimpinosbv.github.io/checkmate/ | `tsimpinosbv/checkmate` |
+| **Ημερολόγιο** | https://tsimpinosbv.github.io/checkmate/imerologio.html | `tsimpinosbv/checkmate` |
+| **V.C. Tips** | https://tsimpinosbv.github.io/vctips/ | `tsimpinosbv/vctips` (οδηγίες: `/vctips/help/`) |
+| **Check Mate Suite** | https://tsimpinosbv.github.io/ | `tsimpinosbv/tsimpinosbv.github.io` |
+
+Τα εικονίδια για αποστολή (512×512) είναι στο `icons/icon-512.png`, `icons/diary-512.png` και στο `icons/icon-512.png` του V.C. Tips. Όταν στέλνετε τους συνδέσμους, εμφανίζεται κάρτα προεπισκόπησης με εικόνα (`icons/share-checkmate.png`, `icons/share-diary.png`, `vctips/icons/share.png`).
+
 ## 13. Συχνές ερωτήσεις
 
 **Δεν ήρθε email μετά από αλλαγή.**
