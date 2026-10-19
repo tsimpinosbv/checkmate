@@ -22,6 +22,7 @@ out=f'''<!doctype html>
 <meta name="theme-color" content="#14213a">
 <meta name="description" content="Αγώνες, αναθέσεις και πληρωμές Video Check.">
 <link rel="manifest" href="manifest.webmanifest">
+<script src="/suite-back.js" defer></script>
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -124,6 +125,7 @@ diary=f'''<!doctype html>
 <meta name="theme-color" content="#1d6b47">
 <meta name="description" content="Προσωπικό ημερολόγιο αγώνων και πληρωμών.">
 <link rel="manifest" href="imerologio.webmanifest">
+<script src="/suite-back.js" defer></script>
 <link rel="icon" type="image/png" sizes="32x32" href="icons/diary-32.png">
 <link rel="apple-touch-icon" href="icons/diary-apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
