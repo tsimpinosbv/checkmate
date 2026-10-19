@@ -23,6 +23,15 @@
 - Λειτουργεί σε υπολογιστή, tablet και κινητό, και **εγκαθίσταται σαν εφαρμογή**.
 - **Ημερολόγιο** (`imerologio.html`): δεύτερη, ξεχωριστή εφαρμογή για προσωπική χρήση. Κάθε χρήστης γράφει τους δικούς του αγώνες και πληρωμές για να τα συγκρίνει με το Check Mate. Τα δεδομένα είναι ιδιωτικά (ούτε οι διαχειριστές τα βλέπουν) και δεν συνδέονται με τις αναθέσεις. Κοινά είναι μόνο οι λογαριασμοί και οι προτεινόμενες αμοιβές.
 
+## Οι εφαρμογές μας
+
+- **Check Mate**: https://tsimpinosbv.github.io/checkmate/
+- **Ημερολόγιο**: https://tsimpinosbv.github.io/checkmate/imerologio.html
+- **V.C. Tips** (ξεχωριστό repository `tsimpinosbv/vctips`): https://tsimpinosbv.github.io/vctips/
+- **Check Mate Suite** (όλες μαζί): https://tsimpinosbv.github.io/
+
+Κάρτες προεπισκόπησης συνδέσμων: `icons/share-checkmate.png`, `icons/share-diary.png` (meta tags στο `build.py` και στο `index.html`).
+
 ## Χρήσιμοι σύνδεσμοι
 
 - Εφαρμογή: https://tsimpinosbv.github.io/checkmate
