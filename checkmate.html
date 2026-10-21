@@ -524,6 +524,15 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 .ugrid .ok{color:var(--good);font-size:13px}
 .ugrid .na{color:var(--muted);font-size:12px}
 .uscroll{overflow-x:auto}
+.wkbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:18px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.wkbar .wkcur{display:flex;flex-direction:column;align-items:center;flex:0 1 auto;min-width:0;text-align:center;padding-inline:6px}
+.wkbar .wkcur .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.wkbar .wkcur b{font-family:var(--f-mono);font-size:18px;font-weight:500}
+.wkbar .wkarrow{padding:8px 14px}
+.wkbar .wkgap{flex:1}
+@media (max-width:560px){.wkbar .wkcur{flex:1 1 0}.wkbar .wkgap{flex-basis:100%;height:0}.wkbar>.btn.small{flex:1;justify-content:center}}
+.tabs{overflow-x:auto;scrollbar-width:none}
+.tabs button{white-space:nowrap;flex:none}
 details.unav>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:14px 16px}
 details.unav>summary::-webkit-details-marker{display:none}
 details.unav>summary .chev{color:var(--muted);transition:transform .15s}
@@ -1423,7 +1432,7 @@ let db=null, user=null, me=null, isAdmin=false;
 let sched=[], roster=[], links={}, claims=[], teamList=[], venues=[], fees={op:80,as:40}, contacts={}, profilesAll={}, notify={email:false, endpoint:""}, mail=null;
 let ready={sched:false,roster:false,links:false};
 let tab = ls.get("cm.tab","sched");
-const st = {season:"", month:"", person:"", paid:"", vis:"", q:""};
+const st = {season:"", month:"", person:"", paid:"", vis:"", q:"", week:weekOf(today())};   // week: Monday of the round shown ("" = all matches)
 
 function rosterByNorm(){ const m={}; roster.forEach(r=>m[norm(r.name)]=r); return m; }
 function uidForName(name){ if(!name) return null; const r=rosterByNorm()[norm(name)]; return r ? (links[r.id]||null) : null; }
@@ -1453,9 +1462,11 @@ function loadErr(){ $("app").innerHTML = `<div class="panel"><div class="empty">
 function slotsOf(list){ const s=[]; list.forEach(m=>["op","as"].forEach(r=>{ if(m[r]) s.push({m, role:r, name:m[r], fee:+m["fee_"+r]||0, paid:!!m["paid_"+r]}); })); return s; }
 function filteredSched(){
   const q=st.q.trim().toLowerCase(), pn=st.person?norm(st.person):"";
+  const wkDays = st.week ? new Set(weekDays(st.week)) : null;
   return sched.filter(m =>
-    (!st.season || seasonOf(m.date)===st.season) &&
-    (!st.month || (m.date||"").slice(0,7)===st.month) &&
+    (!wkDays || wkDays.has(m.date)) &&
+    (wkDays || !st.season || seasonOf(m.date)===st.season) &&
+    (wkDays || !st.month || (m.date||"").slice(0,7)===st.month) &&
     (!pn || norm(m.op)===pn || norm(m.as)===pn) &&
     (!st.paid || ["op","as"].some(r=>m[r] && (!pn||norm(m[r])===pn) && (st.paid==="yes")===!!m["paid_"+r])) &&
     (!st.vis || (st.vis==="hidden")===!!m.hidden) &&
@@ -1505,9 +1516,19 @@ function renderSched(months, people, seasons=[]){
     <div class="cell"><div class="k">Πληρώθηκαν</div><div class="v">${eur(paid)}</div></div>
     <div class="cell"><div class="k">Εκκρεμούν</div><div class="v or">${eur(total-paid)}</div></div>
   </section>
-  <section class="filters" aria-label="Φίλτρα" style="margin-top:18px">
-    <div class="f"><label for="fSeason">Σεζόν</label><select id="fSeason">${opt(seasons.map(x=>[x,x]),st.season,"Όλες")}</select></div>
-    <div class="f"><label for="fMonth">Μήνας</label><select id="fMonth">${opt(months.slice().reverse().map(m=>[m,MONTHS_FULL[+m.slice(5)-1]+" "+m.slice(0,4)]),st.month,"Όλοι")}</select></div>
+  <section class="wkbar" aria-label="Αγωνιστική">
+    ${st.week?`<button type="button" class="btn wkarrow" data-act="wk" data-d="-7" aria-label="Προηγούμενη εβδομάδα">◀</button>
+      <div class="wkcur"><span class="k">Αγωνιστική εβδομάδα${st.week===weekOf(today())?" · τρέχουσα":""}</span><b>${weekLabel(st.week)}</b></div>
+      <button type="button" class="btn wkarrow" data-act="wk" data-d="7" aria-label="Επόμενη εβδομάδα">▶</button>
+      <span class="wkgap"></span>
+      ${st.week!==weekOf(today())?`<button type="button" class="btn small" data-act="wknow">Τρέχουσα</button>`:""}
+      <button type="button" class="btn small" data-act="wkall">Όλοι οι αγώνες</button>`
+    :`<div class="wkcur"><span class="k">Προβολή</span><b>Όλοι οι αγώνες</b></div><span class="wkgap"></span>
+      <button type="button" class="btn small primary" data-act="wknow">Ανά αγωνιστική εβδομάδα</button>`}
+  </section>
+  <section class="filters" aria-label="Φίλτρα" style="margin-top:12px">
+    ${st.week?"":`<div class="f"><label for="fSeason">Σεζόν</label><select id="fSeason">${opt(seasons.map(x=>[x,x]),st.season,"Όλες")}</select></div>
+    <div class="f"><label for="fMonth">Μήνας</label><select id="fMonth">${opt(months.slice().reverse().map(m=>[m,MONTHS_FULL[+m.slice(5)-1]+" "+m.slice(0,4)]),st.month,"Όλοι")}</select></div>`}
     <div class="f"><label for="fPerson">Άτομο</label><select id="fPerson">${opt(people.map(p=>[p,p]),st.person,"Όλα")}</select></div>
     <div class="f"><label for="fPaid">Πληρωμή</label><select id="fPaid">${opt([["no","Εκκρεμεί"],["yes","Πληρώθηκε"]],st.paid,"Όλα")}</select></div>
     <div class="f"><label for="fVis">Στους χρήστες</label><select id="fVis">${opt([["shown","Ορατές"],["hidden","Κρυφές"]],st.vis,"Όλες")}</select></div>
@@ -1519,7 +1540,12 @@ function renderSched(months, people, seasons=[]){
     html += `<div class="empty"><div class="board-art"></div><strong>Δεν υπάρχουν αναθέσεις ακόμα</strong><div>Πρόσθεσε μία χειροκίνητα ή φέρε το πρόγραμμα από Excel.</div>
       <div class="actions"><button class="btn" data-act="import">⬆ Εισαγωγή Excel</button><button class="btn primary" data-act="add">+ Νέα ανάθεση</button></div></div>`;
   } else if(!list.length){
-    html += `<div class="empty"><strong>Καμία ανάθεση με αυτά τα φίλτρα</strong><button class="btn" data-act="clear">Καθαρισμός φίλτρων</button></div>`;
+    const nxt = st.week ? sched.map(m=>m.date).filter(d=>d && d>addDays(st.week,6)).sort()[0] : "";
+    const prv = st.week ? sched.map(m=>m.date).filter(d=>d && d<st.week).sort().pop() : "";
+    const anyInWeek = st.week && sched.some(m=>weekDays(st.week).includes(m.date));
+    html += st.week && !anyInWeek
+      ? `<div class="empty"><strong>Δεν υπάρχουν αγώνες αυτή την εβδομάδα</strong><div class="actions">${prv?`<button class="btn" data-act="wkgo" data-w="${weekOf(prv)}">◀ Προηγούμενη με αγώνες (${weekLabel(weekOf(prv))})</button>`:""}${nxt?`<button class="btn" data-act="wkgo" data-w="${weekOf(nxt)}">Επόμενη με αγώνες (${weekLabel(weekOf(nxt))}) ▶</button>`:""}</div></div>`
+      : `<div class="empty"><strong>Καμία ανάθεση με αυτά τα φίλτρα</strong><button class="btn" data-act="clear">Καθαρισμός φίλτρων</button></div>`;
   } else {
     html += `<div class="row head"><div>Ημ/νία</div><div>Αγώνας</div><div>Χειριστής</div><div>Βοηθός</div><div></div></div>`;
     let lastComp=null;
@@ -1535,8 +1561,8 @@ function renderSched(months, people, seasons=[]){
   }
   html += `</section>`;
   $("tabBody").innerHTML = html;
-  $("fSeason").onchange=e=>{st.season=e.target.value;st.month="";renderAdmin();};
-  $("fMonth").onchange=e=>{st.month=e.target.value;renderAdmin();};
+  if($("fSeason")) $("fSeason").onchange=e=>{st.season=e.target.value;st.month="";renderAdmin();};
+  if($("fMonth")) $("fMonth").onchange=e=>{st.month=e.target.value;renderAdmin();};
   $("fPerson").onchange=e=>{st.person=e.target.value;renderAdmin();};
   $("fPaid").onchange=e=>{st.paid=e.target.value;renderAdmin();};
   $("fVis").onchange=e=>{st.vis=e.target.value;renderAdmin();};
@@ -1546,7 +1572,7 @@ function bulkIdle(list){
   const shown=list.filter(m=>!m.hidden).length, hid=list.length-shown;
   return `<span>Στη λίστα: ${shown} ορατές, ${hid} κρυφές στους χρήστες.</span>`+
     (hid?`<button type="button" class="btn small" data-act="bulk" data-to="show">Εμφάνιση όλων (${hid})</button>`:"")+
-    (shown?`<button type="button" class="btn small" data-act="bulk" data-to="hide">${st.season&&!st.month&&!st.person&&!st.paid&&!st.vis&&!st.q?`Απόκρυψη όλης της σεζόν ${esc(st.season)}`:"Απόκρυψη όλων"} (${shown})</button>`:"");
+    (shown?`<button type="button" class="btn small" data-act="bulk" data-to="hide">${!st.week&&st.season&&!st.month&&!st.person&&!st.paid&&!st.vis&&!st.q?`Απόκρυψη όλης της σεζόν ${esc(st.season)}`:"Απόκρυψη όλων"} (${shown})</button>`:"");
 }
 function slotHtml(m, r){
   if(!m[r]) return `<div class="slot"><span class="role ${r}">${ROLE[r]}</span><span class="empty-slot">— χωρίς άτομο —</span></div>`;
@@ -2037,6 +2063,10 @@ document.addEventListener("click", async e => {
   if(act==="import") openImport();
   if(act==="edit"&&m) openForm(m);
   if(act==="clear"){ Object.assign(st,{season:"",month:"",person:"",paid:"",vis:"",q:""}); renderAdmin(); }
+  if(act==="wk"){ st.week=addDays(st.week||weekOf(today()), +b.dataset.d); renderAdmin(); }
+  if(act==="wknow"){ st.week=weekOf(today()); renderAdmin(); }
+  if(act==="wkall"){ st.week=""; renderAdmin(); }
+  if(act==="wkgo"){ st.week=b.dataset.w; renderAdmin(); }
   if(act==="logmode") $("logModeWrap").innerHTML = `<span class="confirm">Αλλαγή όλης της εφαρμογής σε «Ημερολόγιο αγώνων»; <button type="button" class="btn small primary" data-act="logmodeyes">Ναι</button><button type="button" class="btn small" data-act="logmodeno">Όχι</button></span>`;
   if(act==="logmodeno") $("logModeWrap").innerHTML = `<button class="btn small" type="button" data-act="logmode">Ενεργοποίηση ημερολογίου</button>`;
   if(act==="logmodeyes"){ try{ await db.doc("config/app").set({mode:"log", changedAt:Date.now()}); location.reload(); }catch{ toast("Η αλλαγή απέτυχε"); } }
