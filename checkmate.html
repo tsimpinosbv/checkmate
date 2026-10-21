@@ -1353,7 +1353,7 @@ const nextWeeks = n => { const w0=weekOf(today()); return Array.from({length:n},
 const ddmm = d => { const [,m,dd]=d.split("-"); return `${+dd}/${+m}`; };
 const weekLabel = wk => `${ddmm(wk)} – ${ddmm(addDays(wk,6))}`;
 /* profiles/{uid}.unavail[weekMonday] = {days:[YYYY-MM-DD…], note, at}; days:[] means "available all week" */
-const UNAV_WEEKS = 4;
+const UNAV_WEEKS = 2;
 /* Match the rows of an imported file to existing matches.
    Same competition + same home/away = same pairing. A pairing can appear more than once (play-off series),
    so within a pairing: 1) same date → same match; 2) the rest are paired in date order only when the
