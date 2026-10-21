@@ -1493,8 +1493,8 @@ function startAdmin(){
   db.collection("links").limit(1000).onSnapshot(s=>{ links={}; s.docs.forEach(d=>links[d.id]=d.data().uid); ready.links=true; renderAdmin(); }, loadErr);
   db.collection("claims").limit(1000).onSnapshot(s=>{ claims=s.docs.map(d=>({uid:d.id,...d.data()})); renderAdmin(); }, ()=>{});
   db.collection("profiles").limit(2000).onSnapshot(s=>{ profilesAll={}; s.docs.forEach(d=>profilesAll[d.id]=d.data()); if(tab!=="lists") renderAdmin(); }, ()=>{});
-  db.collection("teams").limit(1000).onSnapshot(s=>{ teamList=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.teams=true; seedLists(); upgradeItems(); if(tab==="lists") renderAdmin(); }, ()=>{});
-  db.collection("venues").limit(1000).onSnapshot(s=>{ venues=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.venues=true; seedLists(); upgradeItems(); if(tab==="lists") renderAdmin(); }, ()=>{});
+  db.collection("teams").limit(1000).onSnapshot(s=>{ teamList=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.teams=true; dedupeLists(); seedLists(); upgradeItems(); if(tab==="lists") renderAdmin(); }, ()=>{});
+  db.collection("venues").limit(1000).onSnapshot(s=>{ venues=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.venues=true; dedupeLists(); seedLists(); upgradeItems(); if(tab==="lists") renderAdmin(); }, ()=>{});
   db.collection("contacts").limit(1000).onSnapshot(s=>{ contacts={}; s.docs.forEach(d=>contacts[d.id]=d.data().email||""); if(tab==="people") renderAdmin(); }, ()=>{});
   db.doc("config/notify").onSnapshot(s=>{ notify={email:false, endpoint:"", ...(s.exists?s.data():{})}; if(tab==="people") renderAdmin(); }, ()=>{});
   claude.use("mail").then(x=>mail=x).catch(()=>{});
@@ -2080,7 +2080,51 @@ const hasPlace = v => !!(v && (v.full || v.address || v.map));
 function mapUrl(name){ const v=venueOf(name); if(!hasPlace(v)) return ""; if(/^https?:\/\//i.test(v.map||"")) return v.map; return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(venueQuery(v)); }
 function mapEmbed(name){ const v=venueOf(name); if(!v || !(v.full || v.address || COORD.test(v.map||""))) return ""; return "https://maps.google.com/maps?q="+encodeURIComponent(venueQuery(v))+"&z=15&output=embed"; }
 function venueNames(){ return venues.length ? uniqNorm(venues.map(v=>v.name)) : uniqNorm([...teamList.map(t=>t.venue), ...sched.map(m=>m.venue)]); }
-let listsReady={teams:false,venues:false}, listsSeeded=false;
+let listsReady={teams:false,venues:false}, listsSeeded=false, dedupeDone=false;
+/* teams & venues: one name = one entry. Every creation goes through one queue and is re-checked right
+   before writing, so the first-run fill, an Excel import and the forms can never add the same name twice.
+   If the name already exists, only its empty fields are filled. Returns {id, created}. */
+let listQ = Promise.resolve();
+const queued = fn => { const p = listQ.then(fn, fn); listQ = p.catch(()=>{}); return p; };
+const listOf = kind => kind==="teams" ? teamList : venues;
+const filled = v => v!=="" && v!=null;
+function addListDoc(kind, name, data={}){
+  return queued(async ()=>{
+    const ex = listOf(kind).find(x=>norm(x.name)===norm(name));
+    if(ex){
+      const upd={}; Object.entries(data).forEach(([f,v])=>{ if(filled(v) && !filled(ex[f])) upd[f]=v; });
+      if(Object.keys(upd).length){ await w(()=>db.doc(`${kind}/${ex.id}`).update(upd)); Object.assign(ex,upd); }
+      return {id:ex.id, created:false};
+    }
+    const doc={name, ...data}; const ref=await w(()=>db.collection(kind).add(doc));
+    const arr=listOf(kind); if(!arr.some(x=>x.id===ref.id)) arr.push({id:ref.id, ...doc});
+    return {id:ref.id, created:true};
+  });
+}
+/* clean up entries that were already doubled: keep the one with the most details, copy over any field
+   it lacks from the others, delete the rest. The programme refers to teams/venues by name, so nothing breaks. */
+function dedupeLists(){
+  if(dedupeDone || !listsReady.teams || !listsReady.venues) return; dedupeDone=true;
+  return queued(async ()=>{
+    let merged=0;
+    for(const kind of ["teams","venues"]){
+      const groups=new Map();
+      listOf(kind).forEach(x=>{ const k=norm(x.name); if(!k) return; if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(x); });
+      for(const g of groups.values()){
+        if(g.length<2) continue;
+        const score=x=>Object.entries(x).filter(([f,v])=>f!=="id" && f!=="name" && filled(v)).length;
+        g.sort((a,b)=>score(b)-score(a) || a.id.localeCompare(b.id));
+        const keep=g[0], add={};
+        g.slice(1).forEach(x=>Object.entries(x).forEach(([f,v])=>{ if(f!=="id" && f!=="name" && filled(v) && !filled(keep[f]) && add[f]===undefined) add[f]=v; }));
+        try{
+          if(Object.keys(add).length){ await w(()=>db.doc(`${kind}/${keep.id}`).update(add)); Object.assign(keep,add); }
+          for(const x of g.slice(1)){ await w(()=>db.doc(`${kind}/${x.id}`).delete()); merged++; }
+        }catch(e){ console.warn("dedupe", e); }
+      }
+    }
+    if(merged){ toast(`Ενοποιήθηκαν ${merged} διπλές καταχωρίσεις σε ομάδες και γήπεδα`); if(tab==="lists") renderAdmin(); }
+  });
+}
 /* when the users' copy of an assignment gains new fields (e.g. VAR codes, venue maps), refresh every copy once, silently.
    Bump ITEM_VERSION whenever itemFor() changes. Runs on the first admin load after an update. */
 const ITEM_VERSION = 3; let itemCheckDone=false;
@@ -2103,8 +2147,8 @@ async function seedLists(){   // first time only: fill the lists from the progra
 /* new teams/venues typed in a form or found in an import are added to the lists */
 async function ensureLists(newTeams, venueList, homeVenue){
   const tk=new Set(teamList.map(t=>norm(t.name))), vk=new Set(venues.map(v=>norm(v.name)));
-  for(const n of uniqNorm(newTeams)) if(!tk.has(norm(n))){ const doc={name:n}; const hv=homeVenue?.[norm(n)]; if(hv) doc.venue=hv; const ref=await w(()=>db.collection("teams").add(doc)); if(!teamList.some(x=>x.id===ref.id)) teamList.push({id:ref.id,...doc}); tk.add(norm(n)); }
-  for(const n of uniqNorm(venueList)) if(!vk.has(norm(n))){ const ref=await w(()=>db.collection("venues").add({name:n})); if(!venues.some(x=>x.id===ref.id)) venues.push({id:ref.id,name:n}); vk.add(norm(n)); }
+  for(const n of uniqNorm(newTeams)) if(!tk.has(norm(n))){ const hv=homeVenue?.[norm(n)]; await addListDoc("teams", n, hv?{venue:hv}:{}); tk.add(norm(n)); }
+  for(const n of uniqNorm(venueList)) if(!vk.has(norm(n))){ await addListDoc("venues", n); vk.add(norm(n)); }
 }
 async function ensureRoster(names){
   const have = rosterByNorm();
@@ -2431,7 +2475,7 @@ async function importTeams(file){
       const d = {}; if(r[ci.var]) d.var=r[ci.var]; if(r[ci.venue]){ d.venue=r[ci.venue]; newVenues.push(d.venue); }
       const ex = teamList.find(t=>norm(t.name)===norm(name));
       if(ex){ if(Object.entries(d).some(([k,v])=>ex[k]!==v)){ await w(()=>db.doc(`teams/${ex.id}`).update(d)); Object.assign(ex,d); updated++; touched.push(name); } }
-      else { const ref = await w(()=>db.collection("teams").add({name, ...d})); if(!teamList.some(x=>x.id===ref.id)) teamList.push({id:ref.id, name, ...d}); added++; touched.push(name); }
+      else { const r = await addListDoc("teams", name, d); r.created ? added++ : updated++; touched.push(name); }
     }
     if(newVenues.length) await ensureLists([], newVenues);
     await resyncTeams(touched);
@@ -2460,7 +2504,7 @@ async function importVenues(file){
       if(!d.map){ const link=r.find((c,i)=>i!==ci.name && (/^https?:\/\//i.test(c) || COORD.test(c))); if(link) d.map=link; }
       const ex = venueOf(name);
       if(ex){ if(Object.keys(d).length && Object.entries(d).some(([k,v])=>ex[k]!==v)){ await w(()=>db.doc(`venues/${ex.id}`).update(d)); Object.assign(ex,d); updated++; touched.push(name); } }
-      else { const ref = await w(()=>db.collection("venues").add({name, ...d})); if(!venues.some(x=>x.id===ref.id)) venues.push({id:ref.id, name, ...d}); added++; touched.push(name); }
+      else { const r = await addListDoc("venues", name, d); r.created ? added++ : updated++; touched.push(name); }
     }
     await resyncVenues(touched);
     toast(`Γήπεδα: ${added} νέα, ${updated} ενημερώθηκαν`); renderAdmin();
