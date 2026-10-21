@@ -600,7 +600,7 @@ function slotHtml(m, r){
 let unavWk = null;
 function renderUnav(){
   const weeks = [addDays(weekOf(today()),-7), ...nextWeeks(UNAV_WEEKS)];
-  if(!weeks.includes(unavWk)) unavWk = weeks[2];   // default: next week
+  if(!weeks.includes(unavWk)) unavWk = weeks[1];   // default: current week
   const days = weekDays(unavWk), t = today();
   const ridName = {}; roster.forEach(r=>ridName[r.id]=r.name);
   const ppl = new Map();   // uid -> name
