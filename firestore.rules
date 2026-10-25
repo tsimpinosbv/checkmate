@@ -47,5 +47,10 @@ service cloud.firestore {
       allow create, update: if isSelf(uid) && request.resource.data.status == 'pending';
     }
     match /mine/{uid}/{rest=**} { allow read: if isSelf(uid); }
+
+    // V.C. Tips (tsimpinosbv.github.io/vctips): every signed-in user reads the guide; only admins edit (catch-all above).
+    match /vct_steps/{doc}  { allow read: if signedIn(); }
+    match /vct_tips/{doc}   { allow read: if signedIn(); }
+    match /vct_venues/{doc} { allow read: if signedIn(); }
   }
 }
