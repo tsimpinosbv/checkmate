@@ -1,0 +1,24 @@
+name: PDF οδηγιών
+# Ξαναφτιάχνει τα PDF του φακέλου help/ κάθε φορά που αλλάζουν οι οδηγίες.
+on:
+  push:
+    branches: [main]
+    paths: ['help/*.html', 'help/img/**', 'tools/make-pdf.js', '.github/workflows/pdf.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: sudo apt-get update && sudo apt-get install -y fonts-noto-color-emoji fonts-noto-core
+      - run: npm i --no-save playwright@1.47.2 && npx playwright install --with-deps chromium
+      - run: node tools/make-pdf.js
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add help/*.pdf
+          git diff --cached --quiet || (git commit -m "PDF οδηγιών: αυτόματη ενημέρωση" && git push)
