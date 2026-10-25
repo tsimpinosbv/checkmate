@@ -452,7 +452,7 @@ function icsEvent(i){
     i.dateTbc?"Η ημέρα/ώρα θα επιβεβαιωθεί":"", i.notes, i.venueMap?`Χάρτης: ${i.venueMap}`:""].filter(Boolean).join("\n");
   return ["BEGIN:VEVENT", `UID:${i.id||((i.match||"")+"_"+i.role)}@checkmate`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g,"").slice(0,15)}Z`, when,
     `SUMMARY:${icsEsc("Video Check: "+(i.home||"")+(i.away?" – "+i.away:""))}`, loc?`LOCATION:${icsEsc(loc)}`:"", `DESCRIPTION:${icsEsc(desc)}`,
-    "BEGIN:VALARM","TRIGGER:-PT3H","ACTION:DISPLAY","DESCRIPTION:Video Check","END:VALARM","END:VEVENT"].filter(Boolean).join("\r\n");
+    "BEGIN:VALARM","TRIGGER:-PT4H","ACTION:DISPLAY","DESCRIPTION:Video Check","END:VALARM","END:VEVENT"].filter(Boolean).join("\r\n");
 }
 function downloadIcs(items, filename){
   const body = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Check Mate//EL","CALSCALE:GREGORIAN","METHOD:PUBLISH",
