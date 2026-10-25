@@ -143,6 +143,7 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
       </div>
     </div>
     <div class="actions">
+      <button class="btn" id="btnImportCm" type="button" title="Πρόσθεσε στο ημερολόγιο τις αναθέσεις σου από το Check Mate">⬇ Από Check Mate</button>
       <button class="btn" id="btnCsv" type="button">⬇ CSV (Excel)</button>
       <button class="btn" id="btnReport" type="button">⬇ Αναφορά</button>
       <button class="btn primary" id="btnAdd" type="button">+ Νέος αγώνας</button>
@@ -449,6 +450,27 @@ ${[...list].sort((a,b)=>(a.date||"").localeCompare(b.date||"")).map(r=>`<tr><td>
   saveFile(fileStem()+".html", html);
 };
 
+/* ---------- bring my assignments from Check Mate (one tap; already added ones are skipped) ---------- */
+let meId = null;
+$("btnImportCm").onclick = async () => {
+  if(!db || !col || !meId){ toast("Συνδέσου πρώτα"); return; }
+  const btn = $("btnImportCm"); btn.disabled = true;
+  try{
+    const snap = await db.collection(`mine/${meId}/items`).get();
+    const items = snap.docs.map(d=>({id:d.id, ...d.data()})).filter(i=>i.date && i.home);
+    if(!items.length){ toast("Δεν βρέθηκαν αναθέσεις στο Check Mate"); return; }
+    const key = r => [r.date, (r.home||"").trim().toLowerCase(), (r.away||"").trim().toLowerCase(), r.role].join("|");
+    const have = new Set(rows.map(r=>r.fromCm).filter(Boolean)), haveKey = new Set(rows.map(key));
+    const add = items.filter(i=>!have.has(i.id) && !haveKey.has(key(i)));
+    for(const i of add){
+      await col.add({date:i.date, time:i.time||"", home:i.home||"", away:i.away||"", comp:i.comp||"", venue:i.venue||"", person:i.partner||"", role:i.role==="as"?"as":"op",
+        fee: (+i.fee || FEES[i.role] || 0), paid:false, paidDate:"", notes:"", fromCm:i.id, createdAt:Date.now()});
+    }
+    toast(add.length ? `Προστέθηκαν ${add.length} ${add.length===1?"αγώνας":"αγώνες"} από το Check Mate` : "Όλες οι αναθέσεις σου υπάρχουν ήδη στο ημερολόγιο");
+  }catch(err){ console.warn(err); toast("Δεν ήταν δυνατή η μεταφορά. Δοκίμασε ξανά."); }
+  finally{ btn.disabled = false; }
+};
+
 /* ---------- data ---------- */
 function setWriteUI(){ $("btnAdd").disabled=!canWrite; }
 (async () => {
@@ -457,7 +479,7 @@ function setWriteUI(){ $("btnAdd").disabled=!canWrite; }
   const u = db && await claude.use("user");
   const me = u && await u.me();
   if(!db || !me){ loadedOpen=true; $("log").innerHTML=`<div class="empty"><strong>Η αποθήκευση δεν είναι διαθέσιμη</strong><div>Συνδέσου ξανά για να δεις το ημερολόγιό σου.</div></div>`; return; }
-  col = db.collection("diary").doc(me.id).collection("matches");
+  col = db.collection("diary").doc(me.id).collection("matches"); meId = me.id;
   db.doc("config/fees").onSnapshot(s => { if(s.exists){ const d=s.data(); FEES = {op: d.op ?? 80, as: d.as ?? 40}; } }, ()=>{});
   col.orderBy("date","desc").limit(2000).onSnapshot(snap => {
     rows = snap.docs.map(d=>({id:d.id, ...d.data(), paid:!!d.data().paid}))
