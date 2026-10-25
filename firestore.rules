@@ -41,7 +41,11 @@ service cloud.firestore {
 
     // Mode 2 (assignments): users see the roster, manage their own claim, read their own assignments.
     match /roster/{doc}         { allow read: if signedIn(); }
-    match /claims/{uid}         { allow read, write: if isSelf(uid); }
+    // A user may send or withdraw their own "this is me" request, but only as pending: approval is the admin's.
+    match /claims/{uid} {
+      allow read, delete: if isSelf(uid);
+      allow create, update: if isSelf(uid) && request.resource.data.status == 'pending';
+    }
     match /mine/{uid}/{rest=**} { allow read: if isSelf(uid); }
   }
 }
