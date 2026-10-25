@@ -60,11 +60,13 @@ img.full{display:block;width:100%;border:1px solid var(--line);border-radius:12p
   <a class="btn primary" href="../checkmate.html">← Στην εφαρμογή</a>
 </div></header>
 <main><section class="card lead"><p>Ο <strong>διαχειριστής</strong> φτιάχνει το πρόγραμμα, ορίζει ποιος ορίζεται σε κάθε αγώνα ως <strong>Χειριστής</strong> ή <strong>Βοηθός</strong>, αποφασίζει τι βλέπουν οι χρήστες και σημειώνει τις πληρωμές. Οι χρήστες βλέπουν μόνο τις δικές τους αναθέσεις και παίρνουν email όταν κάτι αλλάζει.</p>
-<p>Μπαίνετε στο Check Mate με τον λογαριασμό διαχειριστή. Υπάρχουν τρεις καρτέλες: <strong>Πρόγραμμα</strong>, <strong>Ομάδες &amp; γήπεδα</strong> και <strong>Άτομα</strong>. Ο αριθμός δίπλα στα «Άτομα» δείχνει πόσα αιτήματα χρηστών περιμένουν έγκριση.</p>
+<p>Μπαίνετε στο Check Mate με τον λογαριασμό διαχειριστή. Υπάρχουν πέντε καρτέλες: <strong>Πρόγραμμα</strong>, <strong>Ομάδες &amp; γήπεδα</strong>, <strong>Άτομα</strong>, <strong>Κωλύματα</strong> και <strong>Στατιστικά</strong>. Ο αριθμός δίπλα στα «Άτομα» δείχνει πόσα αιτήματα χρηστών περιμένουν έγκριση.</p>
 </section><section class="card"><h2>1 · Το πρόγραμμα</h2>
 <p><img src="img/adm-a01-programma.png" loading="lazy" alt="" class="full"></p>
 <ul>
 <li><strong>Στην κορυφή:</strong> αγώνες, αναθέσεις, σύνολο αμοιβών, πληρωμένα και εκκρεμή, για ό,τι δείχνουν τα φίλτρα.</li>
+<li><strong>Αγωνιστική εβδομάδα:</strong> το πρόγραμμα ανοίγει στην <strong>τρέχουσα εβδομάδα</strong>. Με τα <strong>◀ ▶</strong> πάτε στην προηγούμενη ή την επόμενη, με το <strong>Τρέχουσα</strong> γυρίζετε στη σημερινή και με το <strong>Όλοι οι αγώνες</strong> βλέπετε όλη τη λίστα.</li>
+<li><strong>⚠ Κώλυμα</strong> δίπλα σε όνομα: το άτομο έχει δηλώσει ότι δεν μπορεί εκείνη τη μέρα.</li>
 <li><strong>Φίλτρα:</strong> Σεζόν, Μήνας, Άτομο, Πληρωμή, «Στους χρήστες» (ορατές/κρυφές) και αναζήτηση.</li>
 <li><strong>Σε κάθε αγώνα:</strong> ημερομηνία, ομάδες με το αρκτικόλεξο VAR από κάτω, γήπεδο (📍 ανοίγει τον χάρτη), χειριστής και βοηθός με αμοιβή και πληρωμή.</li>
 <li>Η <strong>πράσινη τελεία</strong> δίπλα σε όνομα σημαίνει ότι το άτομο έχει συνδεδεμένο λογαριασμό και βλέπει την ανάθεση.</li>
@@ -77,7 +79,8 @@ img.full{display:block;width:100%;border:1px solid var(--line);border-radius:12p
 <ol>
 <li>Πατήστε <strong>+ Νέα ανάθεση</strong> (ή ✎ σε υπάρχοντα αγώνα).</li>
 <li>Συμπληρώστε ημερομηνία, ώρα, διοργάνωση, ομάδες, γήπεδο, κάλυψη και VAR.</li>
-<li>Στις θέσεις <strong>Χειριστής</strong> και <strong>Βοηθός</strong> διαλέξτε άτομο από τη λίστα ή γράψτε νέο όνομα. Η ένδειξη «⚠ ίδια μέρα» δείχνει ότι το άτομο έχει ήδη αγώνα εκείνη τη μέρα.</li>
+<li>Στις θέσεις <strong>Χειριστής</strong> και <strong>Βοηθός</strong> διαλέξτε άτομο από τη λίστα ή γράψτε νέο όνομα. Η ένδειξη «⚠ ίδια μέρα» δείχνει ότι το άτομο έχει ήδη αγώνα εκείνη τη μέρα, και η «⚠ κώλυμα» ότι έχει δηλώσει πως δεν μπορεί.</li>
+<li>Αν αλλάξετε ώρα, ημερομηνία, γήπεδο ή άτομα, ο χρήστης βλέπει στην κάρτα του την ένδειξη <strong>⚠ Άλλαξε</strong> μέχρι να πατήσει ΟΚ.</li>
 <li>Η <strong>αμοιβή</strong> μπαίνει αυτόματα (80 € / 40 €) και αλλάζει αν χρειαστεί.</li>
 <li>Τσεκάρετε <strong>Ορατή στους χρήστες</strong> για να τη δουν τα άτομα της ανάθεσης.</li>
 <li><strong>Αποθήκευση.</strong></li>
@@ -108,6 +111,7 @@ img.full{display:block;width:100%;border:1px solid var(--line);border-radius:12p
 <li><strong>Ομάδες:</strong> δίπλα σε κάθε ομάδα γράψτε το <strong>VAR</strong>, το αρκτικόλεξο που μπαίνει στο challenge, και την <strong>έδρα</strong> (🏟). Οι χρήστες βλέπουν το όνομα της ομάδας και από κάτω το VAR.</li>
 <li><strong>Γήπεδα:</strong> γράψτε <strong>πλήρες όνομα</strong>, <strong>διεύθυνση</strong> ή σύνδεσμο <strong>Google Maps</strong>. Οι χρήστες βλέπουν τότε τον χάρτη στην ανάθεσή τους.</li>
 <li><strong>Όλα μαζί με Excel:</strong> <strong>⬇ Excel</strong> κατεβάζει τη λίστα, τη συμπληρώνετε και την ανεβάζετε με <strong>⬆ Excel</strong>. Ομάδες: <em>Ομάδα · VAR · Έδρα</em>. Γήπεδα: <em>Γήπεδο · Πλήρες όνομα · Διεύθυνση · Χάρτης</em>.</li>
+<li>Αν η ίδια ομάδα ή το ίδιο γήπεδο έχει γραφτεί δύο φορές (π.χ. με διαφορετικά κεφαλαία ή τόνους), οι διπλές καταχωρίσεις <strong>ενοποιούνται αυτόματα</strong> όταν ανοίγετε την εφαρμογή.</li>
 <li>Πατήστε <strong>Tab</strong> μετά από κάθε αλλαγή για να αποθηκευτεί. Οι αναθέσεις των χρηστών ενημερώνονται αμέσως, χωρίς email.</li>
 </ul>
 </section><section class="card"><h2>6 · Άτομα και χρήστες</h2>
@@ -152,7 +156,26 @@ img.full{display:block;width:100%;border:1px solid var(--line);border-radius:12p
 </div>
 </section><section class="card"><h2>8 · Εξαγωγή σε Excel</h2>
 <p>Το <strong>⬇ Excel</strong> κατεβάζει τις αναθέσεις <strong>με τα τρέχοντα φίλτρα</strong> (π.χ. μία σεζόν ή έναν μήνα), σε φύλλα: <strong>Σύνοψη</strong>, <strong>Αναθέσεις</strong>, <strong>Ανά άτομο</strong>, <strong>Ανά μήνα</strong>, <strong>Ανά διοργάνωση</strong>, με σύνολα και πληρωμές. Το <strong>⬇ CSV</strong> δίνει απλή λίστα.</p>
-</section><section class="card"><h2>9 · Τι βλέπει ο χρήστης</h2>
+</section><section class="card" id="kolymata"><h2>9 · Κωλύματα</h2>
+<p>Οι χρήστες δηλώνουν, για <strong>αυτή και την επόμενη εβδομάδα</strong>, τις μέρες που δεν μπορούν ή ότι είναι διαθέσιμοι. Στην καρτέλα <strong>Κωλύματα</strong>:</p>
+<ul>
+<li>Διαλέξτε <strong>Εβδομάδα</strong>. Ανοίγει στην τρέχουσα.</li>
+<li>Στην κορυφή: πόσοι έχουν <strong>κώλυμα</strong>, πόσοι είναι <strong>διαθέσιμοι</strong> και πόσοι <strong>δεν δήλωσαν</strong>.</li>
+<li>Πίνακας ανά άτομο και μέρα: <strong>✕</strong> κώλυμα · <strong>✓</strong> διαθέσιμος · <strong>·</strong> δεν έχει δηλώσει, με τη σημείωση του χρήστη.</li>
+<li><strong>⚠ Αναθέσεις σε μέρα με κώλυμα:</strong> λίστα με αγώνες όπου έχετε βάλει κάποιον που δήλωσε ότι δεν μπορεί.</li>
+<li><strong>✉ Υπενθύμιση σε όσους δεν δήλωσαν</strong>: στέλνει email σε όσους δεν έχουν δηλώσει για την εβδομάδα. Ζητά επιβεβαίωση πριν φύγει.</li>
+</ul>
+</section><section class="card" id="statistika"><h2>10 · Στατιστικά</h2>
+<ul>
+<li>Φίλτρα: <strong>Σεζόν</strong>, <strong>Μήνας</strong>, <strong>Διοργάνωση</strong>.</li>
+<li>Σύνολα: αναθέσεις, Χειριστής / Βοηθός, αμοιβές, πληρωμένα και εκκρεμή.</li>
+<li>Πίνακας ανά άτομο. Πατήστε μια στήλη για ταξινόμηση.</li>
+<li><strong>⬇ Excel στατιστικών</strong>: όλα σε αρχείο Excel, ανά άτομο, μήνα και διοργάνωση.</li>
+</ul>
+<p>Κάθε χρήστης βλέπει τα δικά του στοιχεία στο πλαίσιο <strong>Τα στατιστικά μου</strong>.</p>
+</section><section class="card" id="antigrafo"><h2>11 · Αντίγραφο ασφαλείας</h2>
+<p>Μία φορά την εβδομάδα εμφανίζεται πάνω από τις καρτέλες η υπενθύμιση <strong>💾</strong>. Πατήστε <strong>⬇ Αντίγραφο σε Excel</strong> και κρατήστε το αρχείο σε ασφαλές μέρος (π.χ. Google Drive). Με το <strong>Αργότερα</strong> η υπενθύμιση ξαναεμφανίζεται σε 2 μέρες.</p>
+</section><section class="card"><h2>12 · Τι βλέπει ο χρήστης</h2>
 <div class="side">
 <p><img src="img/adm-a09-xristis.png" loading="lazy" alt=""><div markdown="1"></p>
 <ul>
@@ -161,14 +184,22 @@ img.full{display:block;width:100%;border:1px solid var(--line);border-radius:12p
 <li>Θέση, συνεργάτη, διοργάνωση, κάλυψη, σημειώσεις.</li>
 <li>Αμοιβή και αν <strong>πληρώθηκε</strong>, με σύνολα στην κορυφή.</li>
 <li>Τις παλιές αναθέσεις με «Προβολή προηγούμενων».</li>
+<li><strong>📅 Στο ημερολόγιο του κινητού</strong> για κάθε αγώνα, με υπενθύμιση 4 ώρες πριν.</li>
+<li><strong>⚠ Άλλαξε</strong> όταν αλλάζετε κάτι σε ανάθεσή του.</li>
+<li>Τα πλαίσια <strong>Κωλύματα</strong> και <strong>Τα στατιστικά μου</strong>.</li>
 </ul>
-<p>Δεν μπορεί να αλλάξει τίποτα. Για τον εαυτό του υπάρχει και το προσωπικό <strong>Ημερολόγιο</strong>, ξεχωριστή εφαρμογή που δεν συνδέεται με το Check Mate και δεν τη βλέπει ο διαχειριστής.</p>
+<p>Δεν μπορεί να αλλάξει τις αναθέσεις. Για τον εαυτό του υπάρχει και το προσωπικό <strong>Ημερολόγιο</strong>, όπου φέρνει τις αναθέσεις του με «⬇ Από Check Mate». Το Ημερολόγιο δεν το βλέπει ο διαχειριστής.</p>
 </div>
 </div>
 </section><section class="card" id="efarmoges"><h2>Οι εφαρμογές μας</h2>
 <p>Τρεις ξεχωριστές εφαρμογές, με τον ίδιο λογαριασμό. Κάθε μία εγκαθίσταται χωριστά, με το δικό της εικονίδιο.</p>
 <div class="apps"><a class="app here" href="https://tsimpinosbv.github.io/checkmate/"><img src="img/app-checkmate.png" alt="" width="56" height="56"><span><b>Check Mate</b><small>Αναθέσεις αγώνων και πληρωμές.</small><em>tsimpinosbv.github.io/checkmate/</em></span></a><a class="app" href="https://tsimpinosbv.github.io/checkmate/imerologio.html"><img src="img/app-imerologio.png" alt="" width="56" height="56"><span><b>Ημερολόγιο</b><small>Το προσωπικό σας αρχείο αγώνων και πληρωμών.</small><em>tsimpinosbv.github.io/checkmate/imerologio.html</em></span></a><a class="app" href="https://tsimpinosbv.github.io/vctips/"><img src="img/app-vctips.png" alt="" width="56" height="56"><span><b>V.C. Tips</b><small>Οδηγός στησίματος, tips και γήπεδα.</small><em>tsimpinosbv.github.io/vctips/</em></span></a></div>
 <p>Όλες μαζί, σε μία σελίδα: <strong>Check Mate Suite</strong> · <a href="https://tsimpinosbv.github.io/">tsimpinosbv.github.io</a></p>
+<ul>
+<li>Στο Suite μπαίνετε <strong>μία φορά</strong> με τον λογαριασμό σας και ανοίγετε όποια εφαρμογή θέλετε. Αρκεί να εγκαταστήσετε μόνο το Suite.</li>
+<li>Μέσα σε κάθε εφαρμογή, το <strong>στρογγυλό κουμπί κάτω αριστερά</strong> ανοίγει τις άλλες δύο. Το <strong>σπιτάκι</strong> γυρίζει στην αρχική σελίδα του Suite.</li>
+<li>Το κουμπί <strong>ⓘ Σχετικά</strong> στο κάτω μέρος δείχνει τον δημιουργό και στοιχεία επικοινωνίας.</li>
+</ul>
 <p class="note">Όταν στέλνετε έναν από αυτούς τους συνδέσμους σε Viber, WhatsApp ή email, εμφανίζεται κάρτα με το εικονίδιο και το όνομα της εφαρμογής.</p>
 </section><section class="card"><h2>Συχνές ερωτήσεις</h2>
 <table>
