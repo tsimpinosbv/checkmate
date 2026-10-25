@@ -78,6 +78,7 @@ h1 .tag{font-style:normal;font-size:.5em;vertical-align:middle;background:var(--
 .match{min-width:0}
 .match b{font-weight:600;display:block;overflow-wrap:anywhere}
 .match .meta{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.match .rnote{margin-top:6px;font-size:13px;color:var(--ink);background:var(--sq);border-radius:6px;padding:5px 8px;white-space:pre-line;overflow-wrap:anywhere}
 .role{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid var(--line)}
 .role.op{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .who{font-size:12.5px;color:var(--muted);margin-top:3px}
@@ -306,7 +307,7 @@ function render(){
      const lk = locked(r);
      return `<div class="row">
      <div class="date c-date">${fmtDate(r.date)}<small>${dayName(r.date)}${r.time?" · "+esc(r.time):""}</small></div>
-     <div class="match c-match"><b>${esc(r.home)} – ${esc(r.away)}</b><div class="meta">${[r.comp,r.venue].filter(Boolean).map(esc).join(" · ")||"&nbsp;"}</div></div>
+     <div class="match c-match"><b>${esc(r.home)} – ${esc(r.away)}</b><div class="meta">${[r.comp,r.venue].filter(Boolean).map(esc).join(" · ")||"&nbsp;"}</div>${(r.notes||"").trim()?`<div class="rnote">📝 ${esc(r.notes.trim())}</div>`:""}</div>
      <div><span class="role ${r.role==="op"?"op":""}">${ROLE[r.role]||"—"}</span>${r.person?`<div class="who">με ${esc(r.person)}</div>`:""}</div>
      <div class="fee">${eur(r.fee)}</div>
      <div><button class="pay ${r.paid?"yes":"no"}" type="button" data-act="toggle" data-id="${r.id}" ${isAdmin?"":"disabled"} title="${payTitle}">${r.paid?`${lk?"🔒":"✓"} Πληρώθηκε${r.paidDate?` <small>${fmtDate(r.paidDate).slice(0,5)}</small>`:""}`:"● Εκκρεμεί"}</button></div>
