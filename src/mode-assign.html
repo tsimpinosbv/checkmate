@@ -252,6 +252,15 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 .wkbar .wkgap{flex:1}
 @media (max-width:560px){.wkbar .wkcur{flex:1 1 0}.wkbar .wkgap{flex-basis:100%;height:0}.wkbar>.btn.small{flex:1;justify-content:center}}
 .tabs{overflow-x:auto;scrollbar-width:none}
+/* ---------- calendar, changed badge, backup banner ---------- */
+.card .tools{display:flex;gap:6px;flex-wrap:wrap}
+.btn.cal{font-size:12.5px;padding:5px 10px}
+.card.changed{border-left-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 35%,transparent)}
+.chg{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;border:0;cursor:pointer;background:var(--warn-bg);color:var(--warn);font:700 12.5px var(--f-body);border-radius:999px;padding:4px 10px}
+.chg small{font-weight:600;opacity:.8}
+.sechead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.banner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--blue-bg);color:var(--ink);border:1px solid color-mix(in srgb,var(--blue) 30%,transparent);border-radius:12px;padding:10px 14px;font-size:14px}
+.banner .grow{flex:1 1 220px}
 /* ---------- statistics ---------- */
 .stbl{width:100%;border-collapse:collapse;font-size:14px}
 .stbl th,.stbl td{border-top:1px solid var(--line);padding:8px 10px;text-align:right;white-space:nowrap}
@@ -428,6 +437,32 @@ const ddmm = d => { const [,m,dd]=d.split("-"); return `${+dd}/${+m}`; };
 const weekLabel = wk => `${ddmm(wk)} – ${ddmm(addDays(wk,6))}`;
 /* profiles/{uid}.unavail[weekMonday] = {days:[YYYY-MM-DD…], note, at}; days:[] means "available all week" */
 const UNAV_WEEKS = 2;
+/* ---------- calendar file (.ics): opens in Google / iPhone / Outlook calendar ---------- */
+const icsEsc = v => String(v??"").replace(/[\\;,]/g, m=>"\\"+m).replace(/\r?\n/g, "\\n");
+function icsEvent(i){
+  if(!i.date) return "";
+  const d = i.date.replace(/-/g,""), tm = (i.time||"").match(/^(\d{1,2}):(\d{2})/);
+  let when;
+  if(tm){
+    const end = new Date(`${i.date}T${pad(tm[1])}:${tm[2]}`); end.setMinutes(end.getMinutes()+150);
+    when = `DTSTART;TZID=Europe/Athens:${d}T${pad(tm[1])}${tm[2]}00\r\nDTEND;TZID=Europe/Athens:${ymd(end).replace(/-/g,"")}T${pad(end.getHours())}${pad(end.getMinutes())}00`;
+  } else when = `DTSTART;VALUE=DATE:${d}\r\nDTEND;VALUE=DATE:${addDays(i.date,1).replace(/-/g,"")}`;
+  const loc = [i.venueFull||i.venue, i.venueAddr].filter(Boolean).join(", ");
+  const desc = [ROLE[i.role] + (i.partner ? ` · ${i.role==="op"?"Βοηθός":"Χειριστής"}: ${i.partner}` : ""), i.comp, i.vc?`VAR: ${i.vc}`:"", i.tv?`Κάλυψη: ${i.tv}`:"",
+    i.dateTbc?"Η ημέρα/ώρα θα επιβεβαιωθεί":"", i.notes, i.venueMap?`Χάρτης: ${i.venueMap}`:""].filter(Boolean).join("\n");
+  return ["BEGIN:VEVENT", `UID:${i.id||((i.match||"")+"_"+i.role)}@checkmate`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g,"").slice(0,15)}Z`, when,
+    `SUMMARY:${icsEsc("Video Check: "+(i.home||"")+(i.away?" – "+i.away:""))}`, loc?`LOCATION:${icsEsc(loc)}`:"", `DESCRIPTION:${icsEsc(desc)}`,
+    "BEGIN:VALARM","TRIGGER:-PT3H","ACTION:DISPLAY","DESCRIPTION:Video Check","END:VALARM","END:VEVENT"].filter(Boolean).join("\r\n");
+}
+function downloadIcs(items, filename){
+  const body = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Check Mate//EL","CALSCALE:GREGORIAN","METHOD:PUBLISH",
+    "BEGIN:VTIMEZONE","TZID:Europe/Athens","BEGIN:STANDARD","DTSTART:19701025T040000","RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU","TZOFFSETFROM:+0300","TZOFFSETTO:+0200","TZNAME:EET","END:STANDARD",
+    "BEGIN:DAYLIGHT","DTSTART:19700329T030000","RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU","TZOFFSETFROM:+0200","TZOFFSETTO:+0300","TZNAME:EEST","END:DAYLIGHT","END:VTIMEZONE",
+    ...items.map(icsEvent).filter(Boolean), "END:VCALENDAR"].join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([body], {type:"text/calendar;charset=utf-8"})); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+}
 const monthLabel = ym => ym ? `${MONTHS_FULL[+ym.slice(5)-1]} ${ym.slice(0,4)}` : "";
 const curSeason = () => { const d=today(); const [y,m]=d.split("-").map(Number); return m>=7?`${y}-${y+1}`:`${y-1}-${y}`; };
 /* slots: [{date, comp, role:"op"|"as", fee, paid}] -> totals */
@@ -571,6 +606,8 @@ function renderAdmin(){
   const focus = document.activeElement?.id;
   $("app").innerHTML = `
   <div style="display:flex;flex-direction:column;gap:18px">
+    ${backupDue() ? `<div class="banner" role="status"><span aria-hidden="true">💾</span><span class="grow">${ls.get("cm.lastBackup",0) ? "Πέρασε πάνω από μία εβδομάδα από το τελευταίο αντίγραφο ασφαλείας." : "Κράτα ένα αντίγραφο ασφαλείας με όλο το πρόγραμμα και τις πληρωμές."}</span>
+      <button class="btn small primary" type="button" data-act="backup">⬇ Αντίγραφο σε Excel</button><button class="btn small" type="button" data-act="backuplater">Αργότερα</button></div>` : ""}
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="sched" aria-selected="${tab==="sched"}">Πρόγραμμα</button>
       <button role="tab" data-tab="lists" aria-selected="${tab==="lists"}">Ομάδες & γήπεδα</button>
@@ -666,6 +703,43 @@ function slotHtml(m, r){
   </div>`;
 }
 
+/* ---------- weekly backup reminder (admin) ---------- */
+const DAY_MS = 864e5;
+function backupDue(){ const now=Date.now(); return sched.length>0 && now - ls.get("cm.lastBackup",0) > 7*DAY_MS && now > ls.get("cm.backupSnooze",0); }
+async function backupAll(){
+  const saved = {...st};
+  Object.assign(st, {season:"", month:"", person:"", paid:"", vis:"", q:"", week:""});
+  try{ await $("btnXlsx").onclick(); ls.set("cm.lastBackup", Date.now()); }
+  finally{ Object.assign(st, saved); renderAdmin(); }
+}
+
+/* ---------- reminder email to those who have not declared (admin) ---------- */
+function unavPending(wk){
+  const ridName = {}; roster.forEach(r=>ridName[r.id]=r.name);
+  return Object.entries(links).filter(([rid,uid])=>uid && ridName[rid] && !unavOf(uid,wk))
+    .map(([rid,uid])=>({uid, name:ridName[rid], email:profilesAll[uid]?.email || contacts[rid] || ""})).filter(p=>p.email);
+}
+function unavMailHtml(wk){
+  const app = location.origin + location.pathname;
+  return `<div style="font-family:Arial,Helvetica,sans-serif;color:#14213a;max-width:560px">
+    <div style="font-size:22px;font-weight:800;margin-bottom:4px">CHECK <span style="color:#f0821e">MATE</span></div>
+    <p style="margin:0 0 12px">Γεια σου,</p>
+    <p style="margin:0 0 12px">Δεν έχεις δηλώσει ακόμα αν έχεις κώλυμα την εβδομάδα <b>${esc(weekLabel(wk))}</b>.</p>
+    <p style="margin:0 0 12px">Άνοιξε το Check Mate, πάτησε <b>«Κωλύματα»</b> και διάλεξε τις μέρες που <b>δεν</b> μπορείς, ή <b>«Διαθέσιμος»</b> αν μπορείς όλες.</p>
+    <p style="margin:16px 0"><a href="${app}" style="background:#f0821e;color:#fff;text-decoration:none;padding:10px 16px;border-radius:8px;font-weight:700;display:inline-block">Άνοιγμα Check Mate</a></p>
+    <div style="font-size:13px;color:#5d6b84;margin:0;padding-top:12px;border-top:1px solid #d9dfea;line-height:1.5">${esc(notify.footer ?? DEFAULT_FOOTER).replace(/\n/g,"<br>")}</div></div>`;
+}
+async function sendUnavReminder(wk, btn){
+  if(!notify.endpoint || !mail){ toast("Ρύθμισε πρώτα την υπηρεσία email (καρτέλα «Άτομα» → Ειδοποιήσεις email)"); return; }
+  const list = unavPending(wk); if(!list.length){ toast("Όλοι έχουν δηλώσει"); return; }
+  if(btn) btn.disabled = true;
+  try{
+    const r = await mail.send(notify.endpoint, list.map(p=>({to:p.email, subject:`Check Mate: δήλωσε τα κωλύματά σου (${weekLabel(wk)})`, html:unavMailHtml(wk)})), senderOpts());
+    ls.set("cm.unavMail."+wk, Date.now()); toast(`Στάλθηκαν ${r.sent ?? list.length} υπενθυμίσεις`);
+  }catch(err){ console.warn(err); toast("Οι υπενθυμίσεις δεν στάλθηκαν"); }
+  finally{ renderAdmin(); }
+}
+
 /* ---------- tab: weekly unavailability ---------- */
 let unavWk = null;
 function renderUnav(){
@@ -687,6 +761,9 @@ function renderUnav(){
     <div class="filters">
       <div class="f"><label for="uWk">Εβδομάδα</label><select id="uWk">${weeks.map((w,i)=>`<option value="${w}"${w===unavWk?" selected":""}>${weekLabel(w)}${i===0?" (προηγούμενη)":i===1?" (τρέχουσα)":""}</option>`).join("")}</select></div>
       <div class="usum"><span class="wk-st no">Κώλυμα: ${nOff}</span><span class="wk-st ok">Διαθέσιμοι: ${nOk}</span><span class="wk-st none">Δεν δήλωσαν: ${nNa}</span></div>
+      ${(()=>{ const pend = unavWk>=weekOf(today()) ? unavPending(unavWk) : []; if(!pend.length) return "";
+        const sent = ls.get("cm.unavMail."+unavWk, 0);
+        return `<div class="f" style="margin-left:auto"><label>&nbsp;</label><span id="unavMailWrap"><button class="btn small" type="button" data-act="unavmail">✉ Υπενθύμιση σε όσους δεν δήλωσαν (${pend.length})</button></span>${sent?`<span class="note">Τελευταία αποστολή: ${fmtDate(ymd(new Date(sent)))}</span>`:""}</div>`; })()}
     </div>
     ${conf.length?`<section class="panel"><div class="comp-head" style="border-top:0;background:var(--warn-bg);color:var(--warn)">⚠ Αναθέσεις σε μέρα με κώλυμα (${conf.length})</div>
       ${conf.map(x=>`<div class="conf"><span class="date">${fmtDate(x.m.date)} <small>${esc(dayName(x.m.date))}${x.m.time?" · "+esc(x.m.time):""}</small></span><b>${esc(x.m[x.r])}</b><span class="role ${x.r}">${ROLE[x.r]}</span><span>${teams(x.m)}</span>${x.u.note?`<span class="note">«${esc(x.u.note)}»</span>`:""}<button class="more" data-act="edit" data-id="${x.m.id}" aria-label="Επεξεργασία">✎</button></div>`).join("")}</section>`:""}
@@ -1096,7 +1173,18 @@ async function syncAndSave(m, prev){
   for(const r of ["op","as"]){
     const old = prev?.sync?.[r];
     if(old && old!==sync[r]) await w(()=>db.doc(`mine/${old}/items/${m.id}_${r}`).delete());
-    if(sync[r]) await w(()=>db.doc(`mine/${sync[r]}/items/${m.id}_${r}`).set(itemFor(m,r)));
+    if(sync[r]){
+      /* «Άλλαξε» badge for the user: which details changed since the last time (not the fee or payment) */
+      const ni = itemFor(m, r);
+      let chg = m["chg_"+r] || prev?.["chg_"+r] || null;
+      if(prev && old===sync[r]){
+        const oi = itemFor(prev, r);
+        const f = NOTE_FIELDS.filter(([k])=>k!=="fee" && String(oi[k]??"")!==String(ni[k]??"")).map(([,l])=>l);
+        if(f.length) chg = {at:Date.now(), f};
+      } else if(old!==sync[r]) chg = null;
+      m["chg_"+r] = chg;
+      await w(()=>db.doc(`mine/${sync[r]}/items/${m.id}_${r}`).set({...ni, changedAt:chg?.at||0, changed:chg?.f||[]}));
+    }
   }
   const {id, ...body} = m;
   await w(()=>db.doc(`sched/${m.id}`).set({...body, sync}));
@@ -1259,6 +1347,11 @@ document.addEventListener("click", async e => {
   if(act==="wknow"){ st.week=weekOf(today()); renderAdmin(); }
   if(act==="wkall"){ st.week=""; renderAdmin(); }
   if(act==="statxls") exportStats();
+  if(act==="backup") backupAll();
+  if(act==="backuplater"){ ls.set("cm.backupSnooze", Date.now()+2*DAY_MS); renderAdmin(); }
+  if(act==="unavmail"){ const n=unavPending(unavWk).length; $("unavMailWrap").innerHTML = `<span class="confirm">Αποστολή email σε ${n} ${n===1?"άτομο":"άτομα"}; <button class="btn small primary" type="button" data-act="unavmailyes">Ναι</button><button class="btn small" type="button" data-act="unavmailno">Όχι</button></span>`; }
+  if(act==="unavmailno") renderAdmin();
+  if(act==="unavmailyes") sendUnavReminder(unavWk, b);
   if(act==="wkgo"){ st.week=b.dataset.w; renderAdmin(); }
   if(act==="logmode") $("logModeWrap").innerHTML = `<span class="confirm">Αλλαγή όλης της εφαρμογής σε «Ημερολόγιο αγώνων»; <button type="button" class="btn small primary" data-act="logmodeyes">Ναι</button><button type="button" class="btn small" data-act="logmodeno">Όχι</button></span>`;
   if(act==="logmodeno") $("logModeWrap").innerHTML = `<button class="btn small" type="button" data-act="logmode">Ενεργοποίηση ημερολογίου</button>`;
@@ -1763,6 +1856,16 @@ async function startUser(){
   db.doc(`claims/${uid}`).onSnapshot(s=>{ myClaim = s.exists ? s.data() : null; renderUser(); }, ()=>{ myClaim=null; renderUser(); });
   db.collection("roster").limit(1000).onSnapshot(s=>{ uRoster=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); renderUser(); }, ()=>{});
   db.collection(`mine/${uid}/items`).limit(2000).onSnapshot(s=>{ myItems=s.docs.map(d=>({id:d.id,...d.data()})); renderUser(); }, ()=>{});
+  /* calendar files and the «Άλλαξε» badge (one listener for the whole user page) */
+  $("app").addEventListener("click", e=>{
+    const c = e.target.closest("[data-ics],[data-ics-all],[data-seen]"); if(!c) return;
+    if(c.dataset.seen){ const seen = ls.get("cm.seen", {}); seen[c.dataset.seen] = Date.now(); ls.set("cm.seen", seen); renderUser(); toast("Σημειώθηκε ως ενημερωμένο"); return; }
+    const t = today(), up = myItems.filter(i=>i.date>=t).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+    if(c.dataset.icsAll){ downloadIcs(up, `CheckMate_anatheseis_${t}.ics`); toast("Άνοιξε το αρχείο για να μπουν στο ημερολόγιο"); return; }
+    const i = myItems.find(x=>x.id===c.dataset.ics); if(!i) return;
+    downloadIcs([i], `CheckMate_${i.date}_${norm(i.home).replace(/[^a-zα-ω0-9]+/gi,"")||"agonas"}.ics`);
+    toast("Άνοιξε το αρχείο για να μπει στο ημερολόγιο");
+  });
   db.doc(`profiles/${uid}`).onSnapshot(s=>{ myUnav=(s.exists&&s.data().unavail)||{}; if(!document.querySelector("#unavBox :focus")) renderUser(); }, ()=>{});
 }
 /* weekly unavailability: the user marks the days they cannot work */
@@ -1873,14 +1976,18 @@ function renderUser(){
   const items = myItems.slice().sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   const upcoming = items.filter(i=>i.date>=t), past = items.filter(i=>i.date<t).reverse();
   const total=items.reduce((a,i)=>a+(+i.fee||0),0), paid=items.filter(i=>i.paid).reduce((a,i)=>a+(+i.fee||0),0);
-  const card=(i,first)=>`<article class="card ${i.role} ${i.date<t?"past":""}">
+  const seen = ls.get("cm.seen", {});
+  const isChg = i => i.changedAt && (seen[i.id]||0) < i.changedAt && i.date >= t;
+  const card=(i,first)=>`<article class="card ${i.role} ${i.date<t?"past":""} ${isChg(i)?"changed":""}">
     <div class="top"><div class="when">${whenMain(i)} <small>${whenSub(i)}</small></div>${first?`<span class="next">Επόμενη</span>`:""}</div>
+    ${isChg(i)?`<button type="button" class="chg" data-seen="${esc(i.id)}" title="Πάτα για να το σημειώσεις ως ενημερωμένο">⚠ Άλλαξε: ${esc((i.changed||[]).join(", ").toLowerCase()||"λεπτομέρειες")} <small>· ΟΚ</small></button>`:""}
     <div class="teams">${teams(i)}</div>${(i.homeVar||i.awayVar)?`<div class="tfull"><span class="vtag">VAR</span> ${esc([i.homeVar||"—", i.away?(i.awayVar||"—"):""].filter(Boolean).join(" – "))}</div>`:""}
     ${venueCard(i)}
     <dl>${i.comp?`<dt>Διοργάνωση</dt><dd>${esc(i.comp)}</dd>`:""}<dt>Θέση</dt><dd><span class="role ${i.role}">${ROLE[i.role]}</span></dd>
       ${i.partner?`<dt>${i.role==="op"?"Βοηθός":"Χειριστής"}</dt><dd>${esc(i.partner)}</dd>`:""}${i.vc?`<dt>VAR</dt><dd>${esc(i.vc)}</dd>`:""}${i.tv?`<dt>Κάλυψη</dt><dd>${esc(i.tv)}</dd>`:""}${i.dateTbc?`<dt>Σημ.</dt><dd>Η ημέρα/ώρα θα επιβεβαιωθεί</dd>`:""}
       ${i.notes?`<dt>Σημειώσεις</dt><dd>${esc(i.notes)}</dd>`:""}</dl>
     <div class="bottom"><span class="fee">${eur(i.fee)}</span><span class="pay ${i.paid?"yes":"no"}">${i.paid?`✓ Πληρώθηκε${i.paidDate?" "+fmtDate(i.paidDate).slice(0,5):""}`:"● Εκκρεμεί"}</span></div>
+      ${i.date>=t?`<div class="tools"><button type="button" class="btn small cal" data-ics="${esc(i.id)}">📅 Στο ημερολόγιο του κινητού</button></div>`:""}
   </article>`;
   $("app").innerHTML = `<div style="display:flex;flex-direction:column;gap:18px">
     <section class="board four" aria-label="Σύνοψη">
@@ -1891,7 +1998,7 @@ function renderUser(){
     </section>
     ${unavPanel()}
     ${myStatsPanel()}
-    <h2 class="sec">${greet} · Επόμενες αναθέσεις</h2>
+    <div class="sechead"><h2 class="sec">${greet} · Επόμενες αναθέσεις</h2>${upcoming.length>1?`<button type="button" class="btn small cal" data-ics-all="1">📅 Όλες στο ημερολόγιο</button>`:""}</div>
     ${upcoming.length?`<div class="cards">${upcoming.map((i,k)=>card(i,k===0)).join("")}</div>`:`<div class="panel"><div class="empty"><strong>Δεν έχεις επόμενες αναθέσεις</strong><div>Θα εμφανιστούν εδώ μόλις σε ορίσει ο διαχειριστής.</div></div></div>`}
     ${past.length?`<div class="actions"><button class="btn" id="togglePast">${showPast?"Απόκρυψη":"Προβολή"} προηγούμενων (${past.length})</button></div>
       ${showPast?`<div class="cards">${past.map(i=>card(i,false)).join("")}</div>`:""}`:""}
