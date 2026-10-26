@@ -303,7 +303,7 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
   #cm-auth .msg.ok{color:var(--good);background:#e3f4ea}
   #cm-auth .hint{color:var(--muted);font-size:13px;line-height:1.45;margin:0}
   #cm-auth p.lead{color:var(--muted);margin:0 0 14px;line-height:1.5}
-  #cm-dock{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:50;display:flex;gap:8px;align-items:center}
+  #cm-dock{position:static;display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;margin:28px auto 4px;padding:0 16px}
   #cm-dock button{font:600 12px "Commissioner",system-ui,sans-serif;padding:7px 11px;border-radius:999px;border:1px solid #d9dfea;background:#fff;color:#14213a;cursor:pointer;box-shadow:0 1px 4px rgba(20,33,58,.12)}
   #cm-dock button.install{background:#f0821e;color:#fff;border-color:#f0821e}
   #cm-dock button[hidden]{display:none}
@@ -355,7 +355,11 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
     const d = dock();
     d.querySelector("#cm-install").hidden = isStandalone() || !(deferredPrompt || isIOS());
     d.querySelector("#cm-signout").hidden = !(auth && auth.currentUser);
+    /* sit in the same bottom row as «Σχετικά» (from /suite-back.js) when it is there */
+    const credit = document.getElementById("cm-credit");
+    if(credit && d.parentNode !== credit){ credit.appendChild(d); d.style.margin = "0"; d.style.padding = "0"; }
   }
+  addEventListener("load", () => setTimeout(updateDock, 700));
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", updateDock); else updateDock();
 
   /* ---------- sign-in / sign-up screen ---------- */
