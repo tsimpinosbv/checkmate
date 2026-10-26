@@ -319,7 +319,6 @@ details.unav .pbody{padding-top:0}
     </div>
     <div class="actions" id="adminActions" hidden>
       <button class="btn" id="btnXlsx" type="button" title="Αναθέσεις και στατιστικά σε Excel, με τα τρέχοντα φίλτρα">⬇ Excel</button>
-      <button class="btn" id="btnCsv" type="button">⬇ CSV</button>
       <button class="btn" id="btnImport" type="button">⬆ Εισαγωγή Excel</button>
       <button class="btn primary" id="btnAdd" type="button">+ Νέα ανάθεση</button>
     </div>
@@ -1719,18 +1718,6 @@ $("impGo").onclick = async ()=>{
   if(fOp!==fees.op||fAs!==fees.as){ try{ await db.doc("config/fees").set({op:fOp,as:fAs}); fees={op:fOp,as:fAs}; }catch{} }
   $("dlgImp").close();
   toast(failed?`Εισήχθησαν ${done-failed}, απέτυχαν ${failed} – ξαναδοκίμασε την εισαγωγή`:`Εισήχθησαν ${done} αγώνες`);
-};
-
-/* ---------- CSV ---------- */
-$("btnCsv").onclick = async ()=>{
-  const pn=st.person?norm(st.person):"";
-  const slots = slotsOf(filteredSched()).filter(s=>!pn||norm(s.name)===pn);
-  if(!slots.length){ toast("Δεν υπάρχουν αναθέσεις για εξαγωγή"); return; }
-  const q=v=>{const s=String(v??"");return /[;"\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s;};
-  const head=["Ημερομηνία","Ημέρα","Ώρα","Διοργάνωση","Γηπεδούχος","Φιλοξενούμενη","Γήπεδο","Κάλυψη","VAR","Άτομο","Θέση","Αμοιβή (€)","Πληρώθηκε","Ημ. πληρωμής"];
-  const lines=[head.join(";"),...slots.map(s=>[s.m.dateText||fmtDate(s.m.date),s.m.dateText?"":dayName(s.m.date),s.m.time||s.m.timeText,s.m.comp,s.m.home,s.m.away,s.m.venue,s.m.tv,s.m.vc,s.name,ROLE[s.role],String(s.fee).replace(".",","),s.paid?"ΝΑΙ":"ΟΧΙ",fmtDate(s.m["paidDate_"+s.role])].map(q).join(";"))];
-  const dl=await claude.use("downloads"); if(!dl){ toast("Η λήψη δεν είναι διαθέσιμη εδώ"); return; }
-  try{ await dl.save({filename:`CheckMate_${st.month||"ola"}_${today()}.csv`, data:"﻿"+lines.join("\r\n")}); }catch(err){ if(err?.code!=="declined") toast("Η λήψη δεν ολοκληρώθηκε"); }
 };
 
 /* ---------- Excel export with statistics ---------- */
