@@ -539,8 +539,9 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 @media (max-width:560px){.wkbar .wkcur{flex:1 1 0}.wkbar .wkgap{flex-basis:100%;height:0}.wkbar>.btn.small{flex:1;justify-content:center}}
 .tabs{overflow-x:auto;scrollbar-width:none}
 /* ---------- calendar, changed badge, backup banner ---------- */
-.card .tools{display:flex;gap:6px;flex-wrap:wrap}
-.btn.cal{font-size:12.5px;padding:5px 10px}
+.seen{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;border-radius:999px;padding:1px 8px;white-space:nowrap}
+.seen.ok{color:var(--good);background:var(--good-bg)}.seen.no{color:var(--muted);background:transparent;border:1px dashed var(--line)}
+.seen .ic{width:1.05em;height:1.05em}
 .card.changed{border-left-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 35%,transparent)}
 .chg{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;border:0;cursor:pointer;background:var(--warn-bg);color:var(--warn);font:700 12.5px var(--f-body);border-radius:999px;padding:4px 10px}
 .chg small{font-weight:600;opacity:.8}
@@ -762,7 +763,7 @@ details.unav .pbody{padding-top:0}
   const st = document.createElement("style"); st.textContent = css + `
   .ic{width:1.15em;height:1.15em;flex:none;vertical-align:-.2em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}`; document.head.appendChild(st);
   /* one set of line icons for Check Mate and Ημερολόγιο (instead of emoji, which look different on every phone) */
-  const ICONS = {dl:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',ul:'<path d="M12 21V9M7 14l5-5 5 5M5 3h14"/>',cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',pin:'<path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',warn:'<path d="M12 3.5 22 20.5H2z"/><path d="M12 10v4.5M12 17.6v.1"/>',video:'<rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3"/>',save:'<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3M8 21v-7h8v7"/>',map:'<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/>',mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',book:'<path d="M12 6c-2-1.5-5-2-8-2v15c3 0 6 .5 8 2 2-1.5 5-2 8-2V4c-3 0-6 .5-8 2z"/><path d="M12 6v15"/>',doc:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',print:'<path d="M7 9V3h10v6"/><path d="M7 17H4v-7h16v7h-3"/><path d="M7 14h10v7H7z"/>',lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',pen:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',phone:'<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/>'};
+  const ICONS = {dl:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',ul:'<path d="M12 21V9M7 14l5-5 5 5M5 3h14"/>',cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',pin:'<path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',warn:'<path d="M12 3.5 22 20.5H2z"/><path d="M12 10v4.5M12 17.6v.1"/>',video:'<rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3"/>',save:'<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3M8 21v-7h8v7"/>',map:'<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/>',mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',book:'<path d="M12 6c-2-1.5-5-2-8-2v15c3 0 6 .5 8 2 2-1.5 5-2 8-2V4c-3 0-6 .5-8 2z"/><path d="M12 6v15"/>',doc:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',print:'<path d="M7 9V3h10v6"/><path d="M7 17H4v-7h16v7h-3"/><path d="M7 14h10v7H7z"/>',lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',pen:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',phone:'<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/>',eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'};
   window.cmIcon = n => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]||""}</svg>`;
 
   const esc = s => String(s??"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -1415,32 +1416,6 @@ const ddmm = d => { const [,m,dd]=d.split("-"); return `${+dd}/${+m}`; };
 const weekLabel = wk => `${ddmm(wk)} – ${ddmm(addDays(wk,6))}`;
 /* profiles/{uid}.unavail[weekMonday] = {days:[YYYY-MM-DD…], note, at}; days:[] means "available all week" */
 const UNAV_WEEKS = 2;
-/* ---------- calendar file (.ics): opens in Google / iPhone / Outlook calendar ---------- */
-const icsEsc = v => String(v??"").replace(/[\\;,]/g, m=>"\\"+m).replace(/\r?\n/g, "\\n");
-function icsEvent(i){
-  if(!i.date) return "";
-  const d = i.date.replace(/-/g,""), tm = (i.time||"").match(/^(\d{1,2}):(\d{2})/);
-  let when;
-  if(tm){
-    const end = new Date(`${i.date}T${pad(tm[1])}:${tm[2]}`); end.setMinutes(end.getMinutes()+150);
-    when = `DTSTART;TZID=Europe/Athens:${d}T${pad(tm[1])}${tm[2]}00\r\nDTEND;TZID=Europe/Athens:${ymd(end).replace(/-/g,"")}T${pad(end.getHours())}${pad(end.getMinutes())}00`;
-  } else when = `DTSTART;VALUE=DATE:${d}\r\nDTEND;VALUE=DATE:${addDays(i.date,1).replace(/-/g,"")}`;
-  const loc = [i.venueFull||i.venue, i.venueAddr].filter(Boolean).join(", ");
-  const desc = [ROLE[i.role] + (i.partner ? ` · ${i.role==="op"?"Βοηθός":"Χειριστής"}: ${i.partner}` : ""), i.comp, i.vc?`VAR: ${i.vc}`:"", i.tv?`Κάλυψη: ${i.tv}`:"",
-    i.dateTbc?"Η ημέρα/ώρα θα επιβεβαιωθεί":"", i.notes, i.venueMap?`Χάρτης: ${i.venueMap}`:""].filter(Boolean).join("\n");
-  return ["BEGIN:VEVENT", `UID:${i.id||((i.match||"")+"_"+i.role)}@checkmate`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g,"").slice(0,15)}Z`, when,
-    `SUMMARY:${icsEsc("Video Check: "+(i.home||"")+(i.away?" – "+i.away:""))}`, loc?`LOCATION:${icsEsc(loc)}`:"", `DESCRIPTION:${icsEsc(desc)}`,
-    "BEGIN:VALARM","TRIGGER:-PT4H","ACTION:DISPLAY","DESCRIPTION:Video Check","END:VALARM","END:VEVENT"].filter(Boolean).join("\r\n");
-}
-function downloadIcs(items, filename){
-  const body = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Check Mate//EL","CALSCALE:GREGORIAN","METHOD:PUBLISH",
-    "BEGIN:VTIMEZONE","TZID:Europe/Athens","BEGIN:STANDARD","DTSTART:19701025T040000","RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU","TZOFFSETFROM:+0300","TZOFFSETTO:+0200","TZNAME:EET","END:STANDARD",
-    "BEGIN:DAYLIGHT","DTSTART:19700329T030000","RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU","TZOFFSETFROM:+0200","TZOFFSETTO:+0300","TZNAME:EEST","END:DAYLIGHT","END:VTIMEZONE",
-    ...items.map(icsEvent).filter(Boolean), "END:VCALENDAR"].join("\r\n");
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([body], {type:"text/calendar;charset=utf-8"})); a.download = filename;
-  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
-}
 const monthLabel = ym => ym ? `${MONTHS_FULL[+ym.slice(5)-1]} ${ym.slice(0,4)}` : "";
 const curSeason = () => { const d=today(); const [y,m]=d.split("-").map(Number); return m>=7?`${y}-${y+1}`:`${y-1}-${y}`; };
 /* slots: [{date, comp, role:"op"|"as", fee, paid}] -> totals */
@@ -1679,12 +1654,19 @@ function bulkIdle(list){
     (hid?`<button type="button" class="btn small" data-act="bulk" data-to="show">Εμφάνιση όλων (${hid})</button>`:"")+
     (shown?`<button type="button" class="btn small" data-act="bulk" data-to="hide">${!st.week&&st.season&&!st.month&&!st.person&&!st.paid&&!st.vis&&!st.q?`Απόκρυψη όλης της σεζόν ${esc(st.season)}`:"Απόκρυψη όλων"} (${shown})</button>`:"");
 }
+/* has the person seen this (upcoming, visible) assignment in the app? */
+function seenTag(m, r){
+  const uid = m.sync?.[r]; if(!uid || m.hidden || !m.date || m.date < today()) return "";
+  const at = profilesAll[uid]?.seen?.[`${m.id}_${r}`] || 0, chg = m["chg_"+r]?.at || 0;
+  if(at && at >= chg){ const d = new Date(at); return `<span class="seen ok" title="Το είδε στην εφαρμογή ${fmtDate(ymd(d)).slice(0,5)} ${pad(d.getHours())}:${pad(d.getMinutes())}">${cmIcon("eye")} Το είδε</span>`; }
+  return `<span class="seen no" title="Δεν έχει ανοίξει ακόμα την εφαρμογή μετά ${at?"την αλλαγή":"την ανάθεση"}">${at?"Δεν είδε την αλλαγή":"Δεν το είδε ακόμα"}</span>`;
+}
 function slotHtml(m, r){
   if(!m[r]) return `<div class="slot"><div class="ln"><span class="empty-slot">${ROLE[r]}: κενό</span></div></div>`;
   const linked = !!uidForName(m[r]); const paid=!!m["paid_"+r];
   return `<div class="slot">
     <div class="nm"><span class="dot ${linked?"on":""}" title="${linked?"Συνδεδεμένος λογαριασμός – βλέπει την ανάθεση":"Δεν έχει συνδεθεί λογαριασμός"}"></span>${esc(m[r])}${(()=>{ const u=unavailOn(m[r], m.date); return u?`<span class="unav-flag" title="${esc(u.note?"Κώλυμα: "+u.note:"Έχει δηλώσει κώλυμα αυτή τη μέρα")}">${cmIcon("warn")} Κώλυμα</span>`:""; })()}</div>
-    <div class="ln"><span class="role ${r}">${ROLE[r]}</span><span class="fee">${eur(m["fee_"+r])}</span>
+    <div class="ln"><span class="role ${r}">${ROLE[r]}</span><span class="fee">${eur(m["fee_"+r])}</span>${seenTag(m, r)}
     <button class="pay ${paid?"yes":"no"}" data-act="pay" data-id="${m.id}" data-role="${r}" title="Αλλαγή κατάστασης πληρωμής">${paid?"✓ Πληρώθηκε":"● Εκκρεμεί"}</button></div>
   </div>`;
 }
@@ -2838,7 +2820,24 @@ $("btnXlsx").onclick = async ()=>{
 /* =================================================================
    USER (read-only, own assignments)
    ================================================================= */
-let myItems=[], myClaim=undefined, uRoster=[], showPast=false, myUnav={}, myUnavLoaded=false;
+let myItems=[], myClaim=undefined, uRoster=[], showPast=false, myUnav={}, myUnavLoaded=false, mySeen={}, seenWriting=false;
+/* «Το είδε»: when the user's page shows an upcoming assignment (new or changed), the time is saved in profiles/<uid>.seen,
+   so the administrator knows the person has seen it. Nothing to press. */
+async function markSeen(list){
+  if(!myUnavLoaded || seenWriting || !me) return;
+  const now = Date.now(), upd = {};
+  list.forEach(i => { if(!((mySeen[i.id]||0) >= (i.changedAt||0) && mySeen[i.id])) upd[i.id] = now; });
+  if(!Object.keys(upd).length) return;
+  seenWriting = true;
+  try{
+    const keep = new Set(myItems.map(i=>i.id)), all = {...mySeen, ...upd};
+    const tidy = Object.keys(all).some(k=>!keep.has(k));
+    if(tidy){ const pruned = {}; Object.keys(all).filter(k=>keep.has(k)).forEach(k=>pruned[k]=all[k]);   // forget finished/removed assignments
+      await db.doc(`profiles/${me.id}`).update({seen:pruned}).catch(()=>db.doc(`profiles/${me.id}`).set({seen:pruned}, {merge:true})); }
+    else await db.doc(`profiles/${me.id}`).set({seen:upd}, {merge:true});
+  }catch(err){ console.warn("seen", err); }
+  finally{ seenWriting = false; }
+}
 async function startUser(){
   const uid = me?.id;
   if(!uid){ $("app").innerHTML=`<div class="panel"><div class="empty"><strong>Δεν αναγνωρίστηκε ο λογαριασμός σου</strong><div>Συνδέσου με τον λογαριασμό Google σου, από τον σύνδεσμο που σου έστειλε ο διαχειριστής.</div></div></div>`; return; }
@@ -2846,18 +2845,14 @@ async function startUser(){
   db.doc(`claims/${uid}`).onSnapshot(s=>{ myClaim = s.exists ? s.data() : null; renderUser(); }, ()=>{ myClaim=null; renderUser(); });
   db.collection("roster").limit(1000).onSnapshot(s=>{ uRoster=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); renderUser(); }, ()=>{});
   db.collection(`mine/${uid}/items`).limit(2000).onSnapshot(s=>{ myItems=s.docs.map(d=>({id:d.id,...d.data()})); renderUser(); }, ()=>{});
-  /* calendar files and the «Άλλαξε» badge (one listener for the whole user page) */
+  /* the «Άλλαξε» badge and the availability reminder (one listener for the whole user page) */
   $("app").addEventListener("click", e=>{
-    const c = e.target.closest("[data-ics],[data-ics-all],[data-seen],[data-unavgo]"); if(!c) return;
+    const c = e.target.closest("[data-seen],[data-unavgo]"); if(!c) return;
     if(c.dataset.unavgo){ unavOpen=true; renderUser(); const d=$("unavDet"); if(d){ d.scrollIntoView({behavior:"smooth",block:"start"}); d.querySelector(".day:not([disabled])")?.focus({preventScroll:true}); } return; }
     if(c.dataset.seen){ const seen = ls.get("cm.seen", {}); seen[c.dataset.seen] = Date.now(); ls.set("cm.seen", seen); renderUser(); toast("Σημειώθηκε ως ενημερωμένο"); return; }
-    const t = today(), up = myItems.filter(i=>i.date>=t).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
-    if(c.dataset.icsAll){ downloadIcs(up, `CheckMate_anatheseis_${t}.ics`); toast("Άνοιξε το αρχείο για να μπουν στο ημερολόγιο"); return; }
-    const i = myItems.find(x=>x.id===c.dataset.ics); if(!i) return;
-    downloadIcs([i], `CheckMate_${i.date}_${norm(i.home).replace(/[^a-zα-ω0-9]+/gi,"")||"agonas"}.ics`);
-    toast("Άνοιξε το αρχείο για να μπει στο ημερολόγιο");
   });
-  db.doc(`profiles/${uid}`).onSnapshot(s=>{ myUnav=(s.exists&&s.data().unavail)||{}; myUnavLoaded=true; if(!document.querySelector("#unavBox :focus")) renderUser(); }, ()=>{});
+  db.doc(`profiles/${uid}`).onSnapshot(s=>{ myUnav=(s.exists&&s.data().unavail)||{}; mySeen=(s.exists&&s.data().seen)||{}; myUnavLoaded=true; if(!document.querySelector("#unavBox :focus")) renderUser(); }, ()=>{});
+  document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible" && !document.querySelector("#unavBox :focus")) renderUser(); });   // back to the app: count as seen
 }
 /* weekly unavailability: the user marks the days they cannot work */
 let unavOpen = false;   // closed on entry; opens on tap and stays as the user leaves it
@@ -2989,7 +2984,6 @@ function renderUser(){
       ${i.partner?`<dt>${i.role==="op"?"Βοηθός":"Χειριστής"}</dt><dd>${esc(i.partner)}</dd>`:""}${i.vc?`<dt>VAR</dt><dd>${esc(i.vc)}</dd>`:""}${i.tv?`<dt>Κάλυψη</dt><dd>${esc(i.tv)}</dd>`:""}${i.dateTbc?`<dt>Σημ.</dt><dd>Η ημέρα/ώρα θα επιβεβαιωθεί</dd>`:""}
       ${i.notes?`<dt>Σημειώσεις</dt><dd>${esc(i.notes)}</dd>`:""}</dl>
     <div class="bottom"><span class="fee">${eur(i.fee)}</span><span class="pay ${i.paid?"yes":"no"}">${i.paid?`✓ Πληρώθηκε${i.paidDate?" "+fmtDate(i.paidDate).slice(0,5):""}`:"● Εκκρεμεί"}</span></div>
-      ${i.date>=t?`<div class="tools"><button type="button" class="btn small cal" data-ics="${esc(i.id)}">${cmIcon("cal")} Στο ημερολόγιο του κινητού</button></div>`:""}
   </article>`;
   const nxWk = nextWeeks(2)[1];
   const nudge = myUnavLoaded && !myUnav[nxWk] ? `<div class="banner nudge" role="status">${cmIcon("cal")}<span class="grow">Δεν έχεις δηλώσει κωλύματα για την επόμενη εβδομάδα (${weekLabel(nxWk)}).</span><button type="button" class="btn small primary" data-unavgo="1">Δήλωσε τώρα</button></div>` : "";
@@ -3001,7 +2995,7 @@ function renderUser(){
       <div class="cell"><div class="k">Πληρώθηκαν</div><div class="v">${eur(paid)}</div></div>
       <div class="cell"><div class="k">Εκκρεμούν</div><div class="v or">${eur(total-paid)}</div></div>
     </section>
-    <div class="sechead"><div><div class="hi">${greet}</div><h2 class="sec">Επόμενες αναθέσεις</h2></div>${upcoming.length>1?`<button type="button" class="btn small cal" data-ics-all="1">${cmIcon("cal")} Όλες στο ημερολόγιο</button>`:""}</div>
+    <div class="sechead"><div><div class="hi">${greet}</div><h2 class="sec">Επόμενες αναθέσεις</h2></div></div>
     ${upcoming.length?`<div class="cards">${upcoming.map((i,k)=>card(i,k===0)).join("")}</div>`:`<div class="panel"><div class="empty"><strong>Δεν έχεις επόμενες αναθέσεις</strong><div>Θα εμφανιστούν εδώ μόλις σε ορίσει ο διαχειριστής.</div></div></div>`}
     ${unavPanel()}
     ${myStatsPanel()}
@@ -3009,6 +3003,7 @@ function renderUser(){
       ${showPast?`<div class="cards">${past.map(i=>card(i,false)).join("")}</div>`:""}`:""}
   </div>`;
   const tp=$("togglePast"); if(tp) tp.onclick=()=>{ showPast=!showPast; renderUser(); };
+  if(document.visibilityState==="visible") markSeen(upcoming);
   renderUnavUser(); bindMyStats();
 }
 })();
