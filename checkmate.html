@@ -539,6 +539,7 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 .chg{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;border:0;cursor:pointer;background:var(--warn-bg);color:var(--warn);font:700 12.5px var(--f-body);border-radius:999px;padding:4px 10px}
 .chg small{font-weight:600;opacity:.8}
 .sechead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.banner.nudge{background:var(--warn-bg);border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
 .banner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--blue-bg);color:var(--ink);border:1px solid color-mix(in srgb,var(--blue) 30%,transparent);border-radius:12px;padding:10px 14px;font-size:14px}
 .banner .grow{flex:1 1 220px}
 /* ---------- statistics ---------- */
@@ -1648,9 +1649,17 @@ function renderSched(months, people, seasons=[]){
   $("fVis").onchange=e=>{st.vis=e.target.value;renderAdmin();};
   $("fSearch").oninput=e=>{st.q=e.target.value;renderAdmin();};
 }
+/* unpaid, already played assignments of the person chosen in the filter */
+function unpaidOf(list){
+  if(!st.person) return [];
+  const pn=norm(st.person), t=today();
+  return list.filter(m=>m.date && m.date<=t).flatMap(m=>["op","as"].filter(r=>m[r] && norm(m[r])===pn && !m["paid_"+r]).map(r=>({m,r})));
+}
 function bulkIdle(list){
   const shown=list.filter(m=>!m.hidden).length, hid=list.length-shown;
-  return `<span>Στη λίστα: ${shown} ορατές, ${hid} κρυφές στους χρήστες.</span>`+
+  const up=unpaidOf(list), upSum=up.reduce((a,x)=>a+(+x.m["fee_"+x.r]||0),0);
+  return (up.length?`<button type="button" class="btn small primary" data-act="paybulk">✓ Πληρωμή όλων · ${esc(st.person)} (${up.length} · ${eur(upSum)})</button>`:"")+
+    `<span>Στη λίστα: ${shown} ορατές, ${hid} κρυφές στους χρήστες.</span>`+
     (hid?`<button type="button" class="btn small" data-act="bulk" data-to="show">Εμφάνιση όλων (${hid})</button>`:"")+
     (shown?`<button type="button" class="btn small" data-act="bulk" data-to="hide">${!st.week&&st.season&&!st.month&&!st.person&&!st.paid&&!st.vis&&!st.q?`Απόκρυψη όλης της σεζόν ${esc(st.season)}`:"Απόκρυψη όλων"} (${shown})</button>`:"");
 }
@@ -2327,6 +2336,22 @@ document.addEventListener("click", async e => {
     $("bulk").innerHTML = `<span class="confirm">${hide?"Απόκρυψη":"Εμφάνιση"} ${list.length} αναθέσεων ${hide?"από":"στους"} χρήστες; <button type="button" class="btn small primary" data-act="bulkyes" data-to="${b.dataset.to}">Ναι</button><button type="button" class="btn small" data-act="bulkno">Όχι</button></span>`;
   }
   if(act==="bulkno") $("bulk").innerHTML = bulkIdle(filteredSched());
+  if(act==="paybulk"){
+    const up=unpaidOf(filteredSched()), sum=up.reduce((a,x)=>a+(+x.m["fee_"+x.r]||0),0);
+    $("bulk").innerHTML = `<span class="confirm">Πληρωμή ${up.length} ${up.length===1?"ανάθεσης":"αναθέσεων"} του ${esc(st.person)}, σύνολο ${eur(sum)}; <button type="button" class="btn small primary" data-act="paybulkyes">Ναι</button><button type="button" class="btn small" data-act="bulkno">Όχι</button></span>`;
+  }
+  if(act==="paybulkyes"){
+    const up=unpaidOf(filteredSched()), d=today();
+    $("bulk").innerHTML = `<span>Ενημέρωση ${up.length} αναθέσεων…</span>`;
+    const byMatch=new Map(); up.forEach(x=>{ if(!byMatch.has(x.m.id)) byMatch.set(x.m.id,{m:x.m,roles:[]}); byMatch.get(x.m.id).roles.push(x.r); });
+    let n=0, failed=0;
+    for(const {m,roles} of byMatch.values()){
+      const upd={...m, updatedAt:Date.now()}; roles.forEach(r=>{ upd["paid_"+r]=true; upd["paidDate_"+r]=d; });
+      try{ await syncAndSave(upd, m); n+=roles.length; }catch{ failed+=roles.length; }
+    }
+    toast(failed?`Πληρώθηκαν ${n}, απέτυχαν ${failed}. Δοκίμασε ξανά.`:`Σημειώθηκαν ως πληρωμένες ${n} αναθέσεις`);
+    if($("bulk")) $("bulk").innerHTML = bulkIdle(filteredSched());
+  }
   if(act==="bulkyes"){
     const hide = b.dataset.to==="hide", list = filteredSched().filter(x=>!!x.hidden!==hide);
     $("bulk").innerHTML = `<span>Ενημέρωση ${list.length} αναθέσεων…</span>`;
@@ -2797,7 +2822,7 @@ $("btnXlsx").onclick = async ()=>{
 /* =================================================================
    USER (read-only, own assignments)
    ================================================================= */
-let myItems=[], myClaim=undefined, uRoster=[], showPast=false, myUnav={};
+let myItems=[], myClaim=undefined, uRoster=[], showPast=false, myUnav={}, myUnavLoaded=false;
 async function startUser(){
   const uid = me?.id;
   if(!uid){ $("app").innerHTML=`<div class="panel"><div class="empty"><strong>Δεν αναγνωρίστηκε ο λογαριασμός σου</strong><div>Συνδέσου με τον λογαριασμό Google σου, από τον σύνδεσμο που σου έστειλε ο διαχειριστής.</div></div></div>`; return; }
@@ -2807,7 +2832,8 @@ async function startUser(){
   db.collection(`mine/${uid}/items`).limit(2000).onSnapshot(s=>{ myItems=s.docs.map(d=>({id:d.id,...d.data()})); renderUser(); }, ()=>{});
   /* calendar files and the «Άλλαξε» badge (one listener for the whole user page) */
   $("app").addEventListener("click", e=>{
-    const c = e.target.closest("[data-ics],[data-ics-all],[data-seen]"); if(!c) return;
+    const c = e.target.closest("[data-ics],[data-ics-all],[data-seen],[data-unavgo]"); if(!c) return;
+    if(c.dataset.unavgo){ unavOpen=true; renderUser(); const d=$("unavDet"); if(d){ d.scrollIntoView({behavior:"smooth",block:"start"}); d.querySelector(".day:not([disabled])")?.focus({preventScroll:true}); } return; }
     if(c.dataset.seen){ const seen = ls.get("cm.seen", {}); seen[c.dataset.seen] = Date.now(); ls.set("cm.seen", seen); renderUser(); toast("Σημειώθηκε ως ενημερωμένο"); return; }
     const t = today(), up = myItems.filter(i=>i.date>=t).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
     if(c.dataset.icsAll){ downloadIcs(up, `CheckMate_anatheseis_${t}.ics`); toast("Άνοιξε το αρχείο για να μπουν στο ημερολόγιο"); return; }
@@ -2815,7 +2841,7 @@ async function startUser(){
     downloadIcs([i], `CheckMate_${i.date}_${norm(i.home).replace(/[^a-zα-ω0-9]+/gi,"")||"agonas"}.ics`);
     toast("Άνοιξε το αρχείο για να μπει στο ημερολόγιο");
   });
-  db.doc(`profiles/${uid}`).onSnapshot(s=>{ myUnav=(s.exists&&s.data().unavail)||{}; if(!document.querySelector("#unavBox :focus")) renderUser(); }, ()=>{});
+  db.doc(`profiles/${uid}`).onSnapshot(s=>{ myUnav=(s.exists&&s.data().unavail)||{}; myUnavLoaded=true; if(!document.querySelector("#unavBox :focus")) renderUser(); }, ()=>{});
 }
 /* weekly unavailability: the user marks the days they cannot work */
 let unavOpen = false;   // closed on entry; opens on tap and stays as the user leaves it
@@ -2938,7 +2964,10 @@ function renderUser(){
     <div class="bottom"><span class="fee">${eur(i.fee)}</span><span class="pay ${i.paid?"yes":"no"}">${i.paid?`✓ Πληρώθηκε${i.paidDate?" "+fmtDate(i.paidDate).slice(0,5):""}`:"● Εκκρεμεί"}</span></div>
       ${i.date>=t?`<div class="tools"><button type="button" class="btn small cal" data-ics="${esc(i.id)}">📅 Στο ημερολόγιο του κινητού</button></div>`:""}
   </article>`;
+  const nxWk = nextWeeks(2)[1];
+  const nudge = myUnavLoaded && !myUnav[nxWk] ? `<div class="banner nudge" role="status"><span aria-hidden="true">📅</span><span class="grow">Δεν έχεις δηλώσει κωλύματα για την επόμενη εβδομάδα (${weekLabel(nxWk)}).</span><button type="button" class="btn small primary" data-unavgo="1">Δήλωσε τώρα</button></div>` : "";
   $("app").innerHTML = `<div style="display:flex;flex-direction:column;gap:18px">
+    ${nudge}
     <section class="board four" aria-label="Σύνοψη">
       <div class="cell"><div class="k">Επόμενες</div><div class="v">${upcoming.length}</div></div>
       <div class="cell"><div class="k">Σύνολο αμοιβών</div><div class="v">${eur(total)}</div></div>
