@@ -52,7 +52,11 @@
     :root:not([data-theme="light"]) #cm-auth .msg.ok{background:#16301f}
     :root:not([data-theme="light"]) #cm-dock button:not(.install){background:#1b2436;color:#eef2f8;border-color:#33405a}
   }`;
-  const st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
+  const st = document.createElement("style"); st.textContent = css + `
+  .ic{width:1.15em;height:1.15em;flex:none;vertical-align:-.2em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}`; document.head.appendChild(st);
+  /* one set of line icons for Check Mate and Ημερολόγιο (instead of emoji, which look different on every phone) */
+  const ICONS = {dl:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',ul:'<path d="M12 21V9M7 14l5-5 5 5M5 3h14"/>',cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',pin:'<path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',warn:'<path d="M12 3.5 22 20.5H2z"/><path d="M12 10v4.5M12 17.6v.1"/>',video:'<rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3"/>',save:'<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3M8 21v-7h8v7"/>',map:'<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/>',mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',book:'<path d="M12 6c-2-1.5-5-2-8-2v15c3 0 6 .5 8 2 2-1.5 5-2 8-2V4c-3 0-6 .5-8 2z"/><path d="M12 6v15"/>',doc:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',print:'<path d="M7 9V3h10v6"/><path d="M7 17H4v-7h16v7h-3"/><path d="M7 14h10v7H7z"/>',lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',pen:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',phone:'<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/>'};
+  window.cmIcon = n => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]||""}</svg>`;
 
   const esc = s => String(s??"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   /* the same code serves two apps: the main Check Mate app and the personal diary (imerologio.html) */
@@ -71,7 +75,7 @@
     let d = document.getElementById("cm-dock");
     if(!d){
       d = document.createElement("div"); d.id = "cm-dock";
-      d.innerHTML = `<button type="button" class="install" id="cm-install" hidden>📲 Εγκατάσταση</button><button type="button" id="cm-signout" hidden>Αποσύνδεση</button>`;
+      d.innerHTML = `<button type="button" class="install" id="cm-install" hidden><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg> Εγκατάσταση</button><button type="button" id="cm-signout" hidden>Αποσύνδεση</button>`;
       document.body.appendChild(d);
       const tip = document.createElement("div"); tip.id = "cm-ios"; tip.hidden = true; tip.setAttribute("role","dialog");
       tip.innerHTML = `<button type="button" aria-label="Κλείσιμο" id="cm-ios-x">×</button><b>Εγκατάσταση στο iPhone</b><br>1. Πάτησε το κουμπί <b>Κοινοποίηση</b> (το τετράγωνο με το βέλος ↑) στο Safari.<br>2. Επίλεξε <b>Προσθήκη στην οικία</b>.<br>3. Πάτησε <b>Προσθήκη</b>.`;
@@ -150,7 +154,7 @@
       <div class="or">ή</div>
       <button type="button" class="google" id="cm-google">${googleSvg} Συνέχεια με Google</button>`;
     }
-    const help = `<a class="help" href="${DIARY ? "help/imerologio.html" : "help/"}">📖 Οδηγίες χρήσης</a>`;
+    const help = `<a class="help" href="${DIARY ? "help/imerologio.html" : "help/"}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6c-2-1.5-5-2-8-2v15c3 0 6 .5 8 2 2-1.5 5-2 8-2V4c-3 0-6 .5-8 2z"/><path d="M12 6v15"/></svg> Οδηγίες χρήσης</a>`;
     rootEl().innerHTML = `<div id="cm-auth">${head}${body}${help}</div>`;
     const box = document.getElementById("cm-auth");
     box.querySelectorAll("[data-view]").forEach(b => b.onclick = () => showAuth(b.dataset.view, null, (document.getElementById("cm-email")||{}).value||email));
