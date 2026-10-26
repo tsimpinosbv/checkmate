@@ -340,7 +340,7 @@ h2.sec{font-family:var(--f-display);font-weight:800;text-transform:uppercase;fon
 .cell .k{font-size:11px;letter-spacing:.09em;text-transform:uppercase;opacity:.75}
 .cell .v{font-family:var(--f-mono);font-size:24px;font-variant-numeric:tabular-nums;margin-top:4px;white-space:nowrap}
 .cell .v.or{color:var(--accent)}
-@media (max-width:720px){.board,.board.four{grid-template-columns:repeat(2,1fr)}.cell{border-bottom:1px solid color-mix(in srgb,var(--bg) 18%,transparent)}.board:not(.four) .cell:first-child{grid-column:1/-1}}
+@media (max-width:720px){.board{grid-template-columns:repeat(5,minmax(0,1fr))}.board.four{grid-template-columns:repeat(4,minmax(0,1fr))}.cell{padding:8px 3px;text-align:center}.cell .k{font-size:8.5px;letter-spacing:0;line-height:1.25;overflow-wrap:anywhere}.cell .v{font-size:15px;margin-top:3px}}
 
 .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
 .f{display:flex;flex-direction:column;gap:4px;min-width:0}
@@ -566,6 +566,7 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 .sttiles .t .v{font-family:var(--f-mono);font-size:20px;margin-top:2px;font-variant-numeric:tabular-nums}
 .sttiles .t .v.or{color:var(--warn)}
 .tabs button{white-space:nowrap;flex:none}
+@media (max-width:720px){.tabs{flex-wrap:wrap;overflow:visible;border-bottom:0;gap:6px}.tabs button{border:1px solid var(--line);border-radius:999px;padding:7px 12px;margin:0;font-size:14px}.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}}
 details.unav>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:14px 16px}
 details.unav>summary::-webkit-details-marker{display:none}
 details.unav>summary .chev{color:var(--muted);transition:transform .15s}
@@ -736,7 +737,7 @@ details.unav .pbody{padding-top:0}
   #cm-auth .msg.ok{color:var(--good);background:#e3f4ea}
   #cm-auth .hint{color:var(--muted);font-size:13px;line-height:1.45;margin:0}
   #cm-auth p.lead{color:var(--muted);margin:0 0 14px;line-height:1.5}
-  #cm-dock{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:50;display:flex;gap:8px;align-items:center}
+  #cm-dock{position:static;display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;margin:28px auto 4px;padding:0 16px}
   #cm-dock button{font:600 12px "Commissioner",system-ui,sans-serif;padding:7px 11px;border-radius:999px;border:1px solid #d9dfea;background:#fff;color:#14213a;cursor:pointer;box-shadow:0 1px 4px rgba(20,33,58,.12)}
   #cm-dock button.install{background:#f0821e;color:#fff;border-color:#f0821e}
   #cm-dock button[hidden]{display:none}
@@ -788,7 +789,11 @@ details.unav .pbody{padding-top:0}
     const d = dock();
     d.querySelector("#cm-install").hidden = isStandalone() || !(deferredPrompt || isIOS());
     d.querySelector("#cm-signout").hidden = !(auth && auth.currentUser);
+    /* sit in the same bottom row as «Σχετικά» (from /suite-back.js) when it is there */
+    const credit = document.getElementById("cm-credit");
+    if(credit && d.parentNode !== credit){ credit.appendChild(d); d.style.margin = "0"; d.style.padding = "0"; }
   }
+  addEventListener("load", () => setTimeout(updateDock, 700));
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", updateDock); else updateDock();
 
   /* ---------- sign-in / sign-up screen ---------- */
@@ -1664,7 +1669,7 @@ function bulkIdle(list){
     (shown?`<button type="button" class="btn small" data-act="bulk" data-to="hide">${!st.week&&st.season&&!st.month&&!st.person&&!st.paid&&!st.vis&&!st.q?`Απόκρυψη όλης της σεζόν ${esc(st.season)}`:"Απόκρυψη όλων"} (${shown})</button>`:"");
 }
 function slotHtml(m, r){
-  if(!m[r]) return `<div class="slot"><span class="role ${r}">${ROLE[r]}</span><span class="empty-slot">— χωρίς άτομο —</span></div>`;
+  if(!m[r]) return `<div class="slot"><div class="ln"><span class="empty-slot">${ROLE[r]}: κενό</span></div></div>`;
   const linked = !!uidForName(m[r]); const paid=!!m["paid_"+r];
   return `<div class="slot">
     <div class="nm"><span class="dot ${linked?"on":""}" title="${linked?"Συνδεδεμένος λογαριασμός – βλέπει την ανάθεση":"Δεν έχει συνδεθεί λογαριασμός"}"></span>${esc(m[r])}${(()=>{ const u=unavailOn(m[r], m.date); return u?`<span class="unav-flag" title="${esc(u.note?"Κώλυμα: "+u.note:"Έχει δηλώσει κώλυμα αυτή τη μέρα")}">⚠ Κώλυμα</span>`:""; })()}</div>
@@ -2847,7 +2852,7 @@ async function startUser(){
 let unavOpen = false;   // closed on entry; opens on tap and stays as the user leaves it
 function unavPanel(){
   const nx = nextWeeks(2)[1], e = myUnav[nx];
-  const st = !e ? `<span class="wk-st none">Επόμενη εβδομάδα: δεν έχεις δηλώσει</span>` : (e.days||[]).length ? `<span class="wk-st no">Επόμενη εβδομάδα: κώλυμα</span>` : `<span class="wk-st ok">Επόμενη εβδομάδα: ✓ διαθέσιμος</span>`;
+  const st = !e ? `` : (e.days||[]).length ? `<span class="wk-st no">Επόμενη εβδομάδα: κώλυμα</span>` : `<span class="wk-st ok">Επόμενη εβδομάδα: ✓ διαθέσιμος</span>`;
   return `<details class="panel unav" id="unavDet"${unavOpen?" open":""}>
     <summary><span class="unav-t"><svg class="unav-ic" viewBox="0 0 40 40" aria-hidden="true"><rect x="4" y="7" width="32" height="29" rx="6" fill="var(--blue)"/><rect x="4" y="7" width="32" height="9" rx="6" fill="var(--ink)"/><rect x="4" y="12" width="32" height="4" fill="var(--ink)"/><rect x="11" y="3" width="4" height="9" rx="2" fill="var(--ink)" stroke="var(--surface)" stroke-width="1.5"/><rect x="25" y="3" width="4" height="9" rx="2" fill="var(--ink)" stroke="var(--surface)" stroke-width="1.5"/><circle cx="28" cy="28" r="9" fill="var(--bad)" stroke="var(--surface)" stroke-width="2.5"/><path d="M24.5 24.5l7 7M31.5 24.5l-7 7" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><g fill="#fff" opacity=".9"><rect x="9" y="20" width="5" height="4" rx="1"/><rect x="16.5" y="20" width="5" height="4" rx="1"/><rect x="9" y="27" width="5" height="4" rx="1"/></g></svg><span><h2 class="sec">Κωλύματα</h2><span class="unav-sub">Δήλωσε τις μέρες που δεν μπορείς</span></span></span><span class="sumr">${st}<span class="chev" aria-hidden="true">▾</span></span></summary>
     <div class="pbody">
@@ -2974,10 +2979,10 @@ function renderUser(){
       <div class="cell"><div class="k">Πληρώθηκαν</div><div class="v">${eur(paid)}</div></div>
       <div class="cell"><div class="k">Εκκρεμούν</div><div class="v or">${eur(total-paid)}</div></div>
     </section>
-    ${unavPanel()}
-    ${myStatsPanel()}
     <div class="sechead"><h2 class="sec">${greet} · Επόμενες αναθέσεις</h2>${upcoming.length>1?`<button type="button" class="btn small cal" data-ics-all="1">📅 Όλες στο ημερολόγιο</button>`:""}</div>
     ${upcoming.length?`<div class="cards">${upcoming.map((i,k)=>card(i,k===0)).join("")}</div>`:`<div class="panel"><div class="empty"><strong>Δεν έχεις επόμενες αναθέσεις</strong><div>Θα εμφανιστούν εδώ μόλις σε ορίσει ο διαχειριστής.</div></div></div>`}
+    ${unavPanel()}
+    ${myStatsPanel()}
     ${past.length?`<div class="actions"><button class="btn" id="togglePast">${showPast?"Απόκρυψη":"Προβολή"} προηγούμενων (${past.length})</button></div>
       ${showPast?`<div class="cards">${past.map(i=>card(i,false)).join("")}</div>`:""}`:""}
   </div>`;
