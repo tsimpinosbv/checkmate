@@ -7,7 +7,7 @@
   --ink:#14213a; --bg:#f3f5f9; --surface:#ffffff; --line:#d9dfea; --muted:#5d6b84;
   --accent:#f0821e; --accent-ink:#ffffff; --blue:#2a7fd4;
   --good:#1d8a52; --good-bg:#e3f4ea; --warn:#b4530b; --warn-bg:#fdeedd;
-  --sq:#e6eaf2;
+  --sq:#e6eaf2; --head:#14213a; --head-ink:#f3f5f9;
   --f-display:"Fira Sans Extra Condensed","Arial Narrow",system-ui,sans-serif;
   --f-body:"Commissioner",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"Fira Mono",ui-monospace,Menlo,Consolas,monospace;
@@ -15,11 +15,11 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --ink:#e8edf6; --bg:#0e1524; --surface:#162034; --line:#2a3650; --muted:#97a3ba;
   --accent:#ff9a3d; --accent-ink:#1a1206; --blue:#5aa5f0;
-  --good:#5fd394; --good-bg:#16352a; --warn:#ffb070; --warn-bg:#3a2614; --sq:#1c2840; color-scheme:dark}}
+  --good:#5fd394; --good-bg:#16352a; --warn:#ffb070; --warn-bg:#3a2614; --sq:#1c2840; --head:#0a101d; --head-ink:#e8edf6; color-scheme:dark}}
 :root[data-theme="dark"]{
   --ink:#e8edf6; --bg:#0e1524; --surface:#162034; --line:#2a3650; --muted:#97a3ba;
   --accent:#ff9a3d; --accent-ink:#1a1206; --blue:#5aa5f0;
-  --good:#5fd394; --good-bg:#16352a; --warn:#ffb070; --warn-bg:#3a2614; --sq:#1c2840; color-scheme:dark}
+  --good:#5fd394; --good-bg:#16352a; --warn:#ffb070; --warn-bg:#3a2614; --sq:#1c2840; --head:#0a101d; --head-ink:#e8edf6; color-scheme:dark}
 
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
@@ -29,7 +29,12 @@ button{cursor:pointer}
 :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 
 /* header */
-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+html,body{overflow-x:clip}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--head);color:var(--head-ink);
+  margin:-20px calc(50% - 50vw) 0;padding:calc(14px + env(safe-area-inset-top,0px)) calc(50vw - 50% + 16px) 14px}
+header .sub{color:color-mix(in srgb,var(--head-ink) 72%,transparent)}
+header .mark .m-chk-o{stroke:var(--head)}
+header .btn:not(.primary){background:transparent;color:var(--head-ink);border-color:color-mix(in srgb,var(--head-ink) 35%,transparent)}
 .brand{display:flex;align-items:center;gap:12px}
 .mark{width:52px;height:52px;flex:none;display:block}
 .mark .m-bg{fill:var(--blue)}
@@ -57,7 +62,7 @@ h1 .tag{font-style:normal;font-size:.5em;vertical-align:middle;background:var(--
 .cell .k{font-size:11px;letter-spacing:.09em;text-transform:uppercase;opacity:.75}
 .cell .v{font-family:var(--f-mono);font-size:24px;font-variant-numeric:tabular-nums;margin-top:4px;white-space:nowrap}
 .cell .v.or{color:var(--accent)}
-@media (max-width:720px){.board{grid-template-columns:repeat(2,1fr)}.cell{border-bottom:1px solid color-mix(in srgb,var(--bg) 18%,transparent)}.cell:first-child{grid-column:1/-1}}
+@media (max-width:720px){.board{grid-template-columns:repeat(5,minmax(0,1fr))}.cell{padding:8px 3px;text-align:center}.cell .k{font-size:8.5px;letter-spacing:0;line-height:1.25;overflow-wrap:anywhere}.cell .v{font-size:15px;margin-top:3px}}
 
 /* filters */
 .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
@@ -148,8 +153,8 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
       </div>
     </div>
     <div class="actions">
-      <button class="btn" id="btnCsv" type="button" title="Οι αγώνες που βλέπεις (με τα φίλτρα) σε αρχείο Excel">⬇ Excel</button>
-      <button class="btn" id="btnReport" type="button" title="Σύνολα και αναλυτική λίστα, για προβολή ή εκτύπωση">📄 Αναφορά</button>
+      <button class="btn" id="btnCsv" type="button" title="Οι αγώνες που βλέπεις (με τα φίλτρα) σε αρχείο Excel"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg> Excel</button>
+      <button class="btn" id="btnReport" type="button" title="Σύνολα και αναλυτική λίστα, για προβολή ή εκτύπωση"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg> Αναφορά</button>
       <button class="btn primary" id="btnAdd" type="button">+ Νέος αγώνας</button>
     </div>
   </header>
@@ -176,7 +181,7 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
   <section class="log" id="log" aria-live="polite">
     <div class="empty"><div class="board-art"></div><strong>Φόρτωση αγώνων…</strong></div>
   </section>
-  <div class="privacy">🔒 <b>Προσωπικό ημερολόγιο.</b> Μόνο εσύ βλέπεις τους αγώνες που γράφεις εδώ, ούτε οι διαχειριστές. Δεν συνδέεται με τις αναθέσεις του Check Mate: κράτα εδώ τους αγώνες σου και σύγκρινε με όσα δείχνει το Check Mate. Οι αμοιβές προτείνονται από το Check Mate και μπορείς να τις αλλάξεις.</div>
+  <div class="privacy"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> <b>Προσωπικό ημερολόγιο.</b> Μόνο εσύ βλέπεις τους αγώνες που γράφεις εδώ, ούτε οι διαχειριστές. Οι αγώνες που έκανες στο Check Mate μπαίνουν εδώ μόνοι τους· εσύ σημειώνεις πότε πληρώθηκες και συγκρίνεις με όσα δείχνει το Check Mate. Οι αμοιβές προτείνονται από το Check Mate και μπορείς να τις αλλάξεις.</div>
   <div class="status" id="status"></div>
 </div>
 
@@ -312,11 +317,11 @@ function render(){
      const lk = locked(r);
      return `<div class="row">
      <div class="date c-date">${fmtDate(r.date)}<small>${dayName(r.date)}${r.time?" · "+esc(r.time):""}</small></div>
-     <div class="match c-match"><b>${esc(r.home)} – ${esc(r.away)}</b><div class="meta">${[r.comp,r.venue].filter(Boolean).map(esc).join(" · ")||"&nbsp;"}</div>${(r.notes||"").trim()?`<div class="rnote">📝 ${esc(r.notes.trim())}</div>`:""}</div>
+     <div class="match c-match"><b>${esc(r.home)} – ${esc(r.away)}</b><div class="meta">${[r.comp,r.venue].filter(Boolean).map(esc).join(" · ")||"&nbsp;"}</div>${(r.notes||"").trim()?`<div class="rnote">${cmIcon("pen")} ${esc(r.notes.trim())}</div>`:""}</div>
      <div><span class="role ${r.role==="op"?"op":""}">${ROLE[r.role]||"—"}</span>${r.person?`<div class="who">με ${esc(r.person)}</div>`:""}</div>
      <div class="fee">${eur(r.fee)}</div>
-     <div><button class="pay ${r.paid?"yes":"no"}" type="button" data-act="toggle" data-id="${r.id}" ${isAdmin?"":"disabled"} title="${payTitle}">${r.paid?`${lk?"🔒":"✓"} Πληρώθηκε${r.paidDate?` <small>${fmtDate(r.paidDate).slice(0,5)}</small>`:""}`:"● Εκκρεμεί"}</button></div>
-     <div><button class="more" type="button" data-act="edit" data-id="${r.id}" aria-label="${lk?"Κλειδωμένο – πληρώθηκε":"Επεξεργασία"}" title="${lk?"Πληρώθηκε – δεν αλλάζει":"Επεξεργασία"}" ${canWrite&&!lk?"":"disabled"}>${lk?"🔒":"✎"}</button></div>
+     <div><button class="pay ${r.paid?"yes":"no"}" type="button" data-act="toggle" data-id="${r.id}" ${isAdmin?"":"disabled"} title="${payTitle}">${r.paid?`${lk?cmIcon("lock"):"✓"} Πληρώθηκε${r.paidDate?` <small>${fmtDate(r.paidDate).slice(0,5)}</small>`:""}`:"● Εκκρεμεί"}</button></div>
+     <div><button class="more" type="button" data-act="edit" data-id="${r.id}" aria-label="${lk?"Κλειδωμένο – πληρώθηκε":"Επεξεργασία"}" title="${lk?"Πληρώθηκε – δεν αλλάζει":"Επεξεργασία"}" ${canWrite&&!lk?"":"disabled"}>${lk?cmIcon("lock"):"✎"}</button></div>
    </div>`;}).join("");
 }
 
@@ -481,7 +486,7 @@ ${[...list].sort((a,b)=>(a.date||"").localeCompare(b.date||"")).map(r=>`<tr><td>
 function openReport(html){
   closeReport(true);
   const ov=document.createElement("div"); ov.id="repView"; ov.setAttribute("role","dialog"); ov.setAttribute("aria-label","Αναφορά");
-  ov.innerHTML=`<div class="rv-bar"><button type="button" class="btn" id="rvBack">← Επιστροφή</button><span class="rv-t">Αναφορά</span><button type="button" class="btn primary" id="rvPrint">🖨 Εκτύπωση / PDF</button></div><iframe title="Αναφορά"></iframe>`;
+  ov.innerHTML=`<div class="rv-bar"><button type="button" class="btn" id="rvBack">← Επιστροφή</button><span class="rv-t">Αναφορά</span><button type="button" class="btn primary" id="rvPrint">${cmIcon("print")} Εκτύπωση / PDF</button></div><iframe title="Αναφορά"></iframe>`;
   document.body.appendChild(ov); document.documentElement.style.overflow="hidden";
   ov.querySelector("iframe").srcdoc=html;
   $("rvBack").onclick=()=>history.state?.cmReport ? history.back() : closeReport();
