@@ -148,7 +148,6 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
       </div>
     </div>
     <div class="actions">
-      <button class="btn" id="btnImportCm" type="button" title="Πρόσθεσε στο ημερολόγιο τις αναθέσεις σου από το Check Mate">⬇ Από Check Mate</button>
       <button class="btn" id="btnCsv" type="button" title="Οι αγώνες που βλέπεις (με τα φίλτρα) σε αρχείο Excel">⬇ Excel</button>
       <button class="btn" id="btnReport" type="button" title="Σύνολα και αναλυτική λίστα, για προβολή ή εκτύπωση">📄 Αναφορά</button>
       <button class="btn primary" id="btnAdd" type="button">+ Νέος αγώνας</button>
@@ -353,7 +352,7 @@ $("delWrap").addEventListener("click", async e => {
   if(a==="del"){
     const r = rows.find(x=>x.id===editingId);
     if(locked(r)){ showErr({code:"locked"}); return; }
-    try{ await col.doc(editingId).delete(); $("dlg").close(); toast("Ο αγώνας διαγράφηκε"); }catch(err){ showErr(err); }
+    try{ const gone=rows.find(r=>r.id===editingId); await col.doc(editingId).delete(); if(gone?.fromCm) skipCm(gone.fromCm); $("dlg").close(); toast("Ο αγώνας διαγράφηκε"); }catch(err){ showErr(err); }
   }
 });
 function showErr(err){ $("frmErr").hidden=false; $("frmErr").textContent =
@@ -497,15 +496,20 @@ function closeReport(silent){
 window.addEventListener("popstate", ()=>closeReport());
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && $("repView")) $("rvBack").click(); });
 
-/* ---------- bring my assignments from Check Mate (one tap; already added ones are skipped) ---------- */
-let meId = null;
-$("btnImportCm").onclick = async () => {
-  if(!db || !col || !meId){ toast("Συνδέσου πρώτα"); return; }
-  const btn = $("btnImportCm"); btn.disabled = true;
+/* ---------- my played assignments from Check Mate are added automatically, once each ----------
+   Only matches up to today are added (the diary is a record of work done). A match the user deletes
+   from the diary is remembered in diary/<uid>/meta/cm and not added again. */
+let meId = null, cmSyncing = false;
+async function skipCm(id){
+  try{ const ref=db.doc(`diary/${meId}/meta/cm`), cur=await ref.get(); const skip=new Set((cur.exists&&cur.data().skip)||[]); skip.add(id); await ref.set({skip:[...skip]}, {merge:true}); }catch(err){ console.warn(err); }
+}
+async function syncFromCm(){
+  if(cmSyncing || !db || !col || !meId) return; cmSyncing = true;
   try{
-    const snap = await db.collection(`mine/${meId}/items`).get();
-    const items = snap.docs.map(d=>({id:d.id, ...d.data()})).filter(i=>i.date && i.home);
-    if(!items.length){ toast("Δεν βρέθηκαν αναθέσεις στο Check Mate"); return; }
+    const [snap, meta] = await Promise.all([db.collection(`mine/${meId}/items`).get(), db.doc(`diary/${meId}/meta/cm`).get().catch(()=>null)]);
+    const skip = new Set((meta && meta.exists && meta.data().skip) || []);
+    const t = today();
+    const items = snap.docs.map(d=>({id:d.id, ...d.data()})).filter(i=>i.date && i.home && i.date<=t && !skip.has(i.id));
     const key = r => [r.date, (r.home||"").trim().toLowerCase(), (r.away||"").trim().toLowerCase(), r.role].join("|");
     const have = new Set(rows.map(r=>r.fromCm).filter(Boolean)), haveKey = new Set(rows.map(key));
     const add = items.filter(i=>!have.has(i.id) && !haveKey.has(key(i)));
@@ -513,10 +517,10 @@ $("btnImportCm").onclick = async () => {
       await col.add({date:i.date, time:i.time||"", home:i.home||"", away:i.away||"", comp:i.comp||"", venue:i.venue||"", person:i.partner||"", role:i.role==="as"?"as":"op",
         fee: (+i.fee || FEES[i.role] || 0), paid:false, paidDate:"", notes:"", fromCm:i.id, createdAt:Date.now()});
     }
-    toast(add.length ? `Προστέθηκαν ${add.length} ${add.length===1?"αγώνας":"αγώνες"} από το Check Mate` : "Όλες οι αναθέσεις σου υπάρχουν ήδη στο ημερολόγιο");
-  }catch(err){ console.warn(err); toast("Δεν ήταν δυνατή η μεταφορά. Δοκίμασε ξανά."); }
-  finally{ btn.disabled = false; }
-};
+    if(add.length) toast(`Προστέθηκαν ${add.length} ${add.length===1?"αγώνας":"αγώνες"} από το Check Mate`);
+  }catch(err){ console.warn("Check Mate sync", err); }
+  finally{ cmSyncing = false; }
+}
 
 /* ---------- data ---------- */
 function setWriteUI(){ $("btnAdd").disabled=!canWrite; }
@@ -531,7 +535,8 @@ function setWriteUI(){ $("btnAdd").disabled=!canWrite; }
   col.orderBy("date","desc").limit(2000).onSnapshot(snap => {
     rows = snap.docs.map(d=>({id:d.id, ...d.data(), paid:!!d.data().paid}))
       .sort((a,b)=>(b.date||"").localeCompare(a.date||"") || (b.time||"").localeCompare(a.time||""));
-    loadedOpen = true; render();
+    const first = !loadedOpen; loadedOpen = true; render();
+    if(first) syncFromCm();
   }, () => { loadedOpen=true; $("log").innerHTML=`<div class="empty"><strong>Δεν φορτώθηκε το ημερολόγιο</strong><div>Ανανέωσε τη σελίδα.</div></div>`; });
 })();
 })();
