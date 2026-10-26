@@ -7,7 +7,7 @@
   --ink:#14213a; --bg:#f3f5f9; --surface:#ffffff; --line:#d9dfea; --muted:#5d6b84;
   --accent:#f0821e; --accent-ink:#ffffff; --blue:#2a7fd4; --blue-bg:#e4effb;
   --good:#1d8a52; --good-bg:#e3f4ea; --warn:#b4530b; --warn-bg:#fdeedd; --bad:#c43a2c;
-  --sq:#e6eaf2;
+  --sq:#e6eaf2; --head:#14213a; --head-ink:#f3f5f9;
   --f-display:"Fira Sans Extra Condensed","Arial Narrow",system-ui,sans-serif;
   --f-body:"Commissioner",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"Fira Mono",ui-monospace,Menlo,Consolas,monospace;
@@ -15,11 +15,11 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --ink:#e8edf6; --bg:#0e1524; --surface:#162034; --line:#2a3650; --muted:#97a3ba;
   --accent:#ff9a3d; --accent-ink:#1a1206; --blue:#5aa5f0; --blue-bg:#16283f;
-  --good:#5fd394; --good-bg:#16352a; --warn:#ffb070; --warn-bg:#3a2614; --bad:#ff7b6b; --sq:#1c2840; color-scheme:dark}}
+  --good:#5fd394; --good-bg:#16352a; --warn:#ffb070; --warn-bg:#3a2614; --bad:#ff7b6b; --sq:#1c2840; --head:#0a101d; --head-ink:#e8edf6; color-scheme:dark}}
 :root[data-theme="dark"]{
   --ink:#e8edf6; --bg:#0e1524; --surface:#162034; --line:#2a3650; --muted:#97a3ba;
   --accent:#ff9a3d; --accent-ink:#1a1206; --blue:#5aa5f0; --blue-bg:#16283f;
-  --good:#5fd394; --good-bg:#16352a; --warn:#ffb070; --warn-bg:#3a2614; --bad:#ff7b6b; --sq:#1c2840; color-scheme:dark}
+  --good:#5fd394; --good-bg:#16352a; --warn:#ffb070; --warn-bg:#3a2614; --bad:#ff7b6b; --sq:#1c2840; --head:#0a101d; --head-ink:#e8edf6; color-scheme:dark}
 
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
@@ -29,7 +29,12 @@ button{cursor:pointer}
 :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 [hidden]{display:none!important}
 
-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+html,body{overflow-x:clip}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--head);color:var(--head-ink);
+  margin:-20px calc(50% - 50vw) 0;padding:calc(14px + env(safe-area-inset-top,0px)) calc(50vw - 50% + 16px) 14px}
+header .sub{color:color-mix(in srgb,var(--head-ink) 72%,transparent)}
+header .mark .m-chk-o{stroke:var(--head)}
+header .btn:not(.primary){background:transparent;color:var(--head-ink);border-color:color-mix(in srgb,var(--head-ink) 35%,transparent)}
 .brand{display:flex;align-items:center;gap:12px}
 .mark{width:52px;height:52px;flex:none;display:block}
 .mark .m-bg{fill:var(--blue)} .mark .m-cam{fill:#fff} .mark .m-lens{fill:var(--blue)}
@@ -259,6 +264,7 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 .card.changed{border-left-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 35%,transparent)}
 .chg{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;border:0;cursor:pointer;background:var(--warn-bg);color:var(--warn);font:700 12.5px var(--f-body);border-radius:999px;padding:4px 10px}
 .chg small{font-weight:600;opacity:.8}
+.sechead .hi{color:var(--muted);font-size:14px;font-weight:600;margin-bottom:2px}
 .sechead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .banner.nudge{background:var(--warn-bg);border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
 .banner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--blue-bg);color:var(--ink);border:1px solid color-mix(in srgb,var(--blue) 30%,transparent);border-radius:12px;padding:10px 14px;font-size:14px}
@@ -321,8 +327,8 @@ details.unav .pbody{padding-top:0}
       </div>
     </div>
     <div class="actions" id="adminActions" hidden>
-      <button class="btn" id="btnXlsx" type="button" title="Αναθέσεις και στατιστικά σε Excel, με τα τρέχοντα φίλτρα">⬇ Excel</button>
-      <button class="btn" id="btnImport" type="button">⬆ Εισαγωγή Excel</button>
+      <button class="btn" id="btnXlsx" type="button" title="Αναθέσεις και στατιστικά σε Excel, με τα τρέχοντα φίλτρα"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg> Excel</button>
+      <button class="btn" id="btnImport" type="button"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V9M7 14l5-5 5 5M5 3h14"/></svg> Εισαγωγή Excel</button>
       <button class="btn primary" id="btnAdd" type="button">+ Νέα ανάθεση</button>
     </div>
   </header>
@@ -608,8 +614,8 @@ function renderAdmin(){
   const focus = document.activeElement?.id;
   $("app").innerHTML = `
   <div style="display:flex;flex-direction:column;gap:18px">
-    ${backupDue() ? `<div class="banner" role="status"><span aria-hidden="true">💾</span><span class="grow">${ls.get("cm.lastBackup",0) ? "Πέρασε πάνω από μία εβδομάδα από το τελευταίο αντίγραφο ασφαλείας." : "Κράτα ένα αντίγραφο ασφαλείας με όλο το πρόγραμμα και τις πληρωμές."}</span>
-      <button class="btn small primary" type="button" data-act="backup">⬇ Αντίγραφο σε Excel</button><button class="btn small" type="button" data-act="backuplater">Αργότερα</button></div>` : ""}
+    ${backupDue() ? `<div class="banner" role="status">${cmIcon("save")}<span class="grow">${ls.get("cm.lastBackup",0) ? "Πέρασε πάνω από μία εβδομάδα από το τελευταίο αντίγραφο ασφαλείας." : "Κράτα ένα αντίγραφο ασφαλείας με όλο το πρόγραμμα και τις πληρωμές."}</span>
+      <button class="btn small primary" type="button" data-act="backup">${cmIcon("dl")} Αντίγραφο σε Excel</button><button class="btn small" type="button" data-act="backuplater">Αργότερα</button></div>` : ""}
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="sched" aria-selected="${tab==="sched"}">Πρόγραμμα</button>
       <button role="tab" data-tab="lists" aria-selected="${tab==="lists"}">Ομάδες & γήπεδα</button>
@@ -659,7 +665,7 @@ function renderSched(months, people, seasons=[]){
   <section class="panel" style="margin-top:12px">`;
   if(!sched.length){
     html += `<div class="empty"><div class="board-art"></div><strong>Δεν υπάρχουν αναθέσεις ακόμα</strong><div>Πρόσθεσε μία χειροκίνητα ή φέρε το πρόγραμμα από Excel.</div>
-      <div class="actions"><button class="btn" data-act="import">⬆ Εισαγωγή Excel</button><button class="btn primary" data-act="add">+ Νέα ανάθεση</button></div></div>`;
+      <div class="actions"><button class="btn" data-act="import">${cmIcon("ul")} Εισαγωγή Excel</button><button class="btn primary" data-act="add">+ Νέα ανάθεση</button></div></div>`;
   } else if(!list.length){
     const nxt = st.week ? sched.map(m=>m.date).filter(d=>d && d>addDays(st.week,6)).sort()[0] : "";
     const prv = st.week ? sched.map(m=>m.date).filter(d=>d && d<st.week).sort().pop() : "";
@@ -707,7 +713,7 @@ function slotHtml(m, r){
   if(!m[r]) return `<div class="slot"><div class="ln"><span class="empty-slot">${ROLE[r]}: κενό</span></div></div>`;
   const linked = !!uidForName(m[r]); const paid=!!m["paid_"+r];
   return `<div class="slot">
-    <div class="nm"><span class="dot ${linked?"on":""}" title="${linked?"Συνδεδεμένος λογαριασμός – βλέπει την ανάθεση":"Δεν έχει συνδεθεί λογαριασμός"}"></span>${esc(m[r])}${(()=>{ const u=unavailOn(m[r], m.date); return u?`<span class="unav-flag" title="${esc(u.note?"Κώλυμα: "+u.note:"Έχει δηλώσει κώλυμα αυτή τη μέρα")}">⚠ Κώλυμα</span>`:""; })()}</div>
+    <div class="nm"><span class="dot ${linked?"on":""}" title="${linked?"Συνδεδεμένος λογαριασμός – βλέπει την ανάθεση":"Δεν έχει συνδεθεί λογαριασμός"}"></span>${esc(m[r])}${(()=>{ const u=unavailOn(m[r], m.date); return u?`<span class="unav-flag" title="${esc(u.note?"Κώλυμα: "+u.note:"Έχει δηλώσει κώλυμα αυτή τη μέρα")}">${cmIcon("warn")} Κώλυμα</span>`:""; })()}</div>
     <div class="ln"><span class="role ${r}">${ROLE[r]}</span><span class="fee">${eur(m["fee_"+r])}</span>
     <button class="pay ${paid?"yes":"no"}" data-act="pay" data-id="${m.id}" data-role="${r}" title="Αλλαγή κατάστασης πληρωμής">${paid?"✓ Πληρώθηκε":"● Εκκρεμεί"}</button></div>
   </div>`;
@@ -773,9 +779,9 @@ function renderUnav(){
       <div class="usum"><span class="wk-st no">Κώλυμα: ${nOff}</span><span class="wk-st ok">Διαθέσιμοι: ${nOk}</span><span class="wk-st none">Δεν δήλωσαν: ${nNa}</span></div>
       ${(()=>{ const pend = unavWk>=weekOf(today()) ? unavPending(unavWk) : []; if(!pend.length) return "";
         const sent = ls.get("cm.unavMail."+unavWk, 0);
-        return `<div class="f" style="margin-left:auto"><label>&nbsp;</label><span id="unavMailWrap"><button class="btn small" type="button" data-act="unavmail">✉ Υπενθύμιση σε όσους δεν δήλωσαν (${pend.length})</button></span>${sent?`<span class="note">Τελευταία αποστολή: ${fmtDate(ymd(new Date(sent)))}</span>`:""}</div>`; })()}
+        return `<div class="f" style="margin-left:auto"><label>&nbsp;</label><span id="unavMailWrap"><button class="btn small" type="button" data-act="unavmail">${cmIcon("mail")} Υπενθύμιση σε όσους δεν δήλωσαν (${pend.length})</button></span>${sent?`<span class="note">Τελευταία αποστολή: ${fmtDate(ymd(new Date(sent)))}</span>`:""}</div>`; })()}
     </div>
-    ${conf.length?`<section class="panel"><div class="comp-head" style="border-top:0;background:var(--warn-bg);color:var(--warn)">⚠ Αναθέσεις σε μέρα με κώλυμα (${conf.length})</div>
+    ${conf.length?`<section class="panel"><div class="comp-head" style="border-top:0;background:var(--warn-bg);color:var(--warn)">${cmIcon("warn")} Αναθέσεις σε μέρα με κώλυμα (${conf.length})</div>
       ${conf.map(x=>`<div class="conf"><span class="date">${fmtDate(x.m.date)} <small>${esc(dayName(x.m.date))}${x.m.time?" · "+esc(x.m.time):""}</small></span><b>${esc(x.m[x.r])}</b><span class="role ${x.r}">${ROLE[x.r]}</span><span>${teams(x.m)}</span>${x.u.note?`<span class="note">«${esc(x.u.note)}»</span>`:""}<button class="more" data-act="edit" data-id="${x.m.id}" aria-label="Επεξεργασία">✎</button></div>`).join("")}</section>`:""}
     <section class="panel"><div class="uscroll"><table class="ugrid">
       <thead><tr><th class="nm">Άτομο</th>${days.map(d=>`<th${d===t?' style="color:var(--accent)"':""}>${DAYS[new Date(d+"T12:00").getDay()]}<small>${ddmm(d)}</small></th>`).join("")}<th class="nm">Σημείωση</th></tr></thead>
@@ -810,7 +816,7 @@ function renderStats(seasons){
       <div class="f"><label for="sSeason">Σεζόν</label><select id="sSeason">${opt(seasons.map(x=>[x,x]),sst.season,"Όλες")}</select></div>
       <div class="f"><label for="sMonth">Μήνας</label><select id="sMonth">${opt(months.slice().reverse().map(m=>[m,monthLabel(m)]),sst.month,"Όλοι")}</select></div>
       <div class="f"><label for="sComp">Διοργάνωση</label><select id="sComp">${opt(comps.map(c=>[c,c]),sst.comp,"Όλες")}</select></div>
-      <div class="f" style="margin-left:auto"><label>&nbsp;</label><button class="btn" type="button" data-act="statxls">⬇ Excel στατιστικών</button></div>
+      <div class="f" style="margin-left:auto"><label>&nbsp;</label><button class="btn" type="button" data-act="statxls">${cmIcon("dl")} Excel στατιστικών</button></div>
     </section>
     <section class="board" aria-label="Σύνολα">
       <div class="cell"><div class="k">Αναθέσεις</div><div class="v">${all.n}</div></div>
@@ -864,7 +870,7 @@ function renderLists(){
   <div class="people">
     <section class="panel" style="grid-column:1/-1">
       <div class="ph"><h2 class="sec">Ομάδες<span class="count">${teamList.length}</span></h2>
-        <div class="vtools"><button class="btn small" type="button" data-act="timport">⬆ Excel ομάδων</button><button class="btn small" type="button" data-act="texport">⬇ Excel ομάδων</button><input type="file" id="tFile" accept=".xlsx,.xls,.csv" hidden></div></div>
+        <div class="vtools"><button class="btn small" type="button" data-act="timport">${cmIcon("ul")} Excel ομάδων</button><button class="btn small" type="button" data-act="texport">${cmIcon("dl")} Excel ομάδων</button><input type="file" id="tFile" accept=".xlsx,.xls,.csv" hidden></div></div>
       <form id="addTeam" class="pbody addrow">
         <div class="f"><label for="newTeam">Νέα ομάδα</label><input id="newTeam" placeholder="π.χ. ΟΛΥΜΠΙΑΚΟΣ" autocomplete="off"></div>
         <div class="f"><label for="newTeamVenue">Έδρα</label><input id="newTeamVenue" list="dlVenues" placeholder="π.χ. ΣΕΦ" autocomplete="off"></div>
@@ -874,7 +880,7 @@ function renderLists(){
       <div class="scroll" style="max-height:560px">
       ${teamList.length? teamList.map(x=>`<div class="prow"><div class="who" style="width:150px"><b>${esc(x.name)}</b><span class="note">${cnt(cTeam[norm(x.name)]||0)}</span></div>
         <label class="pmail" style="max-width:200px" title="Το αρκτικόλεξο της ομάδας στο σύστημα challenge (VAR)"><span style="font:700 11px var(--f-body)">VAR</span><input id="tf-var-${x.id}" data-tf="var" data-id="${x.id}" value="${esc(x.var||"")}" placeholder="π.χ. ΟΣΦ" aria-label="VAR ${esc(x.name)}"></label>
-        <div class="ulink"><label class="pmail" title="Συμπληρώνεται αυτόματα ως γήπεδο όταν η ομάδα είναι γηπεδούχος"><span aria-hidden="true">🏟</span><input data-teamvenue="${x.id}" list="dlVenues" value="${esc(x.venue||"")}" placeholder="έδρα" aria-label="Έδρα ${esc(x.name)}"></label>
+        <div class="ulink"><label class="pmail" title="Συμπληρώνεται αυτόματα ως γήπεδο όταν η ομάδα είναι γηπεδούχος">${cmIcon("pin")}<input data-teamvenue="${x.id}" list="dlVenues" value="${esc(x.venue||"")}" placeholder="έδρα" aria-label="Έδρα ${esc(x.name)}"></label>
         <button class="btn small danger" type="button" data-act="dellist" data-kind="teams" data-id="${x.id}" aria-label="Διαγραφή ${esc(x.name)}">✕</button></div></div>`).join("")
       : `<div class="empty"><strong>Καμία ομάδα ακόμα</strong><div>Προστίθενται και αυτόματα όταν γράφεις νέα ομάδα σε ανάθεση ή στο Excel.</div></div>`}
       </div>
@@ -882,7 +888,7 @@ function renderLists(){
     </section>
     <section class="panel" style="grid-column:1/-1">
       <div class="ph"><h2 class="sec">Γήπεδα<span class="count">${venues.length}</span></h2>
-        <div class="vtools"><button class="btn small" type="button" data-act="vimport">⬆ Excel γηπέδων</button><button class="btn small" type="button" data-act="vexport">⬇ Excel γηπέδων</button><input type="file" id="vFile" accept=".xlsx,.xls,.csv" hidden></div></div>
+        <div class="vtools"><button class="btn small" type="button" data-act="vimport">${cmIcon("ul")} Excel γηπέδων</button><button class="btn small" type="button" data-act="vexport">${cmIcon("dl")} Excel γηπέδων</button><input type="file" id="vFile" accept=".xlsx,.xls,.csv" hidden></div></div>
       <form id="addVenue" class="pbody addrow">
         <div class="f"><label for="newVenue">Νέο γήπεδο</label><input id="newVenue" placeholder="π.χ. ΣΕΦ" autocomplete="off"></div>
         <button class="btn small" type="submit">+ Προσθήκη</button>
@@ -895,7 +901,7 @@ function renderLists(){
           <input id="vf-address-${x.id}" data-vf="address" data-id="${x.id}" value="${esc(x.address||"")}" placeholder="Διεύθυνση, πόλη" aria-label="Διεύθυνση ${esc(x.name)}">
           <input id="vf-map-${x.id}" data-vf="map" data-id="${x.id}" value="${esc(x.map||"")}" placeholder="Σύνδεσμος Google Maps ή συντεταγμένες" aria-label="Χάρτης ${esc(x.name)}">
         </div>
-        <div class="ulink">${mapUrl(x.name)?`<a class="btn small" href="${esc(mapUrl(x.name))}" target="_blank" rel="noopener">📍 Χάρτης</a>`:""}
+        <div class="ulink">${mapUrl(x.name)?`<a class="btn small" href="${esc(mapUrl(x.name))}" target="_blank" rel="noopener">${cmIcon("map")} Χάρτης</a>`:""}
         <button class="btn small danger" type="button" data-act="dellist" data-kind="venues" data-id="${x.id}" aria-label="Διαγραφή ${esc(x.name)}">✕</button></div></div>`).join("")
       : `<div class="empty"><strong>Κανένα γήπεδο ακόμα</strong></div>`}
       </div>
@@ -941,7 +947,7 @@ async function renderPeople(pending){
       </div>
       ${roster.length? roster.map(r=>{ const uid=links[r.id]; const waiting=pending.find(c=>c.rid===r.id);
         return `<div class="prow"><div class="who"><b>${esc(r.name)}</b><span class="note">${counts[norm(r.name)]||0} αναθέσεις${uid?` · ${esc(pname(uid))} · ${esc(profilesAll[uid]?.email||"")}`:""}</span></div>
-        ${uid?"":`<label class="pmail" title="Εδώ στέλνονται οι ειδοποιήσεις όσο το άτομο δεν έχει συνδεδεμένο λογαριασμό"><span aria-hidden="true">✉</span><input type="email" data-rmail="${r.id}" value="${esc(contacts[r.id]||"")}" placeholder="email για ειδοποιήσεις" aria-label="Email για ${esc(r.name)}"></label>`}
+        ${uid?"":`<label class="pmail" title="Εδώ στέλνονται οι ειδοποιήσεις όσο το άτομο δεν έχει συνδεδεμένο λογαριασμό">${cmIcon("mail")}<input type="email" data-rmail="${r.id}" value="${esc(contacts[r.id]||"")}" placeholder="email για ειδοποιήσεις" aria-label="Email για ${esc(r.name)}"></label>`}
         <div class="actions">${uid?`<span class="tag on">✓ Βλέπει τις αναθέσεις του</span><button class="btn small danger" data-act="unlink" data-rid="${r.id}">Αποσύνδεση</button>`:waiting?`<span class="tag wait">Αίτημα σε αναμονή</span>`:`<span class="tag off">Χωρίς λογαριασμό</span>`}
         ${roster.length>1?`<button class="btn small" data-act="mergeask" data-rid="${r.id}" title="Το ίδιο άτομο με άλλο όνομα: μεταφορά όλων των αναθέσεων σε ένα όνομα">⇄ Συγχώνευση</button>`:""}
         ${!uid && !counts[norm(r.name)]?`<button class="btn small danger" data-act="delperson" data-rid="${r.id}" aria-label="Διαγραφή">✕</button>`:""}</div>
@@ -978,7 +984,7 @@ async function renderPeople(pending){
         2. Κάνει εγγραφή (ή συνδέεται με Google) και επιλέγει το όνομά του.<br>
         3. Εγκρίνεις το αίτημα εδώ — βλέπει μόνο τις δικές του αναθέσεις.<br>
         4. Στο «Πρόγραμμα» ορίζεις ποιες αναθέσεις είναι <b>Ορατές</b> ή <b>Κρυφές</b>. Οι κρυφές δεν φαίνονται σε κανέναν χρήστη.</div>
-        <div class="actions" style="margin-top:10px"><a class="btn small" href="help/diaxeiristis.html" target="_blank" rel="noopener">📖 Οδηγίες διαχειριστή</a> <button class="btn small" data-act="resync">↻ Επανασυγχρονισμός όλων</button></div>
+        <div class="actions" style="margin-top:10px"><a class="btn small" href="help/diaxeiristis.html" target="_blank" rel="noopener">${cmIcon("book")} Οδηγίες διαχειριστή</a> <button class="btn small" data-act="resync">↻ Επανασυγχρονισμός όλων</button></div>
       </div></section>
     </div>
   </div>`;
@@ -1958,13 +1964,24 @@ async function saveUnav(wk, days, note){
 }
 function venueCard(i){
   const name = i.venue, v = {full:i.venueFull, address:i.venueAddr}, url = i.venueMap||"", emb = i.venueEmbed||"";
-  return `<div class="venue">📍 ${url?`<a href="${esc(url)}" target="_blank" rel="noopener">${esc(name||"—")}</a>`:esc(name||"—")}${name?` <a class="vct" href="/vctips/#venues?v=${encodeURIComponent(name)}">🎥 Οδηγός γηπέδου</a>`:""}</div>`
+  return `<div class="venue">${cmIcon("pin")} ${url?`<a href="${esc(url)}" target="_blank" rel="noopener">${esc(name||"—")}</a>`:esc(name||"—")}${name?` <a class="vct" href="/vctips/#venues?v=${encodeURIComponent(name)}">${cmIcon("video")} Οδηγός γηπέδου</a>`:""}</div>`
     + (v?.full || v?.address ? `<div class="vfull">${esc([v.full, v.address].filter(Boolean).join(" · "))}</div>` : "")
-    + (emb ? `<details class="map"><summary>🗺 Χάρτης</summary><iframe src="${esc(emb)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Χάρτης ${esc(name)}"></iframe><a class="go" href="${esc(url)}" target="_blank" rel="noopener">Άνοιγμα στο Google Maps ↗</a></details>` : "");
+    + (emb ? `<details class="map"><summary>${cmIcon("map")} Χάρτης</summary><iframe src="${esc(emb)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Χάρτης ${esc(name)}"></iframe><a class="go" href="${esc(url)}" target="_blank" rel="noopener">Άνοιγμα στο Google Maps ↗</a></details>` : "");
+}
+/* Greek first names in the vocative: Γιάννης → Γιάννη, Κώστας → Κώστα, Γιώργος → Γιώργο, Αλέξανδρος → Αλέξανδρε */
+function vocative(n){
+  if(!/^[\u0370-\u03ff\u1f00-\u1fff]+$/.test(n||"")) return n||"";
+  if(/[ηαήά]ς$/.test(n)) return n.slice(0,-1);
+  if(/ος$/.test(n)){   /* stress two syllables before the end (Αλέξανδρος, Νικόλαος) → -ε, otherwise → -ο */
+    const k = n.search(/[άέήίόύώ]/); if(k<0) return n.slice(0,-1);
+    const after = (n.slice(k+1).replace(/ου|αι|ει|οι|υι/g,"V").match(/[αεηιουωV]/g)||[]).length;
+    return after>=2 ? n.slice(0,-2)+"ε" : n.slice(0,-1);
+  }
+  return n;
 }
 function renderUser(){
   if(myClaim===undefined) return;
-  const greet = me?.name ? `Γεια σου, ${esc(me.name.split(" ")[0])}` : "Καλώς ήρθες";
+  const greet = me?.name ? `Γεια σου, ${esc(vocative(me.name.split(" ")[0]))}` : "Καλώς ήρθες";
   if(!myClaim || myClaim.status==="rejected"){
     $("app").innerHTML = `<section class="panel"><form class="pbody" id="claimForm" style="max-width:480px">
       <h2 class="sec">${greet}</h2>
@@ -1995,17 +2012,17 @@ function renderUser(){
   const isChg = i => i.changedAt && (seen[i.id]||0) < i.changedAt && i.date >= t;
   const card=(i,first)=>`<article class="card ${i.role} ${i.date<t?"past":""} ${isChg(i)?"changed":""}">
     <div class="top"><div class="when">${whenMain(i)} <small>${whenSub(i)}</small></div>${first?`<span class="next">Επόμενη</span>`:""}</div>
-    ${isChg(i)?`<button type="button" class="chg" data-seen="${esc(i.id)}" title="Πάτα για να το σημειώσεις ως ενημερωμένο">⚠ Άλλαξε: ${esc((i.changed||[]).join(", ").toLowerCase()||"λεπτομέρειες")} <small>· ΟΚ</small></button>`:""}
+    ${isChg(i)?`<button type="button" class="chg" data-seen="${esc(i.id)}" title="Πάτα για να το σημειώσεις ως ενημερωμένο">${cmIcon("warn")} Άλλαξε: ${esc((i.changed||[]).join(", ").toLowerCase()||"λεπτομέρειες")} <small>· ΟΚ</small></button>`:""}
     <div class="teams">${teams(i)}</div>${(i.homeVar||i.awayVar)?`<div class="tfull"><span class="vtag">VAR</span> ${esc([i.homeVar||"—", i.away?(i.awayVar||"—"):""].filter(Boolean).join(" – "))}</div>`:""}
     ${venueCard(i)}
     <dl>${i.comp?`<dt>Διοργάνωση</dt><dd>${esc(i.comp)}</dd>`:""}<dt>Θέση</dt><dd><span class="role ${i.role}">${ROLE[i.role]}</span></dd>
       ${i.partner?`<dt>${i.role==="op"?"Βοηθός":"Χειριστής"}</dt><dd>${esc(i.partner)}</dd>`:""}${i.vc?`<dt>VAR</dt><dd>${esc(i.vc)}</dd>`:""}${i.tv?`<dt>Κάλυψη</dt><dd>${esc(i.tv)}</dd>`:""}${i.dateTbc?`<dt>Σημ.</dt><dd>Η ημέρα/ώρα θα επιβεβαιωθεί</dd>`:""}
       ${i.notes?`<dt>Σημειώσεις</dt><dd>${esc(i.notes)}</dd>`:""}</dl>
     <div class="bottom"><span class="fee">${eur(i.fee)}</span><span class="pay ${i.paid?"yes":"no"}">${i.paid?`✓ Πληρώθηκε${i.paidDate?" "+fmtDate(i.paidDate).slice(0,5):""}`:"● Εκκρεμεί"}</span></div>
-      ${i.date>=t?`<div class="tools"><button type="button" class="btn small cal" data-ics="${esc(i.id)}">📅 Στο ημερολόγιο του κινητού</button></div>`:""}
+      ${i.date>=t?`<div class="tools"><button type="button" class="btn small cal" data-ics="${esc(i.id)}">${cmIcon("cal")} Στο ημερολόγιο του κινητού</button></div>`:""}
   </article>`;
   const nxWk = nextWeeks(2)[1];
-  const nudge = myUnavLoaded && !myUnav[nxWk] ? `<div class="banner nudge" role="status"><span aria-hidden="true">📅</span><span class="grow">Δεν έχεις δηλώσει κωλύματα για την επόμενη εβδομάδα (${weekLabel(nxWk)}).</span><button type="button" class="btn small primary" data-unavgo="1">Δήλωσε τώρα</button></div>` : "";
+  const nudge = myUnavLoaded && !myUnav[nxWk] ? `<div class="banner nudge" role="status">${cmIcon("cal")}<span class="grow">Δεν έχεις δηλώσει κωλύματα για την επόμενη εβδομάδα (${weekLabel(nxWk)}).</span><button type="button" class="btn small primary" data-unavgo="1">Δήλωσε τώρα</button></div>` : "";
   $("app").innerHTML = `<div style="display:flex;flex-direction:column;gap:18px">
     ${nudge}
     <section class="board four" aria-label="Σύνοψη">
@@ -2014,7 +2031,7 @@ function renderUser(){
       <div class="cell"><div class="k">Πληρώθηκαν</div><div class="v">${eur(paid)}</div></div>
       <div class="cell"><div class="k">Εκκρεμούν</div><div class="v or">${eur(total-paid)}</div></div>
     </section>
-    <div class="sechead"><h2 class="sec">${greet} · Επόμενες αναθέσεις</h2>${upcoming.length>1?`<button type="button" class="btn small cal" data-ics-all="1">📅 Όλες στο ημερολόγιο</button>`:""}</div>
+    <div class="sechead"><div><div class="hi">${greet}</div><h2 class="sec">Επόμενες αναθέσεις</h2></div>${upcoming.length>1?`<button type="button" class="btn small cal" data-ics-all="1">${cmIcon("cal")} Όλες στο ημερολόγιο</button>`:""}</div>
     ${upcoming.length?`<div class="cards">${upcoming.map((i,k)=>card(i,k===0)).join("")}</div>`:`<div class="panel"><div class="empty"><strong>Δεν έχεις επόμενες αναθέσεις</strong><div>Θα εμφανιστούν εδώ μόλις σε ορίσει ο διαχειριστής.</div></div></div>`}
     ${unavPanel()}
     ${myStatsPanel()}
