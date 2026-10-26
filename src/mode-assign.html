@@ -89,6 +89,7 @@ h2.sec{font-family:var(--f-display);font-weight:800;text-transform:uppercase;fon
 .pay.yes{background:var(--good-bg);color:var(--good)}
 .pay.no{background:var(--warn-bg);color:var(--warn)}
 button.pay:hover{border-color:currentColor}
+.venue a.vct{font-size:12.5px;font-weight:600;color:var(--blue);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:2px 9px;margin-left:6px;white-space:nowrap}
 .empty-slot{color:var(--muted);font-size:13px;font-style:italic}
 .more{border:0;background:none;width:34px;height:34px;border-radius:8px;color:var(--muted);font-size:18px}
 .more:hover{background:var(--sq);color:var(--ink)}
@@ -1957,7 +1958,7 @@ async function saveUnav(wk, days, note){
 }
 function venueCard(i){
   const name = i.venue, v = {full:i.venueFull, address:i.venueAddr}, url = i.venueMap||"", emb = i.venueEmbed||"";
-  return `<div class="venue">📍 ${url?`<a href="${esc(url)}" target="_blank" rel="noopener">${esc(name||"—")}</a>`:esc(name||"—")}</div>`
+  return `<div class="venue">📍 ${url?`<a href="${esc(url)}" target="_blank" rel="noopener">${esc(name||"—")}</a>`:esc(name||"—")}${name?` <a class="vct" href="/vctips/#venues?v=${encodeURIComponent(name)}">🎥 Οδηγός γηπέδου</a>`:""}</div>`
     + (v?.full || v?.address ? `<div class="vfull">${esc([v.full, v.address].filter(Boolean).join(" · "))}</div>` : "")
     + (emb ? `<details class="map"><summary>🗺 Χάρτης</summary><iframe src="${esc(emb)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Χάρτης ${esc(name)}"></iframe><a class="go" href="${esc(url)}" target="_blank" rel="noopener">Άνοιγμα στο Google Maps ↗</a></details>` : "");
 }
