@@ -159,6 +159,11 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 .confirm{display:flex;gap:8px;align-items:center;font-size:13px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:10}
 @media (prefers-reduced-motion:no-preference){.toast{animation:up .2s ease-out}@keyframes up{from{transform:translate(-50%,8px);opacity:0}}}
+#repView{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;background:var(--bg)}
+#repView .rv-bar{display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;background:var(--surface);border-bottom:1px solid var(--line)}
+#repView .rv-t{flex:1;text-align:center;font-weight:700}
+#repView iframe{flex:1;width:100%;border:0;background:#fff}
+@media (max-width:480px){#repView .rv-t{display:none}#repView .rv-bar .btn{flex:1;justify-content:center}}
 
 </style>
 </head>
@@ -177,8 +182,8 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
     </div>
     <div class="actions">
       <button class="btn" id="btnImportCm" type="button" title="Πρόσθεσε στο ημερολόγιο τις αναθέσεις σου από το Check Mate">⬇ Από Check Mate</button>
-      <button class="btn" id="btnCsv" type="button">⬇ CSV (Excel)</button>
-      <button class="btn" id="btnReport" type="button">⬇ Αναφορά</button>
+      <button class="btn" id="btnCsv" type="button" title="Οι αγώνες που βλέπεις (με τα φίλτρα) σε αρχείο Excel">⬇ Excel</button>
+      <button class="btn" id="btnReport" type="button" title="Σύνολα και αναλυτική λίστα, για προβολή ή εκτύπωση">📄 Αναφορά</button>
       <button class="btn primary" id="btnAdd" type="button">+ Νέος αγώνας</button>
     </div>
   </header>
@@ -741,24 +746,48 @@ async function saveFile(filename, data){
   try{ await dl.save({filename, data}); }
   catch(err){ if(err?.code!=="declined") toast(err?.code==="rate_limited"?"Περίμενε λίγο και ξαναδοκίμασε":"Η λήψη δεν ολοκληρώθηκε"); }
 }
-$("btnCsv").onclick = () => {
+function loadXLSX(){
+  if(window.XLSX) return Promise.resolve(window.XLSX);
+  return new Promise((res,rej)=>{ const sc=document.createElement("script"); sc.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; sc.onload=()=>res(window.XLSX); sc.onerror=()=>rej(new Error("load")); document.head.appendChild(sc); });
+}
+$("btnCsv").onclick = async () => {
   const list = filtered(); if(!list.length){ toast("Δεν υπάρχουν αγώνες για εξαγωγή"); return; }
-  const q = v => { const s=String(v??""); return /[;"\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s; };
-  const head = ["Ημερομηνία","Ημέρα","Ώρα","Γηπεδούχος","Φιλοξενούμενη","Διοργάνωση","Γήπεδο","Συνεργάτης","Θέση","Αμοιβή (€)","Πληρώθηκε","Ημ. πληρωμής","Σημειώσεις"];
-  const lines = [head.join(";"), ...list.map(r=>[fmtDate(r.date),dayName(r.date),r.time,r.home,r.away,r.comp,r.venue,r.person,ROLE[r.role],String(+r.fee||0).replace(".",","),r.paid?"ΝΑΙ":"ΟΧΙ",fmtDate(r.paidDate),r.notes].map(q).join(";"))];
-  saveFile(fileStem()+".csv", "﻿"+lines.join("\r\n"));
+  const btn=$("btnCsv"); btn.disabled=true;
+  try{
+    const X = await loadXLSX();
+    const sorted=[...list].sort((a,b)=>(a.date||"").localeCompare(b.date||"")||(a.time||"").localeCompare(b.time||""));
+    const toDate = d => { if(!d) return ""; const [y,m,dd]=d.split("-").map(Number); return {t:"n", v:(Date.UTC(y,m-1,dd)-Date.UTC(1899,11,30))/864e5, z:"dd/mm/yyyy"}; };
+    const head = ["Ημερομηνία","Ημέρα","Ώρα","Γηπεδούχος","Φιλοξενούμενη","Διοργάνωση","Γήπεδο","Συνεργάτης","Θέση","Αμοιβή (€)","Πληρώθηκε","Ημ. πληρωμής","Σημειώσεις"];
+    const ws = X.utils.aoa_to_sheet([head, ...sorted.map(r=>[toDate(r.date),dayName(r.date),r.time||"",r.home||"",r.away||"",r.comp||"",r.venue||"",r.person||"",ROLE[r.role]||"",+r.fee||0,r.paid?"ΝΑΙ":"ΟΧΙ",toDate(r.paidDate),r.notes||""])])
+    ;
+    ws["!cols"]=[12,9,7,22,22,20,18,20,10,11,10,12,30].map(w=>({wch:w}));
+    ws["!autofilter"]={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:sorted.length,c:head.length-1}})};
+    const sum=a=>a.reduce((t,r)=>t+(+r.fee||0),0), total=sum(list), paid=sum(list.filter(r=>r.paid));
+    const people=[...new Set(list.map(r=>r.person||""))].sort((x,y)=>x.localeCompare(y,"el"));
+    const ws2 = X.utils.aoa_to_sheet([["Check Mate · Το ημερολόγιό μου"],[scopeLabel()],[],
+      ["Αγώνες",list.length],["Χειριστής",list.filter(r=>r.role==="op").length],["Βοηθός",list.filter(r=>r.role==="as").length],
+      ["Σύνολο αμοιβών (€)",total],["Πληρώθηκαν (€)",paid],["Εκκρεμούν (€)",total-paid],[],
+      ["Συνεργάτης","Αγώνες","Χειριστής","Βοηθός","Σύνολο (€)","Πληρώθηκαν (€)","Εκκρεμούν (€)"],
+      ...people.map(p=>{const a=list.filter(r=>(r.person||"")===p), pd=sum(a.filter(r=>r.paid)); return [p||"—",a.length,a.filter(r=>r.role==="op").length,a.filter(r=>r.role==="as").length,sum(a),pd,sum(a)-pd];})]);
+    ws2["!cols"]=[{wch:24},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:13}];
+    const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws2, "Σύνοψη"); X.utils.book_append_sheet(wb, ws, "Αγώνες");
+    const out = X.write(wb, {type:"array", bookType:"xlsx"});
+    await saveFile(fileStem()+".xlsx", new Blob([out], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
+    toast("Το Excel κατέβηκε");
+  }catch(err){ console.warn(err); toast("Δεν ήταν δυνατή η δημιουργία του Excel. Δοκίμασε ξανά."); }
+  finally{ btn.disabled=false; }
 };
 $("btnReport").onclick = () => {
   const list = filtered(); if(!list.length){ toast("Δεν υπάρχουν αγώνες για αναφορά"); return; }
   const sum = a => a.reduce((s,r)=>s+(+r.fee||0),0);
   const total=sum(list), paid=sum(list.filter(r=>r.paid));
   const byPerson = [...new Set(list.map(r=>r.person||""))].sort((x,y)=>x.localeCompare(y,"el")).map(p=>{const a=list.filter(r=>(r.person||"")===p);const pd=sum(a.filter(r=>r.paid));return {p,n:a.length,op:a.filter(r=>r.role==="op").length,as:a.filter(r=>r.role==="as").length,t:sum(a),pd,due:sum(a)-pd};});
-  const html = `<!doctype html><html lang="el"><head><meta charset="utf-8"><title>Check Mate · Ημερολόγιο</title>
+  const html = `<!doctype html><html lang="el"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Check Mate · Ημερολόγιο</title>
 <style>body{font:13px/1.45 "Segoe UI",Arial,sans-serif;color:#14213a;margin:28px}h1{font:800 26px "Arial Narrow",Arial,sans-serif;text-transform:uppercase;margin:0}h1 span{color:#f0821e}
 .s{color:#5d6b84;margin:4px 0 18px}table{border-collapse:collapse;width:100%;margin-bottom:22px}th,td{border-bottom:1px solid #d9dfea;padding:6px 8px;text-align:left;vertical-align:top}
 th{background:#14213a;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.06em}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .k{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}.k div{border:1px solid #d9dfea;border-radius:8px;padding:8px 12px}.k b{display:block;font-size:18px}
-.due{color:#b4530b}.ok{color:#1d8a52}h2{font-size:15px;margin:0 0 6px}tfoot td{font-weight:700;border-top:2px solid #14213a}@media print{body{margin:10mm}}</style></head><body>
+.due{color:#b4530b}.ok{color:#1d8a52}h2{font-size:15px;margin:0 0 6px}tfoot td{font-weight:700;border-top:2px solid #14213a}@media screen and (max-width:640px){body{margin:14px}h1{font-size:21px}table{display:block;overflow-x:auto;white-space:nowrap}td small{white-space:normal}}@media print{body{margin:10mm}}</style></head><body>
 <h1>Check <span>Mate</span> · Το ημερολόγιό μου</h1><div class="s">${esc(scopeLabel())} · Εκδόθηκε ${fmtDate(today())}</div>
 <div class="k"><div>Αγώνες<b>${list.length}</b></div><div>Χειριστής<b>${list.filter(r=>r.role==="op").length}</b></div><div>Βοηθός<b>${list.filter(r=>r.role==="as").length}</b></div>
 <div>Σύνολο<b>${eur(total)}</b></div><div>Πληρώθηκαν<b class="ok">${eur(paid)}</b></div><div>Εκκρεμούν<b class="due">${eur(total-paid)}</b></div></div>
@@ -767,8 +796,26 @@ ${byPerson.map(x=>`<tr><td>${esc(x.p||"—")}</td><td class="n">${x.n}</td><td c
 <h2>Αναλυτικά</h2><table><thead><tr><th>Ημ/νία</th><th>Αγώνας</th><th>Διοργάνωση / Γήπεδο</th><th>Συνεργάτης</th><th>Θέση</th><th class="n">Αμοιβή</th><th>Πληρωμή</th></tr></thead><tbody>
 ${[...list].sort((a,b)=>(a.date||"").localeCompare(b.date||"")).map(r=>`<tr><td>${fmtDate(r.date)}${r.time?" "+esc(r.time):""}</td><td>${esc(r.home)} – ${esc(r.away)}${r.notes?`<br><small>${esc(r.notes)}</small>`:""}</td><td>${[r.comp,r.venue].filter(Boolean).map(esc).join(" / ")}</td><td>${esc(r.person)}</td><td>${ROLE[r.role]}</td><td class="n">${eur(r.fee)}</td><td class="${r.paid?"ok":"due"}">${r.paid?"Πληρώθηκε "+fmtDate(r.paidDate):"Εκκρεμεί"}</td></tr>`).join("")}
 </tbody><tfoot><tr><td colspan="5">Σύνολο</td><td class="n">${eur(total)}</td><td></td></tr></tfoot></table></body></html>`;
-  saveFile(fileStem()+".html", html);
+  openReport(html);
 };
+/* the report opens on top of the diary, with a back button and print / save as PDF */
+function openReport(html){
+  closeReport(true);
+  const ov=document.createElement("div"); ov.id="repView"; ov.setAttribute("role","dialog"); ov.setAttribute("aria-label","Αναφορά");
+  ov.innerHTML=`<div class="rv-bar"><button type="button" class="btn" id="rvBack">← Επιστροφή</button><span class="rv-t">Αναφορά</span><button type="button" class="btn primary" id="rvPrint">🖨 Εκτύπωση / PDF</button></div><iframe title="Αναφορά"></iframe>`;
+  document.body.appendChild(ov); document.documentElement.style.overflow="hidden";
+  ov.querySelector("iframe").srcdoc=html;
+  $("rvBack").onclick=()=>history.state?.cmReport ? history.back() : closeReport();
+  $("rvPrint").onclick=()=>{ try{ ov.querySelector("iframe").contentWindow.print(); }catch{ toast("Η εκτύπωση δεν είναι διαθέσιμη εδώ"); } };
+  try{ history.pushState({cmReport:1}, ""); }catch{}
+  $("rvBack").focus();
+}
+function closeReport(silent){
+  const ov=$("repView"); if(!ov) return; ov.remove(); document.documentElement.style.overflow="";
+  if(!silent) $("btnReport")?.focus();
+}
+window.addEventListener("popstate", ()=>closeReport());
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && $("repView")) $("rvBack").click(); });
 
 /* ---------- bring my assignments from Check Mate (one tap; already added ones are skipped) ---------- */
 let meId = null;
