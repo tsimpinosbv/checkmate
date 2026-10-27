@@ -1528,7 +1528,11 @@ let ready={sched:false,roster:false,links:false};
 let tab = ls.get("cm.tab","sched");
 const st = {season:"", month:"", person:"", paid:"", vis:"", q:"", week:weekOf(today())};
 /* programme view: «Κάρτες» or «Πίνακας» (spreadsheet). Phone starts in cards, computer in the table; a choice is remembered per device */
-let view = (()=>{ try{ const v=localStorage.getItem("cm.view"); if(v==="cards"||v==="grid") return v; }catch{} return matchMedia("(min-width:900px)").matches ? "grid" : "cards"; })();   // week: Monday of the round shown ("" = all matches)
+let view = (()=>{ try{ const v=localStorage.getItem("cm.view"); if(v==="cards"||v==="grid") return v; }catch{} return "grid"; })();
+/* the switch and the table are for the computer only: on a phone the programme is always shown as cards */
+const WIDE = matchMedia("(min-width:900px)");
+const viewNow = () => WIDE.matches ? view : "cards";
+WIDE.addEventListener?.("change", () => { if(isAdmin && tab==="sched") renderAdmin(); });   // week: Monday of the round shown ("" = all matches)
 
 function rosterByNorm(){ const m={}; roster.forEach(r=>m[norm(r.name)]=r); return m; }
 function uidForName(name){ if(!name) return null; const r=rosterByNorm()[norm(name)]; return r ? (links[r.id]||null) : null; }
@@ -1637,7 +1641,7 @@ function renderSched(months, people, seasons=[]){
     <div class="f"><label for="fVis">Στους χρήστες</label><select id="fVis">${opt([["shown","Ορατές"],["hidden","Κρυφές"]],st.vis,"Όλες")}</select></div>
     <div class="f grow"><label for="fSearch">Αναζήτηση</label><input id="fSearch" type="search" value="${esc(st.q)}" placeholder="Ομάδα, γήπεδο, VC…"></div>
   </section>
-  <div class="viewsw" role="group" aria-label="Προβολή"><button type="button" data-act="view" data-v="cards" aria-pressed="${view==="cards"}">Κάρτες</button><button type="button" data-act="view" data-v="grid" aria-pressed="${view==="grid"}">Πίνακας</button>${view==="grid"?`<span class="vhint">Αλλάξτε ένα κελί και αποθηκεύεται μόλις φύγετε από αυτό. Enter: κάτω γραμμή.</span>`:""}</div>
+  ${WIDE.matches?`<div class="viewsw" role="group" aria-label="Προβολή"><button type="button" data-act="view" data-v="cards" aria-pressed="${view==="cards"}">Κάρτες</button><button type="button" data-act="view" data-v="grid" aria-pressed="${view==="grid"}">Πίνακας</button>${view==="grid"?`<span class="vhint">Αλλάξτε ένα κελί και αποθηκεύεται μόλις φύγετε από αυτό. Enter: κάτω γραμμή.</span>`:""}</div>`:""}
   ${list.length?`<div class="bulk" id="bulk">${bulkIdle(list)}</div>`:""}
   <section class="panel" style="margin-top:12px">`;
   if(!sched.length){
@@ -1650,7 +1654,7 @@ function renderSched(months, people, seasons=[]){
     html += st.week && !anyInWeek
       ? `<div class="empty"><strong>Δεν υπάρχουν αγώνες αυτή την εβδομάδα</strong><div class="actions">${prv?`<button class="btn" data-act="wkgo" data-w="${weekOf(prv)}">◀ Προηγούμενη με αγώνες (${weekLabel(weekOf(prv))})</button>`:""}${nxt?`<button class="btn" data-act="wkgo" data-w="${weekOf(nxt)}">Επόμενη με αγώνες (${weekLabel(weekOf(nxt))}) ▶</button>`:""}</div></div>`
       : `<div class="empty"><strong>Καμία ανάθεση με αυτά τα φίλτρα</strong><button class="btn" data-act="clear">Καθαρισμός φίλτρων</button></div>`;
-  } else if(view==="grid"){
+  } else if(viewNow()==="grid"){
     html += gridHtml(list);
   } else {
     html += `<div class="row head"><div>Ημ/νία</div><div>Αγώνας</div><div>Χειριστής</div><div>Βοηθός</div><div></div></div>`;
