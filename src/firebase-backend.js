@@ -12,6 +12,16 @@
   #cm-auth{--ink:#14213a;--muted:#5d6b84;--line:#d9dfea;--surface:#fff;--accent:#f0821e;--blue:#2a7fd4;--bad:#c43a2c;--good:#1d8a52;
     box-sizing:border-box;width:min(420px,100% - 32px);margin:48px auto 90px;padding:26px 22px 22px;font:15px "Commissioner",system-ui,sans-serif;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:16px}
   #cm-auth *{box-sizing:border-box}
+  body.cm-signin{background:radial-gradient(120% 70% at 50% 0%,#24375e 0%,#14213a 55%,#0b1222 100%) fixed!important;min-height:100vh}
+  body.cm-signin header,body.cm-signin .top-bar{display:none!important}
+  #cm-hero{text-align:center;color:#fff;margin:44px auto 0;padding:0 16px;font-family:"Commissioner",system-ui,sans-serif}
+  #cm-hero img{width:92px;height:92px;border-radius:22px;filter:drop-shadow(0 8px 22px rgba(0,0,0,.35))}
+  #cm-hero h1{font:800 40px/1 "Fira Sans Extra Condensed",system-ui,sans-serif;margin:14px 0 0;text-transform:uppercase;letter-spacing:.02em;color:#fff}
+  #cm-hero h1 span{color:#f0821e}
+  #cm-hero .sub{color:#b9c6dd;font-size:14px;margin-top:6px;letter-spacing:.04em}
+  #cm-hero .tag{display:inline-block;margin-top:10px;padding:4px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.22);color:#fff;font:700 11px "Commissioner",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase}
+  body.cm-signin #cm-auth{margin-top:22px;box-shadow:0 18px 50px rgba(0,0,0,.35);border-color:transparent}
+  body.cm-signin #cm-credit{color:#b9c6dd}
   #cm-auth .brand{display:flex;align-items:center;gap:12px;margin-bottom:18px}
   #cm-auth .brand img{width:48px;height:48px}
   #cm-auth h1{font:800 30px/1 "Fira Sans Extra Condensed",system-ui,sans-serif;margin:0;text-transform:uppercase;letter-spacing:.01em}
@@ -125,8 +135,9 @@
   }
   function showAuth(view="login", msg=null, email=""){
     const head = DIARY
-      ? `<div class="brand"><img src="icons/diary-192.png" alt=""><div><h1>Check <span>Mate</span></h1><div class="sub">Ημερολόγιο · προσωπικό αρχείο αγώνων</div></div></div>`
-      : `<div class="brand"><img src="icons/icon-192.png" alt=""><div><h1>Check <span>Mate</span></h1><div class="sub">Video Check · αγώνες &amp; αναθέσεις</div></div></div>`;
+      ? `<div id="cm-hero"><img src="icons/diary-192.png" alt=""><h1>Check <span>Mate</span></h1><div class="tag">Ημερολόγιο</div><div class="sub">Το προσωπικό αρχείο αγώνων σου</div></div>`
+      : `<div id="cm-hero"><img src="icons/icon-192.png" alt=""><h1>Check <span>Mate</span></h1><div class="tag">Video Check</div><div class="sub">Αγώνες &amp; αναθέσεις</div></div>`;
+    document.body.classList.add("cm-signin");
     const note = msg ? `<div class="msg ${msg.ok?"ok":"err"}" role="${msg.ok?"status":"alert"}">${esc(msg.text)}</div>` : "";
     let body;
     if(view==="reset"){
@@ -155,7 +166,7 @@
       <button type="button" class="google" id="cm-google">${googleSvg} Συνέχεια με Google</button>`;
     }
     const help = `<a class="help" href="${DIARY ? "help/imerologio.html" : "help/"}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6c-2-1.5-5-2-8-2v15c3 0 6 .5 8 2 2-1.5 5-2 8-2V4c-3 0-6 .5-8 2z"/><path d="M12 6v15"/></svg> Οδηγίες χρήσης</a>`;
-    rootEl().innerHTML = `<div id="cm-auth">${head}${body}${help}</div>`;
+    rootEl().innerHTML = `${head}<div id="cm-auth">${body}${help}</div>`;
     const box = document.getElementById("cm-auth");
     box.querySelectorAll("[data-view]").forEach(b => b.onclick = () => showAuth(b.dataset.view, null, (document.getElementById("cm-email")||{}).value||email));
     const g = document.getElementById("cm-google"); if(g) g.onclick = google;
@@ -213,7 +224,7 @@
       if(done) return;
       if(pendingSignup) await pendingSignup;   // wait for the name to be saved on sign-up
       done = true;
-      if(document.getElementById("cm-auth")) rootEl().innerHTML = `<div id="boot">Φόρτωση…</div>`;
+      document.body.classList.remove("cm-signin"); if(document.getElementById("cm-auth")) rootEl().innerHTML = `<div id="boot">Φόρτωση…</div>`;
       const joined = Date.parse(u.metadata && u.metadata.creationTime) || Date.now();
       const via = (u.providerData||[]).map(p=>p.providerId==="google.com"?"google":"email")[0] || "email";
       /* the diary is not linked to Check Mate: it never writes a profile, so using it does not register you there */
