@@ -141,6 +141,15 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 #repView .rv-t{flex:1;text-align:center;font-weight:700}
 #repView iframe{flex:1;width:100%;border:0;background:#fff}
 @media (max-width:480px){#repView .rv-t{display:none}#repView .rv-bar .btn{flex:1;justify-content:center}}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .board{background:var(--head);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}}
+:root[data-theme="dark"] .board{background:var(--head);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skel{display:flex;flex-direction:column;gap:10px;padding:6px 0}
+.sk{height:62px;border-radius:12px;background:linear-gradient(90deg,var(--sq) 25%,color-mix(in srgb,var(--sq) 40%,var(--surface)) 50%,var(--sq) 75%);background-size:300% 100%;animation:skm 1.3s ease-in-out infinite}
+@keyframes skm{from{background-position:100% 0}to{background-position:0 0}}
+@media (prefers-reduced-motion:reduce){.sk{animation:none}}
+.cdot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--cc);margin-right:6px;vertical-align:1px;box-shadow:0 0 0 2px color-mix(in srgb,var(--cc) 25%,transparent)}
+.row .c-match b{font-size:15.5px}
 </style>
 
 <div class="wrap">
@@ -179,7 +188,7 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
   </section>
 
   <section class="log" id="log" aria-live="polite">
-    <div class="empty"><div class="board-art"></div><strong>Φόρτωση αγώνων…</strong></div>
+    <div class="skel" aria-busy="true"><span class="sr">Φόρτωση αγώνων…</span><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>
   </section>
   <div class="privacy"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> <b>Προσωπικό ημερολόγιο.</b> Μόνο εσύ βλέπεις τους αγώνες που γράφεις εδώ, ούτε οι διαχειριστές. Οι αναθέσεις σου από το Check Mate μπαίνουν εδώ μόνες τους· εσύ σημειώνεις πότε πληρώθηκες και συγκρίνεις με όσα δείχνει το Check Mate. Οι αμοιβές προτείνονται από το Check Mate και μπορείς να τις αλλάξεις.</div>
   <div class="status" id="status"></div>
@@ -231,6 +240,9 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 <script>
 (() => {
 const $ = id => document.getElementById(id);
+const PALETTE = ["#2a7fd4","#1d8a52","#8e44ad","#d35400","#c0392b","#16a085","#b7950b","#3f51b5","#d81b60","#5d6d7e"];
+const cnorm = s => String(s??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[ABEZHIKMNOPTYX]/g,c=>({A:"Α",B:"Β",E:"Ε",Z:"Ζ",H:"Η",I:"Ι",K:"Κ",M:"Μ",N:"Ν",O:"Ο",P:"Ρ",T:"Τ",Y:"Υ",X:"Χ"})[c]).replace(/[.'΄’]/g,"").replace(/\s+/g," ").trim();
+const compColor = n => { let h=0; for(const c of cnorm(n)) h=(h*31+c.charCodeAt(0))>>>0; return PALETTE[h%PALETTE.length]; };
 const ROLE = {op:"Χειριστής", as:"Βοηθός"};
 const MONTHS_FULL = ["Ιανουάριος","Φεβρουάριος","Μάρτιος","Απρίλιος","Μάιος","Ιούνιος","Ιούλιος","Αύγουστος","Σεπτέμβριος","Οκτώβριος","Νοέμβριος","Δεκέμβριος"];
 const DAYS = ["Κυρ","Δευ","Τρι","Τετ","Πεμ","Παρ","Σαβ"];
@@ -317,7 +329,7 @@ function render(){
      const lk = locked(r);
      return `<div class="row">
      <div class="date c-date">${fmtDate(r.date)}<small>${dayName(r.date)}${r.time?" · "+esc(r.time):""}</small></div>
-     <div class="match c-match"><b>${esc(r.home)} – ${esc(r.away)}</b><div class="meta">${[r.comp,r.venue].filter(Boolean).map(esc).join(" · ")||"&nbsp;"}</div>${(r.notes||"").trim()?`<div class="rnote">${cmIcon("pen")} ${esc(r.notes.trim())}</div>`:""}</div>
+     <div class="match c-match"><b>${esc(r.home)} – ${esc(r.away)}</b><div class="meta">${r.comp?`<span class="cdot" style="--cc:${compColor(r.comp)}"></span>`:""}${[r.comp,r.venue].filter(Boolean).map(esc).join(" · ")||"&nbsp;"}</div>${(r.notes||"").trim()?`<div class="rnote">${cmIcon("pen")} ${esc(r.notes.trim())}</div>`:""}</div>
      <div><span class="role ${r.role==="op"?"op":""}">${ROLE[r.role]||"—"}</span>${r.person?`<div class="who">με ${esc(r.person)}</div>`:""}</div>
      <div class="fee">${eur(r.fee)}</div>
      <div><button class="pay ${r.paid?"yes":"no"}" type="button" data-act="toggle" data-id="${r.id}" ${isAdmin?"":"disabled"} title="${payTitle}">${r.paid?`${lk?cmIcon("lock"):"✓"} Πληρώθηκε${r.paidDate?` <small>${fmtDate(r.paidDate).slice(0,5)}</small>`:""}`:"● Εκκρεμεί"}</button></div>
