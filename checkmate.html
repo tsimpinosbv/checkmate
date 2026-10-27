@@ -573,26 +573,11 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 .sechead .hi{color:var(--muted);font-size:14px;font-weight:600;margin-bottom:2px}
 .sechead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .banner.nudge{background:var(--warn-bg);border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
-/* ---- look: dates, competition colours, team badges, skeleton, compact admin bar on phones ---- */
+/* ---- look: dates, skeleton, compact admin bar on phones ---- */
 .card .when{font-family:var(--f-body);font-size:17px;font-weight:700}
 .card .when small{font-family:var(--f-mono);font-weight:400}
 .c-date{font-family:var(--f-body)!important;font-weight:700;font-size:16px}
 .c-date small{font-family:var(--f-mono);font-weight:400}
-.tb{white-space:nowrap;overflow:hidden}
-.tb.tb4{font-size:8.5px!important;letter-spacing:-.2px}
-.card .teams .tb.tb4{font-size:9.5px!important}
-.cchip{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;font-size:12px;font-weight:600;color:var(--ink);background:color-mix(in srgb,var(--cc) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--cc) 35%,transparent);border-radius:999px;padding:2px 10px 2px 8px}
-.cchip::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--cc)}
-.comp-head{border-left:4px solid var(--cc,var(--blue))}
-table.grid tr td:first-child{box-shadow:inset 4px 0 0 var(--cc,transparent)}
-.tm{display:inline-flex;align-items:center;gap:7px;vertical-align:middle}
-.vs{margin:0 8px;color:var(--muted)}
-.tb{display:inline-grid;place-items:center;flex:none;width:30px;height:30px;border-radius:50%;background:var(--tc);color:var(--ti);font:700 10px/1 var(--f-body);letter-spacing:0;text-transform:none;box-shadow:inset 0 0 0 2px color-mix(in srgb,#000 12%,transparent)}
-.card .teams .tb{width:34px;height:34px;font-size:11px}
-.tms{display:flex;flex-wrap:wrap;align-items:center;row-gap:4px}
-.tms .tb{width:24px;height:24px;font-size:8.5px}
-.tcol{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
-.tcol input[type=color]{width:30px;height:26px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;cursor:pointer}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .board{background:var(--head);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}}
 :root[data-theme="dark"] .board{background:var(--head);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
@@ -1546,17 +1531,6 @@ const MON_SHORT = ["Ιαν","Φεβ","Μαρ","Απρ","Μαΐ","Ιουν","Ιο
 const niceDate = d => { if(!d) return ""; const t=new Date(d+"T12:00"); return `${DAYS[t.getDay()]} ${t.getDate()} ${MON_SHORT[t.getMonth()]}${t.getFullYear()!==new Date().getFullYear()?" "+t.getFullYear():""}`; };
 const whenMain = m => esc(m.dateText || niceDate(m.date));
 const whenSub = m => [m.time||m.timeText||"", m.dateTbc?"ημ. αγωνιστικής":""].filter(Boolean).map(esc).join(" · ");
-/* one steady colour per competition (no setup): the same name always gets the same colour */
-const PALETTE = ["#2a7fd4","#1d8a52","#8e44ad","#d35400","#c0392b","#16a085","#b7950b","#3f51b5","#d81b60","#5d6d7e"];
-const hashName = n => { let h=0; for(const c of norm(n)) h=(h*31+c.charCodeAt(0))>>>0; return h; };
-const compColor = n => n ? PALETTE[hashName(n)%PALETTE.length] : "var(--line)";
-const compChip = n => n ? `<span class="cchip" style="--cc:${compColor(n)}">${esc(n)}</span>` : "";
-/* team badge: the team's colour (set in «Ομάδες & γήπεδα», otherwise automatic) with its VAR code */
-const teamColor = n => { const k=norm(n); const t=k?teamList.find(x=>norm(x.name)===k):null; return t?.color || (k?PALETTE[hashName(n)%PALETTE.length]:""); };
-const inkOn = hex => { const m=/^#?([0-9a-f]{6})$/i.exec(hex||""); if(!m) return "#fff"; const v=parseInt(m[1],16), r=v>>16, g=(v>>8)&255, b=v&255; return (r*299+g*587+b*114)/1000>150 ? "#14213a" : "#fff"; };
-const badge = (name, code, color) => name ? `<span class="tb${(code||name).replace(/\s+/g,"").length>3&&code?" tb4":""}" style="--tc:${color||PALETTE[hashName(name)%PALETTE.length]};--ti:${inkOn(color||PALETTE[hashName(name)%PALETTE.length])}" aria-hidden="true">${esc((code||name).replace(/\s+/g,"").slice(0,code?4:3))}</span>` : "";
-/* «ΑΕΚ – ΠΑΟΚ» with badges; works with a schedule entry (admin) or a user's copy (homeColor / homeVar travel with it) */
-const teamsB = m => `<span class="tm">${badge(m.home, m.homeVar ?? teamVar(m.home), m.homeColor ?? teamColor(m.home))}${esc(m.home)}</span>${m.away?`<span class="vs">–</span><span class="tm">${badge(m.away, m.awayVar ?? teamVar(m.away), m.awayColor ?? teamColor(m.away))}${esc(m.away)}</span>`:""}`;
 const ls = {get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch{return d}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
 function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3000); }
 async function w(fn){ for(let i=0;;i++){ try{ return await fn(); }catch(e){ if(i<5 && (e?.code==="resource_exhausted"||e?.code==="unavailable")){ await sleep(400*2**i); continue; } throw e; } } }
@@ -1722,10 +1696,10 @@ function renderSched(months, people, seasons=[]){
     html += `<div class="row head"><div>Ημ/νία</div><div>Αγώνας</div><div>Χειριστής</div><div>Βοηθός</div><div></div></div>`;
     let lastComp=null;
     list.forEach(m=>{
-      if((m.comp||"")!==lastComp){ lastComp=m.comp||""; if(lastComp) html+=`<div class="comp-head" style="--cc:${compColor(lastComp)}">${esc(lastComp)}</div>`; }
+      if((m.comp||"")!==lastComp){ lastComp=m.comp||""; if(lastComp) html+=`<div class="comp-head">${esc(lastComp)}</div>`; }
       html += `<div class="row${m.hidden?" is-hidden":""}">
         <div class="date c-date">${whenMain(m)}<small>${whenSub(m)}</small><button type="button" class="vis${m.hidden?" off":""}" data-act="vis" data-id="${m.id}" title="${m.hidden?"Οι χρήστες δεν τη βλέπουν. Πάτα για εμφάνιση.":"Τη βλέπουν τα άτομα της ανάθεσης. Πάτα για απόκρυψη."}">${m.hidden?"Κρυφή":"Ορατή"}</button></div>
-        <div class="match c-match"><b class="tms">${teamsB(m)}</b>${(teamVar(m.home)||teamVar(m.away))?`<div class="meta tfull">VAR: ${esc([teamVar(m.home)||"—", m.away?(teamVar(m.away)||"—"):""].filter(Boolean).join(" – "))}</div>`:""}<div class="meta">${[m.venue?(mapUrl(m.venue)?`<a class="mlink" href="${esc(mapUrl(m.venue))}" target="_blank" rel="noopener" title="${esc(venueOf(m.venue)?.full||"Χάρτης")}">📍 ${esc(m.venue)}</a>`:esc(m.venue)):"",esc(m.tv||""),esc(m.vc||"")].filter(Boolean).join(" · ")||"&nbsp;"}</div></div>
+        <div class="match c-match"><b>${teams(m)}</b>${(teamVar(m.home)||teamVar(m.away))?`<div class="meta tfull">VAR: ${esc([teamVar(m.home)||"—", m.away?(teamVar(m.away)||"—"):""].filter(Boolean).join(" – "))}</div>`:""}<div class="meta">${[m.venue?(mapUrl(m.venue)?`<a class="mlink" href="${esc(mapUrl(m.venue))}" target="_blank" rel="noopener" title="${esc(venueOf(m.venue)?.full||"Χάρτης")}">📍 ${esc(m.venue)}</a>`:esc(m.venue)):"",esc(m.tv||""),esc(m.vc||"")].filter(Boolean).join(" · ")||"&nbsp;"}</div></div>
         ${slotHtml(m,"op")}${slotHtml(m,"as")}
         <div class="c-edit"><button class="more" data-act="edit" data-id="${m.id}" aria-label="Επεξεργασία">✎</button></div>
       </div>`;
@@ -1759,7 +1733,7 @@ function gridHtml(list){
   };
   return `<div class="gwrap" id="gwrap"><table class="grid"><colgroup>${GCOLS.map(c=>`<col style="width:${c[3]}px">`).join("")}<col style="width:40px"></colgroup>
     <thead><tr>${GCOLS.map(c=>`<th>${c[1]}</th>`).join("")}<th></th></tr></thead>
-    <tbody>${list.map(m=>`<tr class="${m.hidden?"is-hidden":""}${m.date&&m.date<today()?" past":""}" style="--cc:${compColor(m.comp)}">${GCOLS.map(c=>cell(m,c)).join("")}<td class="ck"><button class="more" data-act="edit" data-id="${m.id}" aria-label="Άνοιγμα φόρμας" title="Όλα τα στοιχεία και διαγραφή">✎</button></td></tr>`).join("")}</tbody></table></div>
+    <tbody>${list.map(m=>`<tr class="${m.hidden?"is-hidden":""}${m.date&&m.date<today()?" past":""}">${GCOLS.map(c=>cell(m,c)).join("")}<td class="ck"><button class="more" data-act="edit" data-id="${m.id}" aria-label="Άνοιγμα φόρμας" title="Όλα τα στοιχεία και διαγραφή">✎</button></td></tr>`).join("")}</tbody></table></div>
     <div class="actions" style="padding:10px 12px"><button class="btn small" data-act="add">+ Νέα ανάθεση</button></div>`;
 }
 /* one dropdown for the sheet: all choices of the column, filtered as you type */
@@ -2028,13 +2002,12 @@ function renderLists(){
       ${missT.length?`<div class="pbody note" style="border-top:1px solid var(--line)">${missT.length} ομάδες του προγράμματος δεν είναι στη λίστα: ${missT.slice(0,6).map(esc).join(", ")}${missT.length>6?"…":""} <button class="btn small" type="button" data-act="addmissing" data-kind="teams">Προσθήκη όλων</button></div>`:""}
       <div class="scroll" style="max-height:560px">
       ${teamList.length? teamList.map(x=>`<div class="prow"><div class="who" style="width:150px"><b>${esc(x.name)}</b><span class="note">${cnt(cTeam[norm(x.name)]||0)}</span></div>
-        <label class="tcol" title="Χρώμα του σήματος της ομάδας">${badge(x.name, x.var, teamColor(x.name))}<input type="color" data-tf="color" data-id="${x.id}" value="${/^#[0-9a-f]{6}$/i.test(x.color||"")?x.color:teamColor(x.name)}" aria-label="Χρώμα ${esc(x.name)}"></label>
         <label class="pmail" style="max-width:200px" title="Το αρκτικόλεξο της ομάδας στο σύστημα challenge (VAR)"><span style="font:700 11px var(--f-body)">VAR</span><input id="tf-var-${x.id}" data-tf="var" data-id="${x.id}" value="${esc(x.var||"")}" placeholder="π.χ. ΟΣΦ" aria-label="VAR ${esc(x.name)}"></label>
         <div class="ulink"><label class="pmail" title="Συμπληρώνεται αυτόματα ως γήπεδο όταν η ομάδα είναι γηπεδούχος">${cmIcon("pin")}<input data-teamvenue="${x.id}" list="dlVenues" value="${esc(x.venue||"")}" placeholder="έδρα" aria-label="Έδρα ${esc(x.name)}"></label>
         <button class="btn small danger" type="button" data-act="dellist" data-kind="teams" data-id="${x.id}" aria-label="Διαγραφή ${esc(x.name)}">✕</button></div></div>`).join("")
       : `<div class="empty"><strong>Καμία ομάδα ακόμα</strong><div>Προστίθενται και αυτόματα όταν γράφεις νέα ομάδα σε ανάθεση ή στο Excel.</div></div>`}
       </div>
-      <div class="pbody note" style="border-top:1px solid var(--line);display:block">Δίπλα σε κάθε ομάδα γράψτε στο <b>VAR</b> το αρκτικόλεξο που χρησιμοποιείται στο challenge. Οι χρήστες βλέπουν το όνομα της ομάδας και από κάτω το αρκτικόλεξο VAR, και μπαίνει και στα email. Πατήστε το <b>χρωματιστό κουτάκι</b> για να διαλέξετε το χρώμα του σήματος της ομάδας (κύκλος με το αρκτικόλεξο) που βλέπουν όλοι στις κάρτες. Για όλες μαζί: <b>⬇ Excel ομάδων</b>, συμπληρώστε τη στήλη VAR (στήλες Ομάδα · VAR · Έδρα) και ανεβάστε το με <b>⬆ Excel ομάδων</b>.</div>
+      <div class="pbody note" style="border-top:1px solid var(--line);display:block">Δίπλα σε κάθε ομάδα γράψτε στο <b>VAR</b> το αρκτικόλεξο που χρησιμοποιείται στο challenge. Οι χρήστες βλέπουν το όνομα της ομάδας και από κάτω το αρκτικόλεξο VAR, και μπαίνει και στα email. Για όλες μαζί: <b>⬇ Excel ομάδων</b>, συμπληρώστε τη στήλη VAR (στήλες Ομάδα · VAR · Έδρα) και ανεβάστε το με <b>⬆ Excel ομάδων</b>.</div>
     </section>
     <section class="panel" style="grid-column:1/-1">
       <div class="ph"><h2 class="sec">Γήπεδα<span class="count">${venues.length}</span></h2>
@@ -2069,8 +2042,7 @@ document.addEventListener("change", async e => {
   const tf = e.target.closest?.("[data-tf]");
   if(tf && isAdmin){
     const id=tf.dataset.id, val=tf.value.trim();
-    const f = tf.dataset.tf==="color" ? "color" : "var";
-    try{ await w(()=>db.doc(`teams/${id}`).update({[f]:val})); const t=teamList.find(x=>x.id===id); if(t){ t[f]=val; await resyncTeams([t.name]); } toast(f==="color"?"Το χρώμα αποθηκεύτηκε":"Αποθηκεύτηκε"); if(f==="color") renderAdmin(); }catch{ toast("Η αποθήκευση απέτυχε"); }
+    try{ await w(()=>db.doc(`teams/${id}`).update({var:val})); const t=teamList.find(x=>x.id===id); if(t){ t.var=val; await resyncTeams([t.name]); } toast("Αποθηκεύτηκε"); }catch{ toast("Η αποθήκευση απέτυχε"); }
     return;
   }
   const vf = e.target.closest?.("[data-vf]");
@@ -2312,7 +2284,7 @@ function itemFor(m, r){
   const o = r==="op"?"as":"op";
   return {match:m.id, date:m.date||"", time:m.time||"", dateText:m.dateText||"", timeText:m.timeText||"", dateTbc:!!m.dateTbc, comp:m.comp||"", venue:m.venue||"", home:m.home||"", away:m.away||"",
     tv:m.tv||"", vc:m.vc||"", role:r, partner:m[o]||"", fee:+m["fee_"+r]||0, paid:!!m["paid_"+r], paidDate:m["paidDate_"+r]||"", notes:m.notes||"",
-    ...venueExtra(m.venue), homeVar:teamVar(m.home), awayVar:teamVar(m.away), homeColor:teamColor(m.home), awayColor:teamColor(m.away)};
+    ...venueExtra(m.venue), homeVar:teamVar(m.home), awayVar:teamVar(m.away)};
 }
 /* venue details travel with each user's copy of the assignment (users cannot read the venues list itself) */
 function venueExtra(name){
@@ -3196,9 +3168,9 @@ function renderUser(){
   const card=(i,first)=>`<article class="card ${i.role} ${i.date<t?"past":""} ${isChg(i)?"changed":""}">
     <div class="top"><div class="when">${whenMain(i)} <small>${whenSub(i)}</small></div>${first?`<span class="next">Επόμενη</span>`:""}</div>
     ${isChg(i)?`<button type="button" class="chg" data-seen="${esc(i.id)}" title="Πάτα για να το σημειώσεις ως ενημερωμένο">${cmIcon("warn")} Άλλαξε: ${esc((i.changed||[]).join(", ").toLowerCase()||"λεπτομέρειες")} <small>· ΟΚ</small></button>`:""}
-    ${i.comp?compChip(i.comp):""}<div class="teams">${teamsB(i)}</div>${(i.homeVar||i.awayVar)?`<div class="tfull"><span class="vtag">VAR</span> ${esc([i.homeVar||"—", i.away?(i.awayVar||"—"):""].filter(Boolean).join(" – "))}</div>`:""}
+    <div class="teams">${teams(i)}</div>${(i.homeVar||i.awayVar)?`<div class="tfull"><span class="vtag">VAR</span> ${esc([i.homeVar||"—", i.away?(i.awayVar||"—"):""].filter(Boolean).join(" – "))}</div>`:""}
     ${venueCard(i)}
-    <dl><dt>Θέση</dt><dd><span class="role ${i.role}">${ROLE[i.role]}</span></dd>
+    <dl>${i.comp?`<dt>Διοργάνωση</dt><dd>${esc(i.comp)}</dd>`:""}<dt>Θέση</dt><dd><span class="role ${i.role}">${ROLE[i.role]}</span></dd>
       ${i.partner?`<dt>${i.role==="op"?"Βοηθός":"Χειριστής"}</dt><dd>${esc(i.partner)}</dd>`:""}${i.vc?`<dt>VAR</dt><dd>${esc(i.vc)}</dd>`:""}${i.tv?`<dt>Κάλυψη</dt><dd>${esc(i.tv)}</dd>`:""}${i.dateTbc?`<dt>Σημ.</dt><dd>Η ημέρα/ώρα θα επιβεβαιωθεί</dd>`:""}
       ${i.notes?`<dt>Σημειώσεις</dt><dd>${esc(i.notes)}</dd>`:""}</dl>
     <div class="bottom"><span class="fee">${eur(i.fee)}</span><span class="pay ${i.paid?"yes":"no"}">${i.paid?`✓ Πληρώθηκε${i.paidDate?" "+fmtDate(i.paidDate).slice(0,5):""}`:"● Εκκρεμεί"}</span></div>
