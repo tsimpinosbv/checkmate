@@ -214,7 +214,7 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
   <section class="log" id="log" aria-live="polite">
     <div class="empty"><div class="board-art"></div><strong>Φόρτωση αγώνων…</strong></div>
   </section>
-  <div class="privacy"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> <b>Προσωπικό ημερολόγιο.</b> Μόνο εσύ βλέπεις τους αγώνες που γράφεις εδώ, ούτε οι διαχειριστές. Οι αγώνες που έκανες στο Check Mate μπαίνουν εδώ μόνοι τους· εσύ σημειώνεις πότε πληρώθηκες και συγκρίνεις με όσα δείχνει το Check Mate. Οι αμοιβές προτείνονται από το Check Mate και μπορείς να τις αλλάξεις.</div>
+  <div class="privacy"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> <b>Προσωπικό ημερολόγιο.</b> Μόνο εσύ βλέπεις τους αγώνες που γράφεις εδώ, ούτε οι διαχειριστές. Οι αναθέσεις σου από το Check Mate μπαίνουν εδώ μόνες τους· εσύ σημειώνεις πότε πληρώθηκες και συγκρίνεις με όσα δείχνει το Check Mate. Οι αμοιβές προτείνονται από το Check Mate και μπορείς να τις αλλάξεις.</div>
   <div class="status" id="status"></div>
 </div>
 
@@ -829,30 +829,40 @@ function closeReport(silent){
 window.addEventListener("popstate", ()=>closeReport());
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && $("repView")) $("rvBack").click(); });
 
-/* ---------- my played assignments from Check Mate are added automatically, once each ----------
-   Only matches up to today are added (the diary is a record of work done). A match the user deletes
-   from the diary is remembered in diary/<uid>/meta/cm and not added again. */
-let meId = null, cmSyncing = false;
+/* ---------- my assignments from Check Mate are kept here automatically ----------
+   Every assignment (also upcoming ones) is added once. While an upcoming one is not marked paid, it follows Check Mate:
+   a change of day, time, teams or venue is copied, and if it is cancelled or given to someone else it is removed.
+   Played matches stay as a record. A match the user deletes is remembered in diary/<uid>/meta/cm and not added again. */
+let meId = null, cmSyncing = false, cmItems = null, cmAgain = false, cmAdded = new Set(), cmFresh = false;   // cmAdded: added in this visit (before the list refreshes) · cmFresh: list came from the server, not the phone's offline copy
 async function skipCm(id){
   try{ const ref=db.doc(`diary/${meId}/meta/cm`), cur=await ref.get(); const skip=new Set((cur.exists&&cur.data().skip)||[]); skip.add(id); await ref.set({skip:[...skip]}, {merge:true}); }catch(err){ console.warn(err); }
 }
 async function syncFromCm(){
-  if(cmSyncing || !db || !col || !meId) return; cmSyncing = true;
+  if(!db || !col || !meId || !loadedOpen || cmItems===null) return;
+  if(cmSyncing){ cmAgain = true; return; }
+  cmSyncing = true;
   try{
-    const [snap, meta] = await Promise.all([db.collection(`mine/${meId}/items`).get(), db.doc(`diary/${meId}/meta/cm`).get().catch(()=>null)]);
+    const meta = await db.doc(`diary/${meId}/meta/cm`).get().catch(()=>null);
     const skip = new Set((meta && meta.exists && meta.data().skip) || []);
     const t = today();
-    const items = snap.docs.map(d=>({id:d.id, ...d.data()})).filter(i=>i.date && i.home && i.date<=t && !skip.has(i.id));
+    const items = cmItems.filter(i=>i.date && i.home && !skip.has(i.id)), byId = new Map(cmItems.map(i=>[i.id,i]));
     const key = r => [r.date, (r.home||"").trim().toLowerCase(), (r.away||"").trim().toLowerCase(), r.role].join("|");
-    const have = new Set(rows.map(r=>r.fromCm).filter(Boolean)), haveKey = new Set(rows.map(key));
-    const add = items.filter(i=>!have.has(i.id) && !haveKey.has(key(i)));
-    for(const i of add){
-      await col.add({date:i.date, time:i.time||"", home:i.home||"", away:i.away||"", comp:i.comp||"", venue:i.venue||"", person:i.partner||"", role:i.role==="as"?"as":"op",
-        fee: (+i.fee || FEES[i.role] || 0), paid:false, paidDate:"", notes:"", fromCm:i.id, createdAt:Date.now()});
+    const have = new Set([...rows.map(r=>r.fromCm).filter(Boolean), ...cmAdded]), haveKey = new Set(rows.map(key));
+    const fields = i => ({date:i.date, time:i.time||"", home:i.home||"", away:i.away||"", comp:i.comp||"", venue:i.venue||"", person:i.partner||"", role:i.role==="as"?"as":"op"});
+    let added=0, changed=0, removed=0;
+    for(const i of items.filter(i=>!have.has(i.id) && !haveKey.has(key(i)))){
+      await col.add({...fields(i), fee:(+i.fee || FEES[i.role] || 0), paid:false, paidDate:"", notes:"", fromCm:i.id, createdAt:Date.now()}); cmAdded.add(i.id); added++;
     }
-    if(add.length) toast(`Προστέθηκαν ${add.length} ${add.length===1?"αγώνας":"αγώνες"} από το Check Mate`);
+    for(const r of rows.filter(r=>r.fromCm && !r.paid && (r.date||"")>=t)){
+      const i = byId.get(r.fromCm);
+      if(!i){ if(cmFresh){ await col.doc(r.id).delete(); removed++; } continue; }   // cancelled or given to someone else (only trusted when online)
+      const f = fields(i), diff = Object.keys(f).filter(k=>(r[k]||"")!==f[k]);
+      if(diff.length){ await col.doc(r.id).set({...f, updatedAt:Date.now()}, {merge:true}); changed++; }
+    }
+    const msg = [added?`προστέθηκαν ${added}`:"", changed?`άλλαξαν ${changed}`:"", removed?`αφαιρέθηκαν ${removed}`:""].filter(Boolean).join(", ");
+    if(msg) toast(`Από το Check Mate: ${msg}`);
   }catch(err){ console.warn("Check Mate sync", err); }
-  finally{ cmSyncing = false; }
+  finally{ cmSyncing = false; if(cmAgain){ cmAgain = false; syncFromCm(); } }
 }
 
 /* ---------- data ---------- */
@@ -869,7 +879,11 @@ function setWriteUI(){ $("btnAdd").disabled=!canWrite; }
     rows = snap.docs.map(d=>({id:d.id, ...d.data(), paid:!!d.data().paid}))
       .sort((a,b)=>(b.date||"").localeCompare(a.date||"") || (b.time||"").localeCompare(a.time||""));
     const first = !loadedOpen; loadedOpen = true; render();
-    if(first) syncFromCm();
+    if(first){
+      syncFromCm();
+      db.collection(`mine/${meId}/items`).limit(2000).onSnapshot(s => { cmItems = s.docs.map(d=>({id:d.id, ...d.data()})); cmFresh = !(s.metadata && s.metadata.fromCache); syncFromCm(); }, () => {});
+      db.collection(`mine/${meId}/items`).limit(2000).get({source:"server"}).then(s => { cmItems = s.docs.map(d=>({id:d.id, ...d.data()})); cmFresh = true; syncFromCm(); }).catch(() => {});   // one check straight from the server
+    }
   }, () => { loadedOpen=true; $("log").innerHTML=`<div class="empty"><strong>Δεν φορτώθηκε το ημερολόγιο</strong><div>Ανανέωσε τη σελίδα.</div></div>`; });
 })();
 })();
