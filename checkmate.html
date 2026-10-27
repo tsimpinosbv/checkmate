@@ -371,6 +371,11 @@ table.grid td input:not([type=checkbox]){width:100%;border:0;background:transpar
 table.grid td input:focus{outline:2px solid var(--blue);outline-offset:-2px;background:var(--blue-bg)}
 table.grid td input.unav{color:var(--bad);font-weight:600}
 table.grid td.ck{text-align:center}
+table.grid td.dd{position:relative}
+table.grid td.dd input{padding-right:24px!important}
+table.grid .gdd{position:absolute;right:2px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--muted);width:22px;height:26px;border-radius:5px;font-size:12px;cursor:pointer}
+table.grid .gdd:hover{background:var(--sq);color:var(--ink)}
+.combo-list.gdrop{position:fixed;left:0;right:auto;top:auto;z-index:60;max-height:260px;overflow:auto;max-width:min(360px,calc(100vw - 8px))}
 table.grid td.ck input{width:18px;height:18px;accent-color:var(--accent)}
 table.grid td.saving{background:color-mix(in srgb,var(--blue) 10%,transparent)}
 table.grid td.saved{background:var(--good-bg)}
@@ -1596,7 +1601,8 @@ function renderAdmin(){
   </div>`;
   if(tab==="sched") renderSched(months, people, seasons); else if(tab==="lists") renderLists(); else if(tab==="unav") renderUnav(); else if(tab==="stats") renderStats(seasons); else renderPeople(pending);
   if($("gwrap")) $("gwrap").scrollLeft = gx;
-  if(focus && $(focus)){ const el=$(focus); if(typed!==null && el.value!==typed) el.value = typed; el.focus({preventScroll:true}); if(el.setSelectionRange && (el.type==="search"||el.type==="text")) try{ sel ? el.setSelectionRange(sel[0], sel[1]) : el.setSelectionRange(el.value.length, el.value.length); }catch{} }
+  if(gd.id && !$(gd.id)) gdClose();
+  if(focus && $(focus)){ const el=$(focus); if(typed!==null && el.value!==typed) el.value = typed; el.focus({preventScroll:true}); if(el.setSelectionRange && (el.type==="search"||el.type==="text")) try{ sel ? el.setSelectionRange(sel[0], sel[1]) : el.setSelectionRange(el.value.length, el.value.length); }catch{} if(gd.id===focus) gdOpen(el, typed!==null && typed!==(sched.find(x=>x.id===el.dataset.id)?.[el.dataset.g]??"") ? typed : ""); }
 }
 
 function renderSched(months, people, seasons=[]){
@@ -1672,10 +1678,10 @@ function renderSched(months, people, seasons=[]){
    Each cell saves itself when you leave it (change event), through the same syncAndSave as the form:
    users' copies, «Άλλαξε», emails and «Το είδε» work exactly the same. */
 const GCOLS = [
-  ["date","Ημ/νία","date",128],["time","Ώρα","text",66],["comp","Διοργάνωση","text",150,"dlComps"],["home","Γηπεδούχος","text",150,"dlTeams"],["away","Φιλοξενούμενη","text",150,"dlTeams"],
-  ["venue","Γήπεδο","text",120,"dlVenues"],["tv","Κάλυψη","text",90,"dlTv"],["vc","VAR","text",70],
-  ["op","Χειριστής","text",160,"dlPeople"],["fee_op","€","num",58],["paid_op","Πλ.","check",40],
-  ["as","Βοηθός","text",160,"dlPeople"],["fee_as","€","num",58],["paid_as","Πλ.","check",40],
+  ["date","Ημ/νία","date",128],["time","Ώρα","text",66],["comp","Διοργάνωση","text",160,1],["home","Γηπεδούχος","text",160,1],["away","Φιλοξενούμενη","text",160,1],
+  ["venue","Γήπεδο","text",130,1],["tv","Κάλυψη","text",100,1],["vc","VAR","text",84,1],
+  ["op","Χειριστής","text",170,1],["fee_op","€","num",58],["paid_op","Πλ.","check",40],
+  ["as","Βοηθός","text",170,1],["fee_as","€","num",58],["paid_as","Πλ.","check",40],
   ["visible","Ορατή","check",52],["notes","Σημειώσεις","text",200]];
 function gridHtml(list){
   const cell = (m,[f,l,t,w,dl]) => {
@@ -1683,13 +1689,59 @@ function gridHtml(list){
     if(t==="check"){ const on = f==="visible" ? !m.hidden : !!m[f]; return `<td class="ck"><input type="checkbox" ${base} ${on?"checked":""} ${f.startsWith("paid_")&&!m[f.slice(5)]?"disabled":""}></td>`; }
     const v = t==="num" ? (m[f]??"") : f==="date" ? (m.date||"") : f==="time" ? (m.time||m.timeText||"") : (m[f]??"");
     const flag = (f==="op"||f==="as") && m[f] && unavailOn(m[f], m.date) ? " unav" : "";
-    return `<td><input ${base} class="${flag.trim()}" type="${t==="date"?"date":t==="num"?"number":"text"}" ${t==="num"?'inputmode="decimal" min="0" step="1"':""} value="${esc(v)}" ${dl?`list="${dl}"`:""} autocomplete="off"></td>`;
+    return `<td${dl?' class="dd"':""}><input ${base} class="${flag.trim()}" type="${t==="date"?"date":t==="num"?"number":"text"}" ${t==="num"?'inputmode="decimal" min="0" step="1"':""} value="${esc(v)}" autocomplete="off"${dl?' role="combobox" aria-autocomplete="list" aria-expanded="false"':""}>${dl?`<button type="button" class="gdd" tabindex="-1" data-dd="${id}" aria-label="Όλες οι επιλογές">▾</button>`:""}</td>`;
   };
   return `<div class="gwrap" id="gwrap"><table class="grid"><colgroup>${GCOLS.map(c=>`<col style="width:${c[3]}px">`).join("")}<col style="width:40px"></colgroup>
     <thead><tr>${GCOLS.map(c=>`<th>${c[1]}</th>`).join("")}<th></th></tr></thead>
     <tbody>${list.map(m=>`<tr class="${m.hidden?"is-hidden":""}${m.date&&m.date<today()?" past":""}">${GCOLS.map(c=>cell(m,c)).join("")}<td class="ck"><button class="more" data-act="edit" data-id="${m.id}" aria-label="Άνοιγμα φόρμας" title="Όλα τα στοιχεία και διαγραφή">✎</button></td></tr>`).join("")}</tbody></table></div>
     <div class="actions" style="padding:10px 12px"><button class="btn small" data-act="add">+ Νέα ανάθεση</button></div>`;
 }
+/* one dropdown for the sheet: all choices of the column, filtered as you type */
+const GDROP = {
+  comp:  () => uniq(sched.map(m=>m.comp)),
+  home:  () => teamNames(), away: () => teamNames(),
+  venue: () => venueNames(),
+  tv:    () => uniq(sched.map(m=>m.tv)),
+  vc:    () => uniq(sched.map(m=>m.vc)),
+  op:    () => roster.map(r=>r.name).sort((a,b)=>a.localeCompare(b,"el")), as: () => roster.map(r=>r.name).sort((a,b)=>a.localeCompare(b,"el"))
+};
+const gd = {id:null, items:[], active:-1};
+function gdEl(){ let ul=$("gdrop"); if(!ul){ ul=document.createElement("ul"); ul.id="gdrop"; ul.className="combo-list gdrop"; ul.setAttribute("role","listbox"); ul.hidden=true; document.body.appendChild(ul);
+  ul.addEventListener("mousedown", e=>e.preventDefault());
+  ul.addEventListener("click", e=>{ const li=e.target.closest("li[data-i]"); if(li) gdPick(gd.items[+li.dataset.i].v); }); } return ul; }
+function gdHint(f, m, n){
+  if((f==="op"||f==="as") && m){ const other = f==="op" ? "as" : "op"; if(m[other] && norm(m[other])===norm(n)) return `⚠ ήδη ${ROLE[other]}`; }
+  if((f==="op"||f==="as") && m && m.date){ if(unavailOn(n, m.date)) return "⚠ κώλυμα"; const k=norm(n); if(sched.some(x=>x.id!==m.id && x.date===m.date && (norm(x.op)===k||norm(x.as)===k))) return "⚠ ίδια μέρα"; }
+  if(f==="home") return homeVenueOf(n);
+  return "";
+}
+function gdOpen(inp, filter){
+  const f=inp.dataset.g, src=GDROP[f]; if(!src) return;
+  const m=sched.find(x=>x.id===inp.dataset.id), q=norm(filter||"");
+  gd.id=inp.id;
+  const all=src().filter(Boolean), shown=all.filter(n=>!q||norm(n).includes(q));
+  gd.items=[]; if(inp.value.trim() && f!=="home") gd.items.push({v:"",label:"— Κενό —",cls:"none"});
+  shown.forEach(n=>gd.items.push({v:n,label:n,hint:gdHint(f,m,n)}));
+  const ul=gdEl();
+  ul.innerHTML = gd.items.length ? gd.items.map((it,i)=>`<li role="option" data-i="${i}" class="${it.cls||""}" aria-selected="${i===gd.active}">${esc(it.label)}${it.hint?`<small class="${it.hint.startsWith("⚠")?"warn":""}">${esc(it.hint)}</small>`:""}</li>`).join("")
+    : `<li class="none">${all.length?"Καμία επιλογή με αυτό το κείμενο: θα αποθηκευτεί όπως το γράψατε":"Η λίστα είναι άδεια: γράψτε μια τιμή"}</li>`;
+  const r=inp.getBoundingClientRect(), below=innerHeight-r.bottom;
+  ul.style.left=Math.max(4,Math.min(r.left, innerWidth-260))+"px"; ul.style.minWidth=Math.max(r.width,220)+"px";
+  if(below<220 && r.top>below){ ul.style.top=""; ul.style.bottom=(innerHeight-r.top+4)+"px"; } else { ul.style.bottom=""; ul.style.top=(r.bottom+4)+"px"; }
+  ul.hidden=false; inp.setAttribute("aria-expanded","true");
+  const a=ul.querySelector('[aria-selected="true"]'); if(a) a.scrollIntoView({block:"nearest"});
+}
+function gdClose(){ const ul=$("gdrop"); if(ul) ul.hidden=true; const i=gd.id&&$(gd.id); if(i) i.setAttribute("aria-expanded","false"); gd.id=null; gd.active=-1; }
+function gdPick(v){ const inp=$(gd.id); gdClose(); if(!inp) return; inp.value=v; inp.focus(); inp.dispatchEvent(new Event("change",{bubbles:true})); }
+document.addEventListener("focusin", e=>{ const el=e.target; if(!(el.dataset && el.dataset.g && el.closest("#gwrap"))) return;
+  if(el.type==="text" || el.type==="number") try{ el.select(); }catch{}   // like a spreadsheet: typing replaces the cell
+  if(GDROP[el.dataset.g]){ gd.active=-1; gdOpen(el,""); } });
+document.addEventListener("input", e=>{ const el=e.target; if(el.id && el.id===gd.id){ gd.active=-1; gdOpen(el, el.value); } });
+document.addEventListener("focusout", e=>{ if(e.target.id===gd.id) setTimeout(()=>{ if(!document.activeElement || document.activeElement.id!==gd.id) gdClose(); },150); });
+document.addEventListener("mousedown", e=>{ if(e.target.closest(".gdd")) e.preventDefault(); });
+document.addEventListener("click", e=>{ const b=e.target.closest(".gdd"); if(!b) return; const inp=$(b.dataset.dd); if(!inp) return;
+  if(gd.id===inp.id && !$("gdrop").hidden) gdClose(); else { inp.focus(); gd.active=-1; gdOpen(inp,""); } });
+window.addEventListener("scroll", ()=>{ if(gd.id && $(gd.id)) gdOpen($(gd.id), $(gd.id).value===sched.find(x=>x.id===$(gd.id).dataset.id)?.[$(gd.id).dataset.g] ? "" : $(gd.id).value); }, true);
 async function saveCell(el){
   await new Promise(r=>setTimeout(r,0));   // let the focus move to the next cell first, so a refresh keeps it there
   const m = sched.find(x=>x.id===el.dataset.id); if(!m) return;
@@ -2382,6 +2434,14 @@ document.addEventListener("change", async e => {
 
 /* ---------- «Πίνακας»: save a cell when it is left; Enter goes to the same column of the next row ---------- */
 document.addEventListener("change", e => { const el = e.target; if(isAdmin && el.dataset && el.dataset.g && el.closest("#gwrap")) saveCell(el); });
+document.addEventListener("keydown", e => {
+  const el = e.target; if(!el.id || el.id!==gd.id || $("gdrop")?.hidden) return;
+  const n = gd.items.length;
+  if(e.key==="ArrowDown"||e.key==="ArrowUp"){ e.preventDefault(); e.stopImmediatePropagation(); if(!n) return; gd.active = e.key==="ArrowDown" ? (gd.active+1)%n : (gd.active<=0?n-1:gd.active-1); gdOpen(el, el.value===(sched.find(x=>x.id===el.dataset.id)?.[el.dataset.g]??"")?"":el.value); }
+  else if(e.key==="Enter" && gd.active>=0){ e.preventDefault(); e.stopImmediatePropagation(); gdPick(gd.items[gd.active].v); }
+  else if(e.key==="Escape"){ e.preventDefault(); e.stopImmediatePropagation(); gdClose(); }
+  else if(e.key==="Tab"||e.key==="Enter") gdClose();
+}, true);
 document.addEventListener("keydown", e => {
   const el = e.target; if(!(el.dataset && el.dataset.g && el.closest("#gwrap")) || e.key!=="Enter" || el.type==="checkbox") return;
   e.preventDefault();
