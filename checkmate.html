@@ -356,6 +356,26 @@ h2.sec{font-family:var(--f-display);font-weight:800;text-transform:uppercase;fon
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .row{display:grid;grid-template-columns:100px minmax(0,1fr) 240px 240px 40px;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--line)}
 .row.head{border-top:0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding-block:10px;background:var(--sq)}
+.viewsw{display:flex;align-items:center;gap:0;flex-wrap:wrap;margin-top:12px}
+.viewsw button{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 14px;font-weight:600;font-size:14px}
+.viewsw button:first-child{border-radius:999px 0 0 999px}.viewsw button:nth-child(2){border-radius:0 999px 999px 0;border-left:0}
+.viewsw button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.viewsw .vhint{margin-left:12px;color:var(--muted);font-size:12.5px}
+.gwrap{overflow:auto;max-height:70vh}
+table.grid{border-collapse:separate;border-spacing:0;table-layout:fixed;width:max-content;min-width:100%;font-size:13px}
+table.grid th{position:sticky;top:0;z-index:2;background:var(--sq);color:var(--muted);font-size:11px;letter-spacing:.05em;text-transform:uppercase;text-align:left;padding:7px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.grid th:first-child,table.grid td:first-child{position:sticky;left:0;z-index:1;background:var(--surface)}
+table.grid th:first-child{z-index:3;background:var(--sq)}
+table.grid td{border-bottom:1px solid var(--line);border-right:1px solid color-mix(in srgb,var(--line) 60%,transparent);padding:0;background:var(--surface);transition:background .4s}
+table.grid td input:not([type=checkbox]){width:100%;border:0;background:transparent;color:var(--ink);font:inherit;padding:8px 6px;min-width:0}
+table.grid td input:focus{outline:2px solid var(--blue);outline-offset:-2px;background:var(--blue-bg)}
+table.grid td input.unav{color:var(--bad);font-weight:600}
+table.grid td.ck{text-align:center}
+table.grid td.ck input{width:18px;height:18px;accent-color:var(--accent)}
+table.grid td.saving{background:color-mix(in srgb,var(--blue) 10%,transparent)}
+table.grid td.saved{background:var(--good-bg)}
+table.grid tr.is-hidden td{opacity:.55}
+table.grid tr.past td input:not([type=checkbox]){color:var(--muted)}
 .comp-head{padding:8px 16px;background:var(--blue-bg);color:var(--blue);font-weight:600;font-size:13px;letter-spacing:.03em;border-top:1px solid var(--line)}
 .date{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:14px}
 .date small{display:block;color:var(--muted);font-size:12px}
@@ -1501,7 +1521,9 @@ let db=null, user=null, me=null, isAdmin=false;
 let sched=[], roster=[], links={}, claims=[], teamList=[], venues=[], fees={op:80,as:40}, contacts={}, profilesAll={}, notify={email:false, endpoint:""}, mail=null;
 let ready={sched:false,roster:false,links:false};
 let tab = ls.get("cm.tab","sched");
-const st = {season:"", month:"", person:"", paid:"", vis:"", q:"", week:weekOf(today())};   // week: Monday of the round shown ("" = all matches)
+const st = {season:"", month:"", person:"", paid:"", vis:"", q:"", week:weekOf(today())};
+/* programme view: «Κάρτες» or «Πίνακας» (spreadsheet). Phone starts in cards, computer in the table; a choice is remembered per device */
+let view = (()=>{ try{ const v=localStorage.getItem("cm.view"); if(v==="cards"||v==="grid") return v; }catch{} return matchMedia("(min-width:900px)").matches ? "grid" : "cards"; })();   // week: Monday of the round shown ("" = all matches)
 
 function rosterByNorm(){ const m={}; roster.forEach(r=>m[norm(r.name)]=r); return m; }
 function uidForName(name){ if(!name) return null; const r=rosterByNorm()[norm(name)]; return r ? (links[r.id]||null) : null; }
@@ -1556,7 +1578,9 @@ function renderAdmin(){
   const fill = (id,arr)=>$(id).innerHTML=uniq(arr).map(v=>`<option value="${esc(v)}">`).join("");
   fill("dlTeams", teamNames()); fill("dlComps", sched.map(m=>m.comp)); fill("dlVenues", venueNames()); fill("dlTv", sched.map(m=>m.tv)); fill("dlPeople", people);
 
-  const focus = document.activeElement?.id;
+  const focus = document.activeElement?.id, ae = document.activeElement;
+  const typed = ae && ae.dataset && ae.dataset.g && ae.type!=="checkbox" ? ae.value : null, gx = $("gwrap")?.scrollLeft || 0;
+  let sel = null; try{ if(typed!==null && ae.type==="text") sel = [ae.selectionStart, ae.selectionEnd]; }catch{}
   $("app").innerHTML = `
   <div style="display:flex;flex-direction:column;gap:18px">
     ${backupDue() ? `<div class="banner" role="status">${cmIcon("save")}<span class="grow">${ls.get("cm.lastBackup",0) ? "Πέρασε πάνω από μία εβδομάδα από το τελευταίο αντίγραφο ασφαλείας." : "Κράτα ένα αντίγραφο ασφαλείας με όλο το πρόγραμμα και τις πληρωμές."}</span>
@@ -1571,7 +1595,8 @@ function renderAdmin(){
     <div id="tabBody"></div>
   </div>`;
   if(tab==="sched") renderSched(months, people, seasons); else if(tab==="lists") renderLists(); else if(tab==="unav") renderUnav(); else if(tab==="stats") renderStats(seasons); else renderPeople(pending);
-  if(focus && $(focus)){ const el=$(focus); el.focus(); if(el.setSelectionRange && el.type==="search") el.setSelectionRange(el.value.length, el.value.length); }
+  if($("gwrap")) $("gwrap").scrollLeft = gx;
+  if(focus && $(focus)){ const el=$(focus); if(typed!==null && el.value!==typed) el.value = typed; el.focus({preventScroll:true}); if(el.setSelectionRange && (el.type==="search"||el.type==="text")) try{ sel ? el.setSelectionRange(sel[0], sel[1]) : el.setSelectionRange(el.value.length, el.value.length); }catch{} }
 }
 
 function renderSched(months, people, seasons=[]){
@@ -1606,6 +1631,7 @@ function renderSched(months, people, seasons=[]){
     <div class="f"><label for="fVis">Στους χρήστες</label><select id="fVis">${opt([["shown","Ορατές"],["hidden","Κρυφές"]],st.vis,"Όλες")}</select></div>
     <div class="f grow"><label for="fSearch">Αναζήτηση</label><input id="fSearch" type="search" value="${esc(st.q)}" placeholder="Ομάδα, γήπεδο, VC…"></div>
   </section>
+  <div class="viewsw" role="group" aria-label="Προβολή"><button type="button" data-act="view" data-v="cards" aria-pressed="${view==="cards"}">Κάρτες</button><button type="button" data-act="view" data-v="grid" aria-pressed="${view==="grid"}">Πίνακας</button>${view==="grid"?`<span class="vhint">Αλλάξτε ένα κελί και αποθηκεύεται μόλις φύγετε από αυτό. Enter: κάτω γραμμή.</span>`:""}</div>
   ${list.length?`<div class="bulk" id="bulk">${bulkIdle(list)}</div>`:""}
   <section class="panel" style="margin-top:12px">`;
   if(!sched.length){
@@ -1618,6 +1644,8 @@ function renderSched(months, people, seasons=[]){
     html += st.week && !anyInWeek
       ? `<div class="empty"><strong>Δεν υπάρχουν αγώνες αυτή την εβδομάδα</strong><div class="actions">${prv?`<button class="btn" data-act="wkgo" data-w="${weekOf(prv)}">◀ Προηγούμενη με αγώνες (${weekLabel(weekOf(prv))})</button>`:""}${nxt?`<button class="btn" data-act="wkgo" data-w="${weekOf(nxt)}">Επόμενη με αγώνες (${weekLabel(weekOf(nxt))}) ▶</button>`:""}</div></div>`
       : `<div class="empty"><strong>Καμία ανάθεση με αυτά τα φίλτρα</strong><button class="btn" data-act="clear">Καθαρισμός φίλτρων</button></div>`;
+  } else if(view==="grid"){
+    html += gridHtml(list);
   } else {
     html += `<div class="row head"><div>Ημ/νία</div><div>Αγώνας</div><div>Χειριστής</div><div>Βοηθός</div><div></div></div>`;
     let lastComp=null;
@@ -1639,6 +1667,57 @@ function renderSched(months, people, seasons=[]){
   $("fPaid").onchange=e=>{st.paid=e.target.value;renderAdmin();};
   $("fVis").onchange=e=>{st.vis=e.target.value;renderAdmin();};
   $("fSearch").oninput=e=>{st.q=e.target.value;renderAdmin();};
+}
+/* ---------- «Πίνακας»: the programme as an editable sheet ----------
+   Each cell saves itself when you leave it (change event), through the same syncAndSave as the form:
+   users' copies, «Άλλαξε», emails and «Το είδε» work exactly the same. */
+const GCOLS = [
+  ["date","Ημ/νία","date",128],["time","Ώρα","text",66],["comp","Διοργάνωση","text",150,"dlComps"],["home","Γηπεδούχος","text",150,"dlTeams"],["away","Φιλοξενούμενη","text",150,"dlTeams"],
+  ["venue","Γήπεδο","text",120,"dlVenues"],["tv","Κάλυψη","text",90,"dlTv"],["vc","VAR","text",70],
+  ["op","Χειριστής","text",160,"dlPeople"],["fee_op","€","num",58],["paid_op","Πλ.","check",40],
+  ["as","Βοηθός","text",160,"dlPeople"],["fee_as","€","num",58],["paid_as","Πλ.","check",40],
+  ["visible","Ορατή","check",52],["notes","Σημειώσεις","text",200]];
+function gridHtml(list){
+  const cell = (m,[f,l,t,w,dl]) => {
+    const id = `g-${m.id}-${f}`, base = `id="${id}" data-g="${f}" data-id="${m.id}" aria-label="${esc(l)}"`;
+    if(t==="check"){ const on = f==="visible" ? !m.hidden : !!m[f]; return `<td class="ck"><input type="checkbox" ${base} ${on?"checked":""} ${f.startsWith("paid_")&&!m[f.slice(5)]?"disabled":""}></td>`; }
+    const v = t==="num" ? (m[f]??"") : f==="date" ? (m.date||"") : f==="time" ? (m.time||m.timeText||"") : (m[f]??"");
+    const flag = (f==="op"||f==="as") && m[f] && unavailOn(m[f], m.date) ? " unav" : "";
+    return `<td><input ${base} class="${flag.trim()}" type="${t==="date"?"date":t==="num"?"number":"text"}" ${t==="num"?'inputmode="decimal" min="0" step="1"':""} value="${esc(v)}" ${dl?`list="${dl}"`:""} autocomplete="off"></td>`;
+  };
+  return `<div class="gwrap" id="gwrap"><table class="grid"><colgroup>${GCOLS.map(c=>`<col style="width:${c[3]}px">`).join("")}<col style="width:40px"></colgroup>
+    <thead><tr>${GCOLS.map(c=>`<th>${c[1]}</th>`).join("")}<th></th></tr></thead>
+    <tbody>${list.map(m=>`<tr class="${m.hidden?"is-hidden":""}${m.date&&m.date<today()?" past":""}">${GCOLS.map(c=>cell(m,c)).join("")}<td class="ck"><button class="more" data-act="edit" data-id="${m.id}" aria-label="Άνοιγμα φόρμας" title="Όλα τα στοιχεία και διαγραφή">✎</button></td></tr>`).join("")}</tbody></table></div>
+    <div class="actions" style="padding:10px 12px"><button class="btn small" data-act="add">+ Νέα ανάθεση</button></div>`;
+}
+async function saveCell(el){
+  await new Promise(r=>setTimeout(r,0));   // let the focus move to the next cell first, so a refresh keeps it there
+  const m = sched.find(x=>x.id===el.dataset.id); if(!m) return;
+  const f = el.dataset.g, back = () => { renderAdmin(); };
+  let v = el.type==="checkbox" ? el.checked : el.value.trim();
+  const d = {};
+  if(f==="visible") d.hidden = !v;
+  else if(f==="paid_op"||f==="paid_as"){ const r=f.slice(5); d[f]=!!v; d["paidDate_"+r] = v ? (m[f] ? m["paidDate_"+r] : today()) : ""; }
+  else if(f==="fee_op"||f==="fee_as") d[f] = +String(v).replace(",",".") || 0;
+  else d[f] = v;
+  if(f==="date"){ if(!v){ toast("Η ημερομηνία χρειάζεται"); return back(); } d.dateText = ""; }
+  if(f==="home" && !v){ toast("Ο γηπεδούχος χρειάζεται"); return back(); }
+  if(f==="time"){ if(v && !/^\d{1,2}[:.]\d{2}$/.test(v)){ toast("Γράψε την ώρα π.χ. 18:30"); return back(); } d.time = v.replace(".",":"); d.timeText = ""; }
+  if(f==="op"||f==="as"){
+    if(!v){ d["paid_"+f]=false; d["paidDate_"+f]=""; }
+    else if(!m[f] && !m["fee_"+f]) d["fee_"+f] = fees[f]||0;
+  }
+  if(f==="home" && v && !m.venue){ const hv = homeVenueOf(v); if(hv) d.venue = hv; }
+  if(Object.keys(d).every(k=>String(m[k]??"")===String(d[k]??""))) return;
+  const upd = {...m, ...d, updatedAt:Date.now()}; upd.key = matchKey(upd);
+  if(["date","time","comp","home","away"].includes(f) && sched.some(x=>x.id!==m.id && matchKey(x)===upd.key && x.date===upd.date)){ toast("Υπάρχει ήδη ο ίδιος αγώνας την ίδια μέρα"); return back(); }
+  const td = el.closest("td"); td?.classList.add("saving");
+  try{
+    if((f==="op"||f==="as") && v) await ensureRoster([v]);
+    if(f==="home"||f==="away"||f==="venue"){ try{ await ensureLists(f==="venue"?[]:[v], f==="venue"?[v]:[d.venue].filter(Boolean), null); }catch{} }
+    await syncAndSave(upd, m);
+    const t = $(el.id)?.closest("td"); if(t){ t.classList.remove("saving"); t.classList.add("saved"); setTimeout(()=>t.classList.remove("saved"), 900); }
+  }catch(err){ console.warn(err); toast("Η αλλαγή δεν αποθηκεύτηκε. Δοκίμασε ξανά."); back(); }
 }
 /* unpaid, already played assignments of the person chosen in the filter */
 function unpaidOf(list){
@@ -2301,6 +2380,16 @@ document.addEventListener("change", async e => {
   try{ await db.doc(`contacts/${inp.dataset.rmail}`).set({email:v}); toast(v?"Το email αποθηκεύτηκε":"Το email αφαιρέθηκε"); }catch{ toast("Η αποθήκευση απέτυχε"); }
 });
 
+/* ---------- «Πίνακας»: save a cell when it is left; Enter goes to the same column of the next row ---------- */
+document.addEventListener("change", e => { const el = e.target; if(isAdmin && el.dataset && el.dataset.g && el.closest("#gwrap")) saveCell(el); });
+document.addEventListener("keydown", e => {
+  const el = e.target; if(!(el.dataset && el.dataset.g && el.closest("#gwrap")) || e.key!=="Enter" || el.type==="checkbox") return;
+  e.preventDefault();
+  const tr = el.closest("tr"), col = [...tr.children].indexOf(el.closest("td")), nx = (e.shiftKey ? tr.previousElementSibling : tr.nextElementSibling);
+  const target = nx && nx.children[col] && nx.children[col].querySelector("input");
+  if(target){ target.focus(); target.select && target.select(); } else el.blur();
+});
+
 /* ---------- supervisor actions ---------- */
 document.addEventListener("click", async e => {
   if(!isAdmin) return;
@@ -2308,6 +2397,7 @@ document.addEventListener("click", async e => {
   if(b.dataset.tab){ tab=b.dataset.tab; ls.set("cm.tab",tab); renderAdmin(); return; }
   const act=b.dataset.act, m=sched.find(x=>x.id===b.dataset.id);
   if(act==="add") openForm(null);
+  if(act==="view"){ view=b.dataset.v; try{ localStorage.setItem("cm.view", view); }catch{} renderAdmin(); return; }
   if(act==="import") openImport();
   if(act==="edit"&&m) openForm(m);
   if(act==="clear"){ Object.assign(st,{season:"",month:"",person:"",paid:"",vis:"",q:""}); renderAdmin(); }
