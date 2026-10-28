@@ -299,6 +299,14 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 .tpill{display:inline-flex;align-items:center;gap:5px;margin-left:6px;padding:3px 10px;border-radius:8px;background:var(--ink);color:var(--bg);font:700 19px/1.1 var(--f-mono);vertical-align:1px;letter-spacing:.02em}
 .tpill .ic{width:17px;height:17px;stroke-width:2.4}
 .card.past .tpill{background:var(--sq);color:var(--muted)}
+.paysw{display:inline-flex;margin:6px 0 0 6px;border:1px solid var(--line);border-radius:999px;overflow:hidden;vertical-align:middle}
+.paysw button{border:0;background:var(--surface);color:var(--muted);font:600 12px var(--f-body);padding:3px 9px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap}
+.paysw button+button{border-left:1px solid var(--line)}
+.paysw button[aria-pressed="true"]{background:var(--blue);color:#fff}
+.paysw .ic,.paym .ic{width:14px;height:14px}
+.paym{display:inline-flex;align-items:center;gap:4px;margin-left:8px;padding:2px 9px;border-radius:999px;font:600 12.5px var(--f-body);background:var(--blue-bg);color:var(--blue);vertical-align:1px}
+.paym.cash{background:var(--good-bg);color:var(--good)}
+table.grid select.gsel{width:100%;border:0;background:transparent;font:inherit;color:inherit;padding:6px 4px}
 .tml{display:inline-flex;align-items:center;gap:8px;vertical-align:middle}
 .tvs{margin:0 8px}
 .tlg{width:26px;height:26px;object-fit:contain;flex:none}
@@ -431,6 +439,7 @@ details.unav .pbody{padding-top:0}
         <label class="check"><input type="checkbox" id="iPaidAs"> Πληρώθηκε</label>
       </div>
     </div>
+    <div class="f" style="max-width:260px"><label for="iPay">Τρόπος πληρωμής (το βλέπουν τα άτομα της ανάθεσης)</label><select id="iPay"><option value="">—</option><option value="credit">Πίστωση</option><option value="cash">Μετρητά</option></select></div>
     <label class="check"><input type="checkbox" id="iVisible"> Ορατή στους χρήστες (τη βλέπουν ο χειριστής και ο βοηθός της)</label>
     <div class="f"><label for="iNotes">Σημειώσεις (τις βλέπουν τα άτομα της ανάθεσης)</label><textarea id="iNotes" placeholder="Ώρα προσέλευσης, παραλαβή εξοπλισμού…"></textarea></div>
     <div class="err" id="frmErr" hidden></div>
@@ -556,6 +565,11 @@ function pairImport(rows){
 const seasonOf = d => { if(!d) return ""; const [y,m]=d.split("-").map(Number); return m>=7 ? `${y}-${y+1}` : `${y-1}-${y}`; };
 const matchKey = m => m.comp ? ["C",norm(m.comp),norm(m.home),norm(m.away)].join("|") : [m.date, m.time||"", norm(m.home), norm(m.away)].join("|");
 const teams = m => esc(m.home) + (m.away ? " – " + esc(m.away) : "");
+/* how the game is paid (one choice per game): Πίστωση / Μετρητά */
+const PAYM = {credit:"Πίστωση", cash:"Μετρητά"};
+const PAY_IC = {credit:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg>', cash:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="7" width="20" height="11" rx="2"/><circle cx="12" cy="12.5" r="2.6"/><path d="M6 10v5M18 10v5"/></svg>'};
+const payTag = p => PAYM[p] ? `<span class="paym ${p}">${PAY_IC[p]} ${PAYM[p]}</span>` : "";
+const paySwitch = m => `<span class="paysw" role="group" aria-label="Τρόπος πληρωμής">${["credit","cash"].map(p=>`<button type="button" data-act="paym" data-id="${m.id}" data-to="${p}" aria-pressed="${m.pay===p}" title="${m.pay===p?"Πάτα ξανά για να το αφαιρέσεις":"Πληρωμή με "+PAYM[p]}">${PAY_IC[p]} ${PAYM[p]}</button>`).join("")}</span>`;
 /* team logos: uploaded once in «Ομάδες & γήπεδα»; users' copies carry them as homeLogo / awayLogo */
 const teamLogo = name => { const k=norm(name); const t = k ? teamList.find(x=>norm(x.name)===k) : null; return t?.logo || ""; };
 const logoImg = (src, cls="tlg") => /^data:image\/(png|jpeg|webp);base64,/.test(src||"") ? `<img class="${cls}" src="${src}" alt="" loading="lazy">` : "";
@@ -737,7 +751,7 @@ function renderSched(months, people, seasons=[]){
     list.forEach(m=>{
       if((m.comp||"")!==lastComp){ lastComp=m.comp||""; if(lastComp) html+=`<div class="comp-head">${esc(lastComp)}</div>`; }
       html += `<div class="row${m.hidden?" is-hidden":""}">
-        <div class="date c-date">${whenMain(m)}<small>${whenSub(m)}</small><button type="button" class="vis${m.hidden?" off":""}" data-act="vis" data-id="${m.id}" title="${m.hidden?"Οι χρήστες δεν τη βλέπουν. Πάτα για εμφάνιση.":"Τη βλέπουν τα άτομα της ανάθεσης. Πάτα για απόκρυψη."}">${m.hidden?"Κρυφή":"Ορατή"}</button></div>
+        <div class="date c-date">${whenMain(m)}<small>${whenSub(m)}</small><button type="button" class="vis${m.hidden?" off":""}" data-act="vis" data-id="${m.id}" title="${m.hidden?"Οι χρήστες δεν τη βλέπουν. Πάτα για εμφάνιση.":"Τη βλέπουν τα άτομα της ανάθεσης. Πάτα για απόκρυψη."}">${m.hidden?"Κρυφή":"Ορατή"}</button>${paySwitch(m)}</div>
         <div class="match c-match"><b class="tmw">${teamsL(m)}</b>${(teamVar(m.home)||teamVar(m.away))?`<div class="meta tfull">VAR: ${esc([teamVar(m.home)||"—", m.away?(teamVar(m.away)||"—"):""].filter(Boolean).join(" – "))}</div>`:""}<div class="meta">${[m.venue?(mapUrl(m.venue)?`<a class="mlink" href="${esc(mapUrl(m.venue))}" target="_blank" rel="noopener" title="${esc(venueOf(m.venue)?.full||"Χάρτης")}">📍 ${esc(m.venue)}</a>`:esc(m.venue)):"",esc(m.tv||""),esc(m.vc||"")].filter(Boolean).join(" · ")||"&nbsp;"}</div></div>
         ${slotHtml(m,"op")}${slotHtml(m,"as")}
         <div class="c-edit"><button class="more" data-act="edit" data-id="${m.id}" aria-label="Επεξεργασία">✎</button></div>
@@ -761,10 +775,11 @@ const GCOLS = [
   ["venue","Γήπεδο","text",130,1],["tv","Κάλυψη","text",100,1],["vc","VAR","text",84,1],
   ["op","Χειριστής","text",170,1],["fee_op","€","num",58],["paid_op","Πλ.","check",40],
   ["as","Βοηθός","text",170,1],["fee_as","€","num",58],["paid_as","Πλ.","check",40],
-  ["visible","Ορατή","check",52],["notes","Σημειώσεις","text",200]];
+  ["pay","Πληρωμή","pay",104],["visible","Ορατή","check",52],["notes","Σημειώσεις","text",200]];
 function gridHtml(list){
   const cell = (m,[f,l,t,w,dl]) => {
     const id = `g-${m.id}-${f}`, base = `id="${id}" data-g="${f}" data-id="${m.id}" aria-label="${esc(l)}"`;
+    if(t==="pay") return `<td><select ${base} class="gsel"><option value="">—</option>${Object.entries(PAYM).map(([k,l])=>`<option value="${k}" ${m.pay===k?"selected":""}>${l}</option>`).join("")}</select></td>`;
     if(t==="check"){ const on = f==="visible" ? !m.hidden : !!m[f]; return `<td class="ck"><input type="checkbox" ${base} ${on?"checked":""} ${f.startsWith("paid_")&&!m[f.slice(5)]?"disabled":""}></td>`; }
     const v = t==="num" ? (m[f]??"") : f==="date" ? (m.date||"") : f==="time" ? (m.time||m.timeText||"") : (m[f]??"");
     const flag = (f==="op"||f==="as") && m[f] && unavailOn(m[f], m.date) ? " unav" : "";
@@ -1344,7 +1359,7 @@ document.addEventListener("visibilitychange", () => { if(document.visibilityStat
 function itemFor(m, r){
   const o = r==="op"?"as":"op";
   return {match:m.id, date:m.date||"", time:m.time||"", dateText:m.dateText||"", timeText:m.timeText||"", dateTbc:!!m.dateTbc, comp:m.comp||"", venue:m.venue||"", home:m.home||"", away:m.away||"",
-    tv:m.tv||"", vc:m.vc||"", role:r, partner:m[o]||"", fee:+m["fee_"+r]||0, paid:!!m["paid_"+r], paidDate:m["paidDate_"+r]||"", notes:m.notes||"",
+    tv:m.tv||"", vc:m.vc||"", role:r, partner:m[o]||"", fee:+m["fee_"+r]||0, paid:!!m["paid_"+r], paidDate:m["paidDate_"+r]||"", notes:m.notes||"", pay:m.pay||"",
     ...venueExtra(m.venue), homeVar:teamVar(m.home), awayVar:teamVar(m.away), homeLogo:teamLogo(m.home), awayLogo:teamLogo(m.away)};
 }
 /* venue details travel with each user's copy of the assignment (users cannot read the venues list itself) */
@@ -1547,7 +1562,7 @@ document.addEventListener("keydown", e => {
   const el = e.target; if(!(el.dataset && el.dataset.g && el.closest("#gwrap")) || e.key!=="Enter" || el.type==="checkbox") return;
   e.preventDefault();
   const tr = el.closest("tr"), col = [...tr.children].indexOf(el.closest("td")), nx = (e.shiftKey ? tr.previousElementSibling : tr.nextElementSibling);
-  const target = nx && nx.children[col] && nx.children[col].querySelector("input");
+  const target = nx && nx.children[col] && nx.children[col].querySelector("input,select");
   if(target){ target.focus(); target.select && target.select(); } else el.blur();
 });
 
@@ -1575,6 +1590,11 @@ document.addEventListener("click", async e => {
   if(act==="logmode") $("logModeWrap").innerHTML = `<span class="confirm">Αλλαγή όλης της εφαρμογής σε «Ημερολόγιο αγώνων»; <button type="button" class="btn small primary" data-act="logmodeyes">Ναι</button><button type="button" class="btn small" data-act="logmodeno">Όχι</button></span>`;
   if(act==="logmodeno") $("logModeWrap").innerHTML = `<button class="btn small" type="button" data-act="logmode">Ενεργοποίηση ημερολογίου</button>`;
   if(act==="logmodeyes"){ try{ await db.doc("config/app").set({mode:"log", changedAt:Date.now()}); location.reload(); }catch{ toast("Η αλλαγή απέτυχε"); } }
+  if(act==="paym"&&m){
+    const to = m.pay===b.dataset.to ? "" : b.dataset.to; b.closest(".paysw")?.querySelectorAll("button").forEach(x=>x.disabled=true);
+    try{ await syncAndSave({...m, pay:to, updatedAt:Date.now()}, m); toast(to?`Πληρωμή: ${PAYM[to]}`:"Ο τρόπος πληρωμής αφαιρέθηκε"); }
+    catch{ toast("Η αλλαγή απέτυχε"); renderAdmin(); }
+  }
   if(act==="vis"&&m){
     b.disabled=true;
     try{ await syncAndSave({...m, hidden:!m.hidden, updatedAt:Date.now()}, m); toast(m.hidden?"Η ανάθεση φαίνεται πλέον στους χρήστες":"Η ανάθεση κρύφτηκε από τους χρήστες"); }
@@ -1787,7 +1807,7 @@ function openForm(m){
   v("iDate",m?.date||today()); v("iTime",m?.time); v("iComp",m?.comp??ls.get("cm.comp","")); v("iHome",m?.home); v("iAway",m?.away);
   v("iVenue",m?.venue); v("iTv",m?.tv); v("iVc",m?.vc); v("iOp",m?.op); v("iAs",m?.as);
   v("iFeeOp", m?m.fee_op:(fees.op||"")); v("iFeeAs", m?m.fee_as:(fees.as||""));
-  $("iTbc").checked=!!m?.dateTbc; $("iVisible").checked=!m?.hidden; $("iPaidOp").checked=!!m?.paid_op; $("iPaidAs").checked=!!m?.paid_as; v("iNotes",m?.notes);
+  $("iTbc").checked=!!m?.dateTbc; $("iVisible").checked=!m?.hidden; $("iPaidOp").checked=!!m?.paid_op; $("iPaidAs").checked=!!m?.paid_as; v("iNotes",m?.notes); $("iPay").value = PAYM[m?.pay] ? m.pay : "";
   $("frmErr").hidden=true;
   $("delWrap").innerHTML = m?`<button type="button" class="btn danger" data-del="ask">Διαγραφή</button>`:"";
   $("dlg").showModal();
@@ -1803,7 +1823,7 @@ $("frm").addEventListener("submit", async e=>{
   e.preventDefault();
   const g=id=>$(id).value.trim();
   const d={date:g("iDate"), time:g("iTime"), comp:g("iComp"), home:g("iHome"), away:g("iAway"), venue:g("iVenue"), tv:g("iTv"), vc:g("iVc"),
-    op:g("iOp"), as:g("iAs"), fee_op:+g("iFeeOp")||0, fee_as:+g("iFeeAs")||0, notes:g("iNotes"), dateTbc:$("iTbc").checked, hidden:!$("iVisible").checked,
+    op:g("iOp"), as:g("iAs"), fee_op:+g("iFeeOp")||0, fee_as:+g("iFeeAs")||0, notes:g("iNotes"), pay:$("iPay").value, dateTbc:$("iTbc").checked, hidden:!$("iVisible").checked,
     dateText: editing && editing.date===g("iDate") ? (editing.dateText||"") : "", timeText: g("iTime") ? "" : (editing?.timeText||"")};
   for(const r of ["op","as"]){ const p=$(r==="op"?"iPaidOp":"iPaidAs").checked; d["paid_"+r]=p && !!d[r]; d["paidDate_"+r]=p&&d[r]?(editing?.["paid_"+r]?editing["paidDate_"+r]:today()):""; }
   if(!d.date||!d.home){ $("frmErr").hidden=false; $("frmErr").textContent="Συμπλήρωσε ημερομηνία και αγώνα."; return; }
@@ -2238,7 +2258,7 @@ function renderUser(){
     <dl>${i.comp?`<dt>Διοργάνωση</dt><dd>${esc(i.comp)}</dd>`:""}<dt>Θέση</dt><dd><span class="role ${i.role}">${ROLE[i.role]}</span></dd>
       ${i.partner?`<dt>${i.role==="op"?"Βοηθός":"Χειριστής"}</dt><dd>${esc(i.partner)}</dd>`:""}${i.vc?`<dt>VAR</dt><dd>${esc(i.vc)}</dd>`:""}${i.tv?`<dt>Κάλυψη</dt><dd>${esc(i.tv)}</dd>`:""}${i.dateTbc?`<dt>Σημ.</dt><dd>Η ημέρα/ώρα θα επιβεβαιωθεί</dd>`:""}
       ${i.notes?`<dt>Σημειώσεις</dt><dd>${esc(i.notes)}</dd>`:""}</dl>
-    <div class="bottom"><span class="fee">${eur(i.fee)}</span><span class="pay ${i.paid?"yes":"no"}">${i.paid?`✓ Πληρώθηκε${i.paidDate?" "+fmtDate(i.paidDate).slice(0,5):""}`:"● Εκκρεμεί"}</span></div>
+    <div class="bottom"><span class="fee">${eur(i.fee)} ${payTag(i.pay)}</span><span class="pay ${i.paid?"yes":"no"}">${i.paid?`✓ Πληρώθηκε${i.paidDate?" "+fmtDate(i.paidDate).slice(0,5):""}`:"● Εκκρεμεί"}</span></div>
   </article>`;
   const nxWk = nextWeeks(2)[1];
   const nudge = myUnavLoaded && !myUnav[nxWk] ? `<div class="banner nudge" role="status">${cmIcon("cal")}<span class="grow">Δεν έχεις δηλώσει κωλύματα για την επόμενη εβδομάδα (${weekLabel(nxWk)}).</span><button type="button" class="btn small primary" data-unavgo="1">Δήλωσε τώρα</button></div>` : "";
