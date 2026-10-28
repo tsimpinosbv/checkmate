@@ -296,6 +296,20 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 /* ---- look: dates, skeleton, compact admin bar on phones ---- */
 .card .when{font-family:var(--f-body);font-size:17px;font-weight:700}
 .card .when small{font-family:var(--f-mono);font-weight:400}
+.tpill{display:inline-flex;align-items:center;gap:5px;margin-left:6px;padding:3px 10px;border-radius:8px;background:var(--ink);color:var(--bg);font:700 19px/1.1 var(--f-mono);vertical-align:1px;letter-spacing:.02em}
+.tpill .ic{width:17px;height:17px;stroke-width:2.4}
+.card.past .tpill{background:var(--sq);color:var(--muted)}
+.tml{display:inline-flex;align-items:center;gap:8px;vertical-align:middle}
+.tvs{margin:0 8px}
+.tlg{width:26px;height:26px;object-fit:contain;flex:none}
+.card .teams .tlg{width:40px;height:40px}
+.tmw{display:flex;flex-wrap:wrap;align-items:center;row-gap:4px}
+.tlup{display:inline-grid;place-items:center;width:48px;height:48px;flex:none;border:1px dashed var(--line);border-radius:10px;cursor:pointer;background:var(--surface)}
+.tlup:hover,.tlup:focus-within{border-color:var(--blue)}
+.tlph{font-size:10.5px;font-weight:700;color:var(--blue);text-align:center;line-height:1.15}
+.tlg.big{width:42px;height:42px}
+.tlbox{position:relative;flex:none}
+.tldel{position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--bad);font-size:11px;line-height:1;padding:0;display:grid;place-items:center;cursor:pointer}
 .c-date{font-family:var(--f-body)!important;font-weight:700;font-size:16px}
 .c-date small{font-family:var(--f-mono);font-weight:400}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .board{background:var(--head);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}}
@@ -542,6 +556,12 @@ function pairImport(rows){
 const seasonOf = d => { if(!d) return ""; const [y,m]=d.split("-").map(Number); return m>=7 ? `${y}-${y+1}` : `${y-1}-${y}`; };
 const matchKey = m => m.comp ? ["C",norm(m.comp),norm(m.home),norm(m.away)].join("|") : [m.date, m.time||"", norm(m.home), norm(m.away)].join("|");
 const teams = m => esc(m.home) + (m.away ? " – " + esc(m.away) : "");
+/* team logos: uploaded once in «Ομάδες & γήπεδα»; users' copies carry them as homeLogo / awayLogo */
+const teamLogo = name => { const k=norm(name); const t = k ? teamList.find(x=>norm(x.name)===k) : null; return t?.logo || ""; };
+const logoImg = (src, cls="tlg") => /^data:image\/(png|jpeg|webp);base64,/.test(src||"") ? `<img class="${cls}" src="${src}" alt="" loading="lazy">` : "";
+const teamsL = (m, user) => { const hl = user ? m.homeLogo : teamLogo(m.home), al = user ? m.awayLogo : teamLogo(m.away);
+  if(!hl && !al) return teams(m);
+  return `<span class="tml">${logoImg(hl)}<span>${esc(m.home)}</span></span>${m.away?`<span class="tvs">–</span><span class="tml">${logoImg(al)}<span>${esc(m.away)}</span></span>`:""}`; };
 /* teams: name = as written in the programme (often an acronym, e.g. ΟΣΦΠ), full = full team name */
 /* teams: name = as written in the programme, var = the short code used in the challenge/VAR system */
 const teamVar = name => { const k=norm(name); const t = k ? teamList.find(x=>norm(x.name)===k) : null; return t?.var || ""; };
@@ -718,7 +738,7 @@ function renderSched(months, people, seasons=[]){
       if((m.comp||"")!==lastComp){ lastComp=m.comp||""; if(lastComp) html+=`<div class="comp-head">${esc(lastComp)}</div>`; }
       html += `<div class="row${m.hidden?" is-hidden":""}">
         <div class="date c-date">${whenMain(m)}<small>${whenSub(m)}</small><button type="button" class="vis${m.hidden?" off":""}" data-act="vis" data-id="${m.id}" title="${m.hidden?"Οι χρήστες δεν τη βλέπουν. Πάτα για εμφάνιση.":"Τη βλέπουν τα άτομα της ανάθεσης. Πάτα για απόκρυψη."}">${m.hidden?"Κρυφή":"Ορατή"}</button></div>
-        <div class="match c-match"><b>${teams(m)}</b>${(teamVar(m.home)||teamVar(m.away))?`<div class="meta tfull">VAR: ${esc([teamVar(m.home)||"—", m.away?(teamVar(m.away)||"—"):""].filter(Boolean).join(" – "))}</div>`:""}<div class="meta">${[m.venue?(mapUrl(m.venue)?`<a class="mlink" href="${esc(mapUrl(m.venue))}" target="_blank" rel="noopener" title="${esc(venueOf(m.venue)?.full||"Χάρτης")}">📍 ${esc(m.venue)}</a>`:esc(m.venue)):"",esc(m.tv||""),esc(m.vc||"")].filter(Boolean).join(" · ")||"&nbsp;"}</div></div>
+        <div class="match c-match"><b class="tmw">${teamsL(m)}</b>${(teamVar(m.home)||teamVar(m.away))?`<div class="meta tfull">VAR: ${esc([teamVar(m.home)||"—", m.away?(teamVar(m.away)||"—"):""].filter(Boolean).join(" – "))}</div>`:""}<div class="meta">${[m.venue?(mapUrl(m.venue)?`<a class="mlink" href="${esc(mapUrl(m.venue))}" target="_blank" rel="noopener" title="${esc(venueOf(m.venue)?.full||"Χάρτης")}">📍 ${esc(m.venue)}</a>`:esc(m.venue)):"",esc(m.tv||""),esc(m.vc||"")].filter(Boolean).join(" · ")||"&nbsp;"}</div></div>
         ${slotHtml(m,"op")}${slotHtml(m,"as")}
         <div class="c-edit"><button class="more" data-act="edit" data-id="${m.id}" aria-label="Επεξεργασία">✎</button></div>
       </div>`;
@@ -1020,13 +1040,13 @@ function renderLists(){
       </form>
       ${missT.length?`<div class="pbody note" style="border-top:1px solid var(--line)">${missT.length} ομάδες του προγράμματος δεν είναι στη λίστα: ${missT.slice(0,6).map(esc).join(", ")}${missT.length>6?"…":""} <button class="btn small" type="button" data-act="addmissing" data-kind="teams">Προσθήκη όλων</button></div>`:""}
       <div class="scroll" style="max-height:560px">
-      ${teamList.length? teamList.map(x=>`<div class="prow"><div class="who" style="width:150px"><b>${esc(x.name)}</b><span class="note">${cnt(cTeam[norm(x.name)]||0)}</span></div>
+      ${teamList.length? teamList.map(x=>`<div class="prow"><span class="tlbox"><label class="tlup" title="${x.logo?"Αλλαγή σήματος":"Προσθήκη σήματος"} ${esc(x.name)}">${x.logo?logoImg(x.logo,"tlg big"):`<span class="tlph">+ Σήμα</span>`}<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif" data-tlogo="${x.id}" hidden></label>${x.logo?`<button class="tldel" type="button" data-act="tlogodel" data-id="${x.id}" title="Αφαίρεση σήματος" aria-label="Αφαίρεση σήματος ${esc(x.name)}">✕</button>`:""}</span><div class="who" style="width:150px"><b>${esc(x.name)}</b><span class="note">${cnt(cTeam[norm(x.name)]||0)}</span></div>
         <label class="pmail" style="max-width:200px" title="Το αρκτικόλεξο της ομάδας στο σύστημα challenge (VAR)"><span style="font:700 11px var(--f-body)">VAR</span><input id="tf-var-${x.id}" data-tf="var" data-id="${x.id}" value="${esc(x.var||"")}" placeholder="π.χ. ΟΣΦ" aria-label="VAR ${esc(x.name)}"></label>
         <div class="ulink"><label class="pmail" title="Συμπληρώνεται αυτόματα ως γήπεδο όταν η ομάδα είναι γηπεδούχος">${cmIcon("pin")}<input data-teamvenue="${x.id}" list="dlVenues" value="${esc(x.venue||"")}" placeholder="έδρα" aria-label="Έδρα ${esc(x.name)}"></label>
         <button class="btn small danger" type="button" data-act="dellist" data-kind="teams" data-id="${x.id}" aria-label="Διαγραφή ${esc(x.name)}">✕</button></div></div>`).join("")
       : `<div class="empty"><strong>Καμία ομάδα ακόμα</strong><div>Προστίθενται και αυτόματα όταν γράφεις νέα ομάδα σε ανάθεση ή στο Excel.</div></div>`}
       </div>
-      <div class="pbody note" style="border-top:1px solid var(--line);display:block">Δίπλα σε κάθε ομάδα γράψτε στο <b>VAR</b> το αρκτικόλεξο που χρησιμοποιείται στο challenge. Οι χρήστες βλέπουν το όνομα της ομάδας και από κάτω το αρκτικόλεξο VAR, και μπαίνει και στα email. Για όλες μαζί: <b>⬇ Excel ομάδων</b>, συμπληρώστε τη στήλη VAR (στήλες Ομάδα · VAR · Έδρα) και ανεβάστε το με <b>⬆ Excel ομάδων</b>.</div>
+      <div class="pbody note" style="border-top:1px solid var(--line);display:block">Δίπλα σε κάθε ομάδα γράψτε στο <b>VAR</b> το αρκτικόλεξο που χρησιμοποιείται στο challenge. Οι χρήστες βλέπουν το όνομα της ομάδας και από κάτω το αρκτικόλεξο VAR, και μπαίνει και στα email. Πατήστε <b>+ Σήμα</b> για να ανεβάσετε το λογότυπο της ομάδας (εικόνα PNG/JPG από το κινητό ή τον υπολογιστή)· φαίνεται δίπλα στο όνομα στις κάρτες, και στους χρήστες. Για όλες μαζί: <b>⬇ Excel ομάδων</b>, συμπληρώστε τη στήλη VAR (στήλες Ομάδα · VAR · Έδρα) και ανεβάστε το με <b>⬆ Excel ομάδων</b>.</div>
     </section>
     <section class="panel" style="grid-column:1/-1">
       <div class="ph"><h2 class="sec">Γήπεδα<span class="count">${venues.length}</span></h2>
@@ -1057,7 +1077,29 @@ function renderLists(){
     if(venues.some(t=>norm(t.name)===norm(n))){ toast("Υπάρχει ήδη"); return; }
     try{ await ensureLists([], [n]); toast("Το γήπεδο προστέθηκε"); renderAdmin(); }catch{ toast("Η προσθήκη απέτυχε"); } };
 }
+/* shrink any picture to a 128×128 logo (transparent background kept) so it fits in the team's record */
+async function logoFromFile(file){
+  const url = URL.createObjectURL(file);
+  try{
+    const img = await new Promise((ok,no)=>{ const i=new Image(); i.onload=()=>ok(i); i.onerror=no; i.src=url; });
+    const S=128, c=document.createElement("canvas"); c.width=c.height=S; const g=c.getContext("2d");
+    const w0=img.naturalWidth||img.width||S, h0=img.naturalHeight||img.height||S, k=Math.min(S/w0, S/h0);
+    const w1=Math.max(1,Math.round(w0*k)), h1=Math.max(1,Math.round(h0*k));
+    g.imageSmoothingQuality="high"; g.drawImage(img,(S-w1)/2,(S-h1)/2,w1,h1);
+    let d=c.toDataURL("image/webp",0.9); if(!d.startsWith("data:image/webp")) d=c.toDataURL("image/png");
+    return d;
+  } finally { URL.revokeObjectURL(url); }
+}
 document.addEventListener("change", async e => {
+  const tl = e.target.closest?.("[data-tlogo]");
+  if(tl && isAdmin){
+    const id=tl.dataset.tlogo, t=teamList.find(x=>x.id===id), f=tl.files&&tl.files[0]; if(!t||!f) return;
+    if(!/^image\//.test(f.type)){ toast("Διάλεξε αρχείο εικόνας"); return; }
+    try{ const logo=await logoFromFile(f); if(logo.length>200000) throw 0;
+      await w(()=>db.doc(`teams/${id}`).update({logo})); t.logo=logo; await resyncTeams([t.name]); toast("Το σήμα αποθηκεύτηκε"); renderAdmin(); }
+    catch{ toast("Η εικόνα δεν μπόρεσε να αποθηκευτεί"); }
+    return;
+  }
   const tf = e.target.closest?.("[data-tf]");
   if(tf && isAdmin){
     const id=tf.dataset.id, val=tf.value.trim();
@@ -1303,7 +1345,7 @@ function itemFor(m, r){
   const o = r==="op"?"as":"op";
   return {match:m.id, date:m.date||"", time:m.time||"", dateText:m.dateText||"", timeText:m.timeText||"", dateTbc:!!m.dateTbc, comp:m.comp||"", venue:m.venue||"", home:m.home||"", away:m.away||"",
     tv:m.tv||"", vc:m.vc||"", role:r, partner:m[o]||"", fee:+m["fee_"+r]||0, paid:!!m["paid_"+r], paidDate:m["paidDate_"+r]||"", notes:m.notes||"",
-    ...venueExtra(m.venue), homeVar:teamVar(m.home), awayVar:teamVar(m.away)};
+    ...venueExtra(m.venue), homeVar:teamVar(m.home), awayVar:teamVar(m.away), homeLogo:teamLogo(m.home), awayLogo:teamLogo(m.away)};
 }
 /* venue details travel with each user's copy of the assignment (users cannot read the venues list itself) */
 function venueExtra(name){
@@ -1411,7 +1453,7 @@ function dedupeLists(){
 }
 /* when the users' copy of an assignment gains new fields (e.g. VAR codes, venue maps), refresh every copy once, silently.
    Bump ITEM_VERSION whenever itemFor() changes. Runs on the first admin load after an update. */
-const ITEM_VERSION = 4; let itemCheckDone=false;
+const ITEM_VERSION = 5; let itemCheckDone=false;
 async function upgradeItems(){
   if(itemCheckDone || !ready.sched || !ready.roster || !ready.links || !listsReady.teams || !listsReady.venues) return;
   itemCheckDone=true;
@@ -1587,6 +1629,10 @@ document.addEventListener("click", async e => {
       await w(()=>db.doc(`profiles/${uid}`).delete());
       toast("Αφαιρέθηκε από τη λίστα. Για οριστική διαγραφή του λογαριασμού: Firebase → Authentication → Users.");
     }catch{ toast("Η διαγραφή απέτυχε"); b.disabled=false; }
+  }
+  if(act==="tlogodel"){
+    const id=b.dataset.id, t=teamList.find(x=>x.id===id); if(!t) return;
+    try{ await w(()=>db.doc(`teams/${id}`).update({logo:""})); delete t.logo; await resyncTeams([t.name]); toast("Το σήμα αφαιρέθηκε"); renderAdmin(); }catch{ toast("Η αφαίρεση απέτυχε"); }
   }
   if(act==="dellist"){
     const kind=b.dataset.kind, id=b.dataset.id;
@@ -2185,9 +2231,9 @@ function renderUser(){
   const seen = ls.get("cm.seen", {});
   const isChg = i => i.changedAt && (seen[i.id]||0) < i.changedAt && i.date >= t;
   const card=(i,first)=>`<article class="card ${i.role} ${i.date<t?"past":""} ${isChg(i)?"changed":""}">
-    <div class="top"><div class="when">${whenMain(i)} <small>${whenSub(i)}</small></div>${first?`<span class="next">Επόμενη</span>`:""}</div>
+    <div class="top"><div class="when">${whenMain(i)}${(i.time||i.timeText)?` <span class="tpill"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>${esc(i.time||i.timeText)}</span>`:""}${i.dateTbc?` <small>ημ. αγωνιστικής</small>`:""}</div>${first?`<span class="next">Επόμενη</span>`:""}</div>
     ${isChg(i)?`<button type="button" class="chg" data-seen="${esc(i.id)}" title="Πάτα για να το σημειώσεις ως ενημερωμένο">${cmIcon("warn")} Άλλαξε: ${esc((i.changed||[]).join(", ").toLowerCase()||"λεπτομέρειες")} <small>· ΟΚ</small></button>`:""}
-    <div class="teams">${teams(i)}</div>${(i.homeVar||i.awayVar)?`<div class="tfull"><span class="vtag">VAR</span> ${esc([i.homeVar||"—", i.away?(i.awayVar||"—"):""].filter(Boolean).join(" – "))}</div>`:""}
+    <div class="teams">${teamsL(i,true)}</div>${(i.homeVar||i.awayVar)?`<div class="tfull"><span class="vtag">VAR</span> ${esc([i.homeVar||"—", i.away?(i.awayVar||"—"):""].filter(Boolean).join(" – "))}</div>`:""}
     ${venueCard(i)}
     <dl>${i.comp?`<dt>Διοργάνωση</dt><dd>${esc(i.comp)}</dd>`:""}<dt>Θέση</dt><dd><span class="role ${i.role}">${ROLE[i.role]}</span></dd>
       ${i.partner?`<dt>${i.role==="op"?"Βοηθός":"Χειριστής"}</dt><dd>${esc(i.partner)}</dd>`:""}${i.vc?`<dt>VAR</dt><dd>${esc(i.vc)}</dd>`:""}${i.tv?`<dt>Κάλυψη</dt><dd>${esc(i.tv)}</dd>`:""}${i.dateTbc?`<dt>Σημ.</dt><dd>Η ημέρα/ώρα θα επιβεβαιωθεί</dd>`:""}
