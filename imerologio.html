@@ -177,6 +177,10 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 @keyframes skm{from{background-position:100% 0}to{background-position:0 0}}
 @media (prefers-reduced-motion:reduce){.sk{animation:none}}
 .row .c-match b{font-size:15.5px}
+.tml{display:inline-flex;align-items:center;gap:6px;vertical-align:middle}
+.tvs{margin:0 6px}
+.tlg{width:24px;height:24px;object-fit:contain;flex:none}
+.tmw{display:flex;flex-wrap:wrap;align-items:center;row-gap:3px}
 
 </style>
 </head>
@@ -639,6 +643,18 @@ function refreshOptions(){
   dl("dlVenues", rows.map(r=>r.venue)); dl("dlPeople", rows.map(r=>r.person));
 }
 
+/* team logos come from the Check Mate assignments (the admin uploads them there); matched by team name, so they show on every row */
+const lkey = n => String(n||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[.'΄’]/g,"").replace(/\s+/g," ").trim();
+let logoMap = new Map(), logoSrc = null;
+function logos(){
+  const src = typeof cmItems==="undefined" ? null : cmItems;
+  if(src!==logoSrc){ logoSrc=src; logoMap=new Map(); for(const i of src||[]){ if(i.homeLogo) logoMap.set(lkey(i.home), i.homeLogo); if(i.awayLogo) logoMap.set(lkey(i.away), i.awayLogo); } }
+  return logoMap;
+}
+const tlogo = n => { const d = logos().get(lkey(n)); return /^data:image\/(png|jpeg|webp);base64,/.test(d||"") ? `<img class="tlg" src="${d}" alt="" loading="lazy">` : ""; };
+const teamsHtml = r => { if(!tlogo(r.home) && !tlogo(r.away)) return `${esc(r.home)} – ${esc(r.away)}`;
+  return `<span class="tml">${tlogo(r.home)}<span>${esc(r.home)}</span></span><span class="tvs">–</span><span class="tml">${tlogo(r.away)}<span>${esc(r.away)}</span></span>`; };
+
 /* ---------- render ---------- */
 function render(){
   refreshOptions();
@@ -664,7 +680,7 @@ function render(){
      const lk = locked(r);
      return `<div class="row">
      <div class="date c-date">${fmtDate(r.date)}<small>${dayName(r.date)}${r.time?" · "+esc(r.time):""}</small></div>
-     <div class="match c-match"><b>${esc(r.home)} – ${esc(r.away)}</b><div class="meta">${[r.comp,r.venue].filter(Boolean).map(esc).join(" · ")||"&nbsp;"}</div>${(r.notes||"").trim()?`<div class="rnote">${cmIcon("pen")} ${esc(r.notes.trim())}</div>`:""}</div>
+     <div class="match c-match"><b class="tmw">${teamsHtml(r)}</b><div class="meta">${[r.comp,r.venue].filter(Boolean).map(esc).join(" · ")||"&nbsp;"}</div>${(r.notes||"").trim()?`<div class="rnote">${cmIcon("pen")} ${esc(r.notes.trim())}</div>`:""}</div>
      <div><span class="role ${r.role==="op"?"op":""}">${ROLE[r.role]||"—"}</span>${r.person?`<div class="who">με ${esc(r.person)}</div>`:""}</div>
      <div class="fee">${eur(r.fee)}</div>
      <div><button class="pay ${r.paid?"yes":"no"}" type="button" data-act="toggle" data-id="${r.id}" ${isAdmin?"":"disabled"} title="${payTitle}">${r.paid?`${lk?cmIcon("lock"):"✓"} Πληρώθηκε${r.paidDate?` <small>${fmtDate(r.paidDate).slice(0,5)}</small>`:""}`:"● Εκκρεμεί"}</button></div>
@@ -900,7 +916,7 @@ function setWriteUI(){ $("btnAdd").disabled=!canWrite; }
     const first = !loadedOpen; loadedOpen = true; render();
     if(first){
       syncFromCm();
-      db.collection(`mine/${meId}/items`).limit(2000).onSnapshot(s => { cmItems = s.docs.map(d=>({id:d.id, ...d.data()})); cmFresh = !(s.metadata && s.metadata.fromCache); syncFromCm(); }, () => {});
+      db.collection(`mine/${meId}/items`).limit(2000).onSnapshot(s => { cmItems = s.docs.map(d=>({id:d.id, ...d.data()})); cmFresh = !(s.metadata && s.metadata.fromCache); syncFromCm(); if(loadedOpen) render(); }, () => {});
       db.collection(`mine/${meId}/items`).limit(2000).get({source:"server"}).then(s => { cmItems = s.docs.map(d=>({id:d.id, ...d.data()})); cmFresh = true; syncFromCm(); }).catch(() => {});   // one check straight from the server
     }
   }, () => { loadedOpen=true; $("log").innerHTML=`<div class="empty"><strong>Δεν φορτώθηκε το ημερολόγιο</strong><div>Ανανέωσε τη σελίδα.</div></div>`; });
