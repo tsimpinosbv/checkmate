@@ -1,4 +1,8 @@
-import re
+import re, hashlib
+def stamp(html):
+    """<meta name="app-build">: a fingerprint of the page; the app compares it with the server's copy to offer «Νέα έκδοση»."""
+    h = hashlib.sha256(html.encode()).hexdigest()[:12]
+    return html.replace('<meta charset="utf-8">', f'<meta charset="utf-8">\n<meta name="app-build" content="{h}">', 1)
 def split(src):
     style=re.search(r'<style>(.*?)</style>',src,re.S)
     first_script=src.index('<script>')
@@ -122,7 +126,7 @@ function runAssign(){{
 </body>
 </html>
 '''
-open('checkmate.html','w').write(out)
+open('checkmate.html','w').write(stamp(out))
 
 
 # ---------- second app: personal diary (imerologio.html), installs separately, not linked to Check Mate ----------
@@ -185,4 +189,4 @@ diary=f'''<!doctype html>
 </body>
 </html>
 '''
-open('imerologio.html','w').write(diary)
+open('imerologio.html','w').write(stamp(diary))
