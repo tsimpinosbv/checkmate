@@ -7,11 +7,16 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+# όταν ανεβαίνουν πολλές αλλαγές μαζί, τρέχει μόνο η τελευταία (η προηγούμενη ακυρώνεται χωρίς σφάλμα)
+concurrency:
+  group: pdf-help
+  cancel-in-progress: true
 jobs:
   pdf:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with: { ref: main }
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: sudo apt-get update && sudo apt-get install -y fonts-noto-color-emoji fonts-noto-core
@@ -21,4 +26,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
           git add help/*.pdf
-          git diff --cached --quiet || (git commit -m "PDF οδηγιών: αυτόματη ενημέρωση" && git push)
+          git diff --cached --quiet && exit 0
+          git commit -m "PDF οδηγιών: αυτόματη ενημέρωση"
+          for i in 1 2 3; do git pull --rebase -X theirs origin main && git push && exit 0; sleep 5; done
+          exit 1
