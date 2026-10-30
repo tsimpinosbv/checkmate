@@ -1305,6 +1305,8 @@ function notifyPanel(){
         <div class="f"><label for="nName">Όνομα αποστολέα</label><input id="nName" value="${esc(notify.senderName||"Check Mate")}" autocomplete="off"></div>
         <div class="f"><label for="nReply">Απαντήσεις στο email</label><input id="nReply" type="email" value="${esc(notify.replyTo||"")}" placeholder="${esc(me?.email||"")}" autocomplete="off"></div>
       </div>
+      <div class="f"><label for="nAdmin">Email διαχειριστή για «Δεν μπορώ»</label><input id="nAdmin" type="email" value="${esc(notify.adminAlert ?? me?.email ?? "")}" placeholder="κενό = χωρίς email" autocomplete="off"></div>
+      <div class="note">Όταν ένας χρήστης πατά «Δεν μπορώ» (ή ακυρώνει τη δήλωσή του), στέλνεται email σε αυτή τη διεύθυνση με το όνομα, τον αγώνα και τον λόγο. Αφήστε το κενό αν δεν θέλετε email.</div>
       <div class="f"><label for="nFooter">Κείμενο στο τέλος κάθε email</label><textarea id="nFooter" rows="5">${esc(notify.footer ?? DEFAULT_FOOTER)}</textarea></div>
       <div class="f"><label for="nUrl">Υπηρεσία αποστολής (Google Apps Script)</label><input id="nUrl" value="${esc(notify.endpoint||"")}" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"></div>
       <div class="note">Τα email φεύγουν από τον λογαριασμό Gmail όπου είναι εγκατεστημένη η υπηρεσία${notify.account?`: <b>${esc(notify.account)}</b>`:""}. Για άλλον αποστολέα, εγκατέστησε την υπηρεσία σε εκείνον τον λογαριασμό και βάλε εδώ τη νέα διεύθυνση.</div>
@@ -1315,7 +1317,8 @@ function notifyPanel(){
 function bindNotify(){
   const f=$("notifyForm"); if(!f) return;
   f.onsubmit = async e => { e.preventDefault();
-    const n = {...notify, email:$("nOn").checked, endpoint:$("nUrl").value.trim(), senderName:$("nName").value.trim()||"Check Mate", replyTo:$("nReply").value.trim(), footer:$("nFooter").value.trim()};
+    const n = {...notify, email:$("nOn").checked, endpoint:$("nUrl").value.trim(), senderName:$("nName").value.trim()||"Check Mate", replyTo:$("nReply").value.trim(), footer:$("nFooter").value.trim(), adminAlert:$("nAdmin").value.trim()};
+    if(n.adminAlert && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(n.adminAlert)){ toast("Το email διαχειριστή δεν είναι σωστό"); return; }
     if(n.email && !/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(n.endpoint)){ toast("Βάλε πρώτα τη διεύθυνση της υπηρεσίας αποστολής"); return; }
     try{ await db.doc("config/notify").set(n); notify=n; toast(n.email?"Οι ειδοποιήσεις email ενεργοποιήθηκαν":"Οι ειδοποιήσεις email απενεργοποιήθηκαν"); }catch{ toast("Η αποθήκευση απέτυχε"); } };
   $("nTest").onclick = async () => {
@@ -2230,16 +2233,26 @@ async function startUser(){
       const game = [it.home, it.away].filter(Boolean).join(" – ");
       if(!confirm(`Σίγουρα δεν μπορείς να καλύψεις ${game?`τον αγώνα ${game}`:"αυτόν τον αγώνα"}${it.date?` (${fmtDate(it.date)})`:""};\n\nΘα ενημερωθεί ο διαχειριστής.`)) return;
       b.disabled=true;
-      try{ await ref.set({cant:{[id]:{at:Date.now(), note, date:it.date||"", home:it.home||"", away:it.away||"", role:it.role}}}, {merge:true}); cantOpen=null; toast("Ενημερώθηκε ο διαχειριστής"); }
+      try{ await ref.set({cant:{[id]:{at:Date.now(), note, date:it.date||"", home:it.home||"", away:it.away||"", role:it.role}}}, {merge:true}); cantOpen=null; toast("Ενημερώθηκε ο διαχειριστής"); cantMail(it, note, false); }
       catch{ b.disabled=false; toast("Δεν στάλθηκε. Δοκίμασε ξανά."); }
       return;
     }
     if(act==="undo"){
-      const rest = {...myCant}; delete rest[id]; b.disabled=true;
-      try{ await ref.update({cant:rest}); toast("Η δήλωση ακυρώθηκε"); }catch{ b.disabled=false; toast("Η ακύρωση απέτυχε"); }
+      const rest = {...myCant}, was = myCant[id]; delete rest[id]; b.disabled=true;
+      try{ await ref.update({cant:rest}); toast("Η δήλωση ακυρώθηκε"); const it = myItems.find(x=>x.id===id) || was; if(it) cantMail({...it, role:it.role||was?.role}, "", true); }catch{ b.disabled=false; toast("Η ακύρωση απέτυχε"); }
     }
   });
   document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible" && !document.querySelector("#unavBox :focus")) renderUser(); });   // back to the app: count as seen
+}
+/* email to the admin for «Δεν μπορώ» (address set by the admin in Ειδοποιήσεις email). Best effort: the in-app notice is what counts. */
+async function cantMail(it, note, undo){
+  try{
+    const s = await db.doc("config/notify").get(); const n = s.exists ? s.data() : {};
+    if(!n.endpoint || !n.adminAlert) return;
+    const m = await claude.use("mail"); if(!m) return;
+    const rn = uRoster.find(r=>r.id===myClaim?.rid)?.name || me?.name || me?.email || "";
+    await m.send(n.endpoint, [], {senderName:n.senderName, extra:{kind:"cant", item:{name:rn, email:me?.email||"", role:ROLE[it.role]||"", date:it.date?`${dayName(it.date)} ${fmtDate(it.date)}`:"", time:it.time||"", home:it.home||"", away:it.away||"", venue:it.venue||"", note:note||"", undo:!!undo}}});
+  }catch(e){ console.warn("cant mail", e); }
 }
 function cantHtml(i){
   const c = myCant[i.id];
