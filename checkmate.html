@@ -2,9 +2,9 @@
 <html lang="el">
 <head>
 <meta charset="utf-8">
-<meta name="app-build" content="4de3f444c0bc">
+<meta name="app-build" content="59b965eea6a0">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script>try{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t);if(localStorage.getItem("cm-big"))document.documentElement.classList.add("cm-big")}catch(e){}</script><style>html.cm-big body{zoom:1.14}</style>
+<script>try{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t);if(localStorage.getItem("cm-compact"))document.documentElement.classList.add("cm-compact")}catch(e){}</script>
 <title>Check Mate Challenge</title>
 <meta name="theme-color" content="#14213a">
 <meta name="description" content="Αγώνες, αναθέσεις και πληρωμές Video Check.">
@@ -576,6 +576,18 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 .sechead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .banner.nudge{background:var(--warn-bg);border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
 /* ---- look: dates, skeleton, compact admin bar on phones ---- */
+/* «Συμπαγείς» cards (Ρυθμίσεις, admins on phones): date, time and switches on one line, less space */
+@media (max-width:720px){
+html.cm-compact .row{gap:4px 8px;padding:8px 12px}
+html.cm-compact .c-date{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:15px}
+html.cm-compact .c-date small{display:inline;margin:0}
+html.cm-compact .c-date .vis,html.cm-compact .c-date .paysw{margin:0}
+html.cm-compact .c-match b{font-size:15px}html.cm-compact .c-match .meta{font-size:12px}
+html.cm-compact .slot{flex-direction:row;flex-wrap:wrap;align-items:center;gap:4px 8px}
+html.cm-compact .slot .nm{font-size:13.5px;width:100%}
+html.cm-compact .slot .ln{gap:4px}html.cm-compact .slot .role{font-size:10px;padding:1px 6px}
+html.cm-compact .comp-head{padding:5px 12px}
+}
 .card .when{font-family:var(--f-body);font-size:17px;font-weight:700}
 .card .when small{font-family:var(--f-mono);font-weight:400}
 .tpill{display:inline-flex;align-items:center;gap:5px;margin-left:6px;padding:3px 10px;border-radius:8px;background:var(--ink);color:var(--bg);font:700 19px/1.1 var(--f-mono);vertical-align:1px;letter-spacing:.02em}
@@ -1615,6 +1627,7 @@ function unavailOn(name, date){   // the person declared they cannot work that d
 }
 
 function startAdmin(){
+  window.CM_ADMIN_CARDS = true;   // «Κάρτες προγράμματος: Κανονικές / Συμπαγείς» appears in ⚙ Ρυθμίσεις
   $("adminActions").hidden = false;
   $("subtitle").textContent = "Video Check · πίνακας διαχειριστή";
   db.collection("sched").orderBy("date","asc").limit(2000).onSnapshot(s=>{ sched=s.docs.map(d=>({id:d.id,...d.data()})); ready.sched=true; renderAdmin(); }, loadErr);
