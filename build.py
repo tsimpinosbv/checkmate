@@ -22,6 +22,7 @@ out=f'''<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try{{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t);if(localStorage.getItem("cm-big"))document.documentElement.classList.add("cm-big")}}catch(e){{}}</script><style>html.cm-big body{{zoom:1.14}}</style>
 <title>Check Mate Challenge</title>
 <meta name="theme-color" content="#14213a">
 <meta name="description" content="Αγώνες, αναθέσεις και πληρωμές Video Check.">
@@ -136,6 +137,7 @@ diary=f'''<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try{{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t);if(localStorage.getItem("cm-big"))document.documentElement.classList.add("cm-big")}}catch(e){{}}</script><style>html.cm-big body{{zoom:1.14}}</style>
 <title>Check Mate · Ημερολόγιο</title>
 <meta name="theme-color" content="#1d6b47">
 <meta name="description" content="Προσωπικό ημερολόγιο αγώνων και πληρωμών.">
