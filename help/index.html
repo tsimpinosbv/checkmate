@@ -27,6 +27,7 @@ p{margin:8px 0} ul,ol{margin:6px 0 10px;padding-left:22px} li{margin:4px 0}
 img{max-width:100%;height:auto}
 .pair{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:12px 0}
 .pair img{width:min(260px,100%);border:1px solid var(--line);border-radius:12px}
+.pair figure{margin:0;width:min(220px,100%)}.pair figure img{width:100%}.pair figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:6px}
 .side{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;margin:12px 0}
 .side img{width:min(260px,100%);border:1px solid var(--line);border-radius:12px;display:block}
 .side img.wide{width:min(340px,100%)}
@@ -90,16 +91,24 @@ td{border-bottom:1px solid var(--line);padding:8px 10px;vertical-align:top}
 <p>Τις αναθέσεις τις ορίζει ο διαχειριστής, και δεν αλλάζουν από εσάς. Αν κάτι δεν είναι σωστό, επικοινωνήστε μαζί του.</p>
 </div>
 </div>
-</section><section class="card" id="eide"><h2>Ο διαχειριστής βλέπει ότι το είδατε</h2>
-<p>Όταν ανοίγετε την εφαρμογή και βλέπετε τις επόμενες αναθέσεις σας, ο διαχειριστής ενημερώνεται αυτόματα ότι τις είδατε. <strong>Δεν χρειάζεται να πατήσετε τίποτα.</strong> Αν αλλάξει κάτι σε μια ανάθεση, αρκεί να ανοίξετε ξανά την εφαρμογή.</p>
-</section><section class="card" id="allaxe"><h2>⚠ Άλλαξε: κάτι νέο σε μια ανάθεσή σας</h2>
-<p>Όταν ο διαχειριστής αλλάζει κάτι σε μια ανάθεσή σας (ώρα, ημερομηνία, γήπεδο, συνεργάτη κ.λπ.), στην κάρτα του αγώνα εμφανίζεται κίτρινη ένδειξη, π.χ. <strong>⚠ Άλλαξε: Ώρα</strong>.</p>
-<p>Αφού το δείτε, πατήστε <strong>ΟΚ</strong> και η ένδειξη φεύγει.</p>
-</section><section class="card" id="denmporo"><h2>✋ Δεν μπορώ να καλύψω έναν αγώνα</h2>
-<p>Αν δεν μπορείτε να πάτε σε μια ανάθεση που σας έχει δοθεί, πατήστε <strong>✋ Δεν μπορώ</strong> στην κάρτα του αγώνα, γράψτε αν θέλετε τον λόγο και πατήστε <strong>Ενημέρωση διαχειριστή</strong>. Η εφαρμογή ζητά επιβεβαίωση (<strong>OK</strong>) για να μη σταλεί κατά λάθος.</p>
+</section><section class="card" id="apodoxi"><h2>✓ Αποδοχή ή ✋ άρνηση ενός ορισμού</h2>
+<p>Κάθε ορισμός εμφανίζεται ως κάρτα στις <strong>Επόμενες αναθέσεις</strong>.</p>
+<div class="pair">
+<figure><img src="img/10a-apodoxi.webp" loading="lazy" alt="Κάρτα ανάθεσης με το κουμπί «Δεν μπορώ»"><figcaption>1 · Η κάρτα του ορισμού</figcaption></figure>
+<figure><img src="img/10b-denmporo.webp" loading="lazy" alt="Φόρμα «Δεν μπορώ» με λόγο και κουμπί «Ενημέρωση διαχειριστή»"><figcaption>2 · «Δεν μπορώ»: λόγος και ενημέρωση</figcaption></figure>
+<figure><img src="img/10c-dilothike.webp" loading="lazy" alt="Κόκκινο πλαίσιο «Δήλωσες ότι δεν μπορείς» με κουμπί «Ακύρωση»"><figcaption>3 · Η δήλωση στάλθηκε</figcaption></figure>
+</div>
+<h3>✓ Αποδοχή: δεν πατάτε τίποτα</h3>
+<p>Μόλις ανοίξετε την εφαρμογή και δείτε τον ορισμό (εικόνα 1), ο διαχειριστής βλέπει αυτόματα <strong>«Το είδε»</strong>. Αν δεν πατήσετε «Δεν μπορώ», ο ορισμός θεωρείται <strong>αποδεκτός</strong>. Αν αλλάξει κάτι (π.χ. η ώρα), ανοίξτε ξανά την εφαρμογή για να το δει ο διαχειριστής.</p>
+<h3 id="denmporo">✋ Άρνηση: «Δεν μπορώ»</h3>
+<ol>
+<li>Στην κάρτα του αγώνα πατήστε <strong>✋ Δεν μπορώ</strong> (εικόνα 1).</li>
+<li>Γράψτε, αν θέλετε, τον λόγο και πατήστε <strong>✋ Ενημέρωση διαχειριστή</strong> (εικόνα 2). Με το <strong>Άκυρο</strong> κλείνει χωρίς να σταλεί τίποτα.</li>
+<li>Εμφανίζεται ερώτηση «Σίγουρα δεν μπορείς να καλύψεις τον αγώνα…;». Πατήστε <strong>OK</strong> για να σταλεί ή <strong>Άκυρο</strong> αν το πατήσατε κατά λάθος.</li>
+<li>Η κάρτα δείχνει κόκκινο πλαίσιο <strong>«Δήλωσες ότι δεν μπορείς»</strong> (εικόνα 3). Ο διαχειριστής το βλέπει αμέσως στην εφαρμογή του και βρίσκει αντικαταστάτη. Αν σας αφαιρέσει από τον αγώνα, θα λάβετε email «Ακύρωση ανάθεσης».</li>
+</ol>
 <ul>
-<li>Ο διαχειριστής το βλέπει αμέσως στην εφαρμογή του και βρίσκει αντικαταστάτη. Αν σας αφαιρέσει από τον αγώνα, θα λάβετε κανονικά email «Ακύρωση ανάθεσης».</li>
-<li>Αν τελικά μπορείτε, πατήστε <strong>Ακύρωση</strong> στο κόκκινο πλαίσιο της κάρτας.</li>
+<li>Αν τελικά μπορείτε, πατήστε <strong>Ακύρωση</strong> στο κόκκινο πλαίσιο.</li>
 <li>Για επείγουσες περιπτώσεις (π.χ. την ίδια μέρα) τηλεφωνήστε και στον διαχειριστή.</li>
 </ul>
 </section><section class="card" id="kolymata"><h2>Κωλύματα: οι μέρες που δεν μπορείτε</h2>
