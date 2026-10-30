@@ -304,6 +304,7 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 .chg small{font-weight:600;opacity:.8}
 .sechead .hi{color:var(--muted);font-size:14px;font-weight:600;margin-bottom:2px}
 .sechead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.asubar{border-color:color-mix(in srgb,var(--blue) 45%,transparent)}
 .banner.nudge{background:var(--warn-bg);border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
 /* ---- look: dates, skeleton, compact admin bar on phones ---- */
 .card .when{font-family:var(--f-body);font-size:17px;font-weight:700}
@@ -619,8 +620,29 @@ let db=null, user=null, me=null, isAdmin=false;
   if(!db){ $("app").innerHTML = `<div class="panel"><div class="empty"><strong>Η σελίδα χρειάζεται σύνδεση</strong><div>Συνδέσου με τον λογαριασμό Google σου.</div></div></div>`; return; }
   isAdmin = user ? !!(await user.canEdit()) : false;
   me = user ? await user.me() : null;
-  if(isAdmin) startAdmin(); else startUser();
+  if(isAdmin && ls.get(AS_USER,false)){ isAdmin=false; roleSwitch(true); startUser(); }   // admin looking at the app as a user
+  else if(isAdmin){ roleSwitch(false); startAdmin(); } else startUser();
 })();
+
+/* «Ως χρήστης»: an administrator can switch (on this device) to the user screen and see their own assignments
+   exactly as the users see them; «↩ Διαχειριστής» switches back. */
+const AS_USER = "cm.asUser";
+function roleSwitch(asUser){
+  const go = v => { ls.set(AS_USER, v); location.reload(); };
+  if(asUser){
+    const bar = document.createElement("div");
+    bar.className = "banner asubar"; bar.setAttribute("role","status");
+    bar.innerHTML = `<span aria-hidden="true">👤</span><span class="grow"><b>Προβολή χρήστη.</b> Βλέπεις την εφαρμογή όπως οι χρήστες, με τις δικές σου αναθέσεις.</span><button type="button" class="btn small primary">↩ Διαχειριστής</button>`;
+    bar.querySelector("button").onclick = () => go(false);
+    $("app").before(bar);
+  } else {
+    const b = document.createElement("button");
+    b.className = "btn"; b.type = "button"; b.id = "btnAsUser"; b.title = "Δες την εφαρμογή όπως οι χρήστες, με τις δικές σου αναθέσεις";
+    b.innerHTML = `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg><span class="hl"> Ως χρήστης</span>`;
+    b.onclick = () => go(true);
+    $("adminActions").prepend(b);
+  }
+}
 
 /* =================================================================
    SUPERVISOR
