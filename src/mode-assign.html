@@ -101,6 +101,8 @@ table.grid td.saving{background:color-mix(in srgb,var(--blue) 10%,transparent)}
 table.grid td.saved{background:var(--good-bg)}
 table.grid tr.is-hidden td{opacity:.55}
 table.grid tr.past td input:not([type=checkbox]){color:var(--muted)}
+.panel.sched{overflow:clip}
+.panel.sched .comp-head{position:sticky;top:0;z-index:3}
 .comp-head{padding:8px 16px;background:var(--blue-bg);color:var(--blue);font-weight:600;font-size:13px;letter-spacing:.03em;border-top:1px solid var(--line)}
 .date{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:14px}
 .date small{display:block;color:var(--muted);font-size:12px}
@@ -315,9 +317,9 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 @media (max-width:560px){.wkbar .wkcur{flex:1 1 0}.wkbar .wkgap{flex-basis:100%;height:0}.wkbar>.btn.small{flex:1;justify-content:center}}
 .tabs{overflow-x:auto;scrollbar-width:none}
 /* ---------- calendar, changed badge, backup banner ---------- */
-.seen{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;border-radius:999px;padding:1px 8px;white-space:nowrap}
-.seen.ok{color:var(--good);background:var(--good-bg)}.seen.no{color:var(--muted);background:transparent;border:1px dashed var(--line)}
-.seen .ic{width:1.05em;height:1.05em}
+.seen{display:inline-flex;align-items:center;justify-content:center;border:0;background:none;border-radius:50%;width:22px;height:22px;padding:0;margin-left:2px;cursor:help;flex:none;vertical-align:middle}
+.seen.ok{color:var(--good)}.seen.no{color:var(--muted);opacity:.7}
+.seen .ic{width:17px;height:17px;stroke-width:2.2}
 .card.changed{border-left-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 35%,transparent)}
 .chg{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;border:0;cursor:pointer;background:var(--warn-bg);color:var(--warn);font:700 12.5px var(--f-body);border-radius:999px;padding:4px 10px}
 .chg small{font-weight:600;opacity:.8}
@@ -376,6 +378,8 @@ table.grid select.gsel{width:100%;border:0;background:transparent;font:inherit;c
   #adminActions .btn:not(.primary){padding:8px 10px}
   #btnAdd{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:40;width:58px;height:58px;border-radius:50%;padding:0;justify-content:center;box-shadow:0 6px 18px rgba(240,130,30,.45)}
   #btnAdd .plus{font-size:30px;line-height:1;font-weight:400}
+  #btnAdd{transition:transform .2s ease, opacity .2s ease}
+  body.fab-mini #btnAdd{transform:scale(.68) translate(14px,14px);opacity:.8}
   .wrap{padding-bottom:84px}
   .banner{padding:7px 10px;font-size:12.5px;gap:8px}
   .banner .btn.small{padding:5px 9px;font-size:12px}
@@ -621,6 +625,8 @@ const IC = {
   user:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>',
   eye:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
   eyeOff:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 5.1A10.6 10.6 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6C3.7 8.4 2 12 2 12s3.5 7 10 7c1.8 0 3.4-.5 4.7-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>',
+  seen2:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 13l4 4 9-10M10 15l2 2 9-10"/></svg>',
+  seen1:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4 10-11"/></svg>',
   plus:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>'
 };
 /* «Σήμερα» / «Αύριο» next to the date */
@@ -810,7 +816,7 @@ function renderSched(months, people, seasons=[]){
   </section>
   ${WIDE.matches?`<div class="viewsw" role="group" aria-label="Προβολή"><button type="button" data-act="view" data-v="cards" aria-pressed="${view==="cards"}">Κάρτες</button><button type="button" data-act="view" data-v="grid" aria-pressed="${view==="grid"}">Πίνακας</button>${view==="grid"?`<span class="vhint">Αλλάξτε ένα κελί και αποθηκεύεται μόλις φύγετε από αυτό. Enter: κάτω γραμμή.</span>`:""}</div>`:""}
   ${list.length?`<div class="bulk" id="bulk">${bulkIdle(list)}</div>`:""}
-  <section class="panel" style="margin-top:12px">`;
+  <section class="panel sched" style="margin-top:12px">`;
   if(!sched.length){
     html += `<div class="empty"><div class="board-art"></div><strong>Δεν υπάρχουν αναθέσεις ακόμα</strong><div>Πρόσθεσε μία χειροκίνητα ή φέρε το πρόγραμμα από Excel.</div>
       <div class="actions"><button class="btn" data-act="import">${cmIcon("ul")} Εισαγωγή Excel</button><button class="btn primary" data-act="add">+ Νέα ανάθεση</button></div></div>`;
@@ -962,8 +968,9 @@ function bulkIdle(list){
 function seenTag(m, r){
   const uid = m.sync?.[r]; if(!uid || m.hidden || !m.date || m.date < today()) return "";
   const at = profilesAll[uid]?.seen?.[`${m.id}_${r}`] || 0, chg = m["chg_"+r]?.at || 0;
-  if(at && at >= chg){ const d = new Date(at); return `<span class="seen ok" title="Το είδε στην εφαρμογή ${fmtDate(ymd(d)).slice(0,5)} ${pad(d.getHours())}:${pad(d.getMinutes())}">${cmIcon("eye")} Το είδε</span>`; }
-  return `<span class="seen no" title="Δεν έχει ανοίξει ακόμα την εφαρμογή μετά ${at?"την αλλαγή":"την ανάθεση"}">${at?"Δεν είδε την αλλαγή":"Δεν το είδε ακόμα"}</span>`;
+  if(at && at >= chg){ const d = new Date(at), t = `Το είδε στην εφαρμογή ${fmtDate(ymd(d)).slice(0,5)} ${pad(d.getHours())}:${pad(d.getMinutes())}`; return `<button type="button" class="seen ok" data-tip="${t}" title="${t}" aria-label="${t}">${IC.seen2}</button>`; }
+  const t = at ? "Δεν είδε ακόμα την αλλαγή" : "Δεν το είδε ακόμα";
+  return `<button type="button" class="seen no" data-tip="${t}" title="${t}" aria-label="${t}">${IC.seen1}</button>`;
 }
 /* «Δεν μπορώ» declared by the person in this role (read from their profile) */
 function cantOf(m, r){ const uid = m.sync?.[r]; if(!uid || m.hidden || !m.date || m.date < today()) return null; return profilesAll[uid]?.cant?.[`${m.id}_${r}`] || null; }
@@ -978,9 +985,9 @@ function slotHtml(m, r){
   if(!m[r]) return `<div class="slot"><button type="button" class="add-slot" data-act="edit" data-id="${m.id}" title="Πάτα για να ορίσεις ${ROLE[r]}">${IC.plus} ${ROLE[r]}</button></div>`;
   const linked = !!uidForName(m[r]); const paid=!!m["paid_"+r];
   return `<div class="slot">
-    ${cantFlag(m, r)}<div class="nm"><span class="dot ${linked?"on":""}" title="${linked?"Συνδεδεμένος λογαριασμός – βλέπει την ανάθεση":"Δεν έχει συνδεθεί λογαριασμός"}"></span>${esc(m[r])}${(()=>{ const u=unavailOn(m[r], m.date); return u?`<span class="unav-flag" title="${esc(u.note?"Κώλυμα: "+u.note:"Έχει δηλώσει κώλυμα αυτή τη μέρα")}">${cmIcon("warn")} Κώλυμα</span>`:""; })()}</div>
+    ${cantFlag(m, r)}<div class="nm"><span class="dot ${linked?"on":""}" title="${linked?"Συνδεδεμένος λογαριασμός – βλέπει την ανάθεση":"Δεν έχει συνδεθεί λογαριασμός"}"></span>${esc(m[r])}${(()=>{ const u=unavailOn(m[r], m.date); return u?`<span class="unav-flag" title="${esc(u.note?"Κώλυμα: "+u.note:"Έχει δηλώσει κώλυμα αυτή τη μέρα")}">${cmIcon("warn")} Κώλυμα</span>`:""; })()}${seenTag(m, r)}</div>
     <div class="ln"><span class="role ${r}">${ROLE[r]}</span><span class="fee${paid?" paid":""}">${eur(m["fee_"+r])}</span>
-    <button class="pay ${paid?"yes mini":"no"}" data-act="pay" data-id="${m.id}" data-role="${r}" ${paid?`aria-label="Πληρώθηκε" title="Πληρώθηκε${m["paidDate_"+r]?" "+fmtDate(m["paidDate_"+r]).slice(0,5):""} · πάτα για αλλαγή"`:`title="Αλλαγή κατάστασης πληρωμής"`}>${paid?"✓":"● Εκκρεμεί"}</button>${seenTag(m, r)}</div>
+    <button class="pay ${paid?"yes mini":"no"}" data-act="pay" data-id="${m.id}" data-role="${r}" ${paid?`aria-label="Πληρώθηκε" title="Πληρώθηκε${m["paidDate_"+r]?" "+fmtDate(m["paidDate_"+r]).slice(0,5):""} · πάτα για αλλαγή"`:`title="Αλλαγή κατάστασης πληρωμής"`}>${paid?"✓":"● Εκκρεμεί"}</button></div>
   </div>`;
 }
 
@@ -1859,6 +1866,10 @@ document.addEventListener("click", async e => {
   if(act==="resync"){ b.disabled=true; try{ await resync(()=>true, "Ολοκληρώθηκε"); }catch{ toast("Απέτυχε"); } b.disabled=false; }
 });
 $("btnAdd").onclick=()=>openForm(null);
+/* «Το είδε / Δεν το είδε»: an icon; tap (phone) shows the text */
+document.addEventListener("click", e=>{ const t=e.target.closest?.(".seen[data-tip]"); if(t) toast(t.dataset.tip); });
+/* phone: the round «+» shrinks while scrolling down, grows back when scrolling up */
+{ let lastY = scrollY; addEventListener("scroll", ()=>{ const y=scrollY; if(Math.abs(y-lastY)<8) return; document.body.classList.toggle("fab-mini", y>lastY && y>120); lastY=y; }, {passive:true}); }
 $("btnImport").onclick=()=>openImport();
 
 /* ---------- assignment form ---------- */
