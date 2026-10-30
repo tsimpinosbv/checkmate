@@ -304,6 +304,11 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 .chg small{font-weight:600;opacity:.8}
 .sechead .hi{color:var(--muted);font-size:14px;font-weight:600;margin-bottom:2px}
 .sechead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.tel{display:inline-flex;align-items:center;gap:4px;margin-left:8px;padding:1px 9px;border-radius:999px;background:var(--blue-bg);color:var(--blue);font-weight:700;text-decoration:none;white-space:nowrap}
+.tel .ic{width:13px;height:13px}
+.phonef{display:flex;flex-direction:column;gap:10px;max-width:420px}
+.phonef input[type=tel]{font:16px var(--f-body);padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
+.phonef label.chk{display:flex;gap:8px;align-items:flex-start;font-size:14px}
 .asubar{border-color:color-mix(in srgb,var(--blue) 45%,transparent)}
 .banner.nudge{background:var(--warn-bg);border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
 /* ---- look: dates, skeleton, compact admin bar on phones ---- */
@@ -669,11 +674,11 @@ function unavailOn(name, date){   // the person declared they cannot work that d
 function startAdmin(){
   $("adminActions").hidden = false;
   $("subtitle").textContent = "Video Check · πίνακας διαχειριστή";
-  db.collection("sched").orderBy("date","asc").limit(2000).onSnapshot(s=>{ sched=s.docs.map(d=>({id:d.id,...d.data()})); ready.sched=true; renderAdmin(); }, loadErr);
+  db.collection("sched").orderBy("date","asc").limit(2000).onSnapshot(s=>{ sched=s.docs.map(d=>({id:d.id,...d.data()})); ready.sched=true; renderAdmin(); checkPhones(); }, loadErr);
   db.collection("roster").limit(1000).onSnapshot(s=>{ roster=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); ready.roster=true; renderAdmin(); }, loadErr);
   db.collection("links").limit(1000).onSnapshot(s=>{ links={}; s.docs.forEach(d=>links[d.id]=d.data().uid); ready.links=true; renderAdmin(); }, loadErr);
   db.collection("claims").limit(1000).onSnapshot(s=>{ claims=s.docs.map(d=>({uid:d.id,...d.data()})); renderAdmin(); }, ()=>{});
-  db.collection("profiles").limit(2000).onSnapshot(s=>{ profilesAll={}; s.docs.forEach(d=>profilesAll[d.id]=d.data()); ready.profiles=true; if(tab!=="lists") renderAdmin(); }, ()=>{});
+  db.collection("profiles").limit(2000).onSnapshot(s=>{ profilesAll={}; s.docs.forEach(d=>profilesAll[d.id]=d.data()); ready.profiles=true; if(tab!=="lists") renderAdmin(); checkPhones(); }, ()=>{});
   db.collection("teams").limit(1000).onSnapshot(s=>{ teamList=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.teams=true; dedupeLists(); seedLists(); upgradeItems(); if(tab==="lists") renderAdmin(); }, ()=>{});
   db.collection("venues").limit(1000).onSnapshot(s=>{ venues=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.venues=true; dedupeLists(); seedLists(); upgradeItems(); if(tab==="lists") renderAdmin(); }, ()=>{});
   db.collection("contacts").limit(1000).onSnapshot(s=>{ contacts={}; s.docs.forEach(d=>contacts[d.id]=d.data().email||""); ready.contacts=true; if(tab==="people") renderAdmin(); }, ()=>{});
@@ -1416,9 +1421,21 @@ document.addEventListener("visibilitychange", () => { if(document.visibilityStat
 function itemFor(m, r){
   const o = r==="op"?"as":"op";
   return {match:m.id, date:m.date||"", time:m.time||"", dateText:m.dateText||"", timeText:m.timeText||"", dateTbc:!!m.dateTbc, comp:m.comp||"", venue:m.venue||"", home:m.home||"", away:m.away||"",
-    tv:m.tv||"", vc:m.vc||"", role:r, partner:m[o]||"", fee:+m["fee_"+r]||0, paid:!!m["paid_"+r], paidDate:m["paidDate_"+r]||"", notes:m.notes||"", pay:m.pay||"",
+    tv:m.tv||"", vc:m.vc||"", role:r, partner:m[o]||"", partnerPhone:phoneOf(m[o]), fee:+m["fee_"+r]||0, paid:!!m["paid_"+r], paidDate:m["paidDate_"+r]||"", notes:m.notes||"", pay:m.pay||"",
     ...venueExtra(m.venue), homeVar:teamVar(m.home), awayVar:teamVar(m.away), homeLogo:teamLogo(m.home), awayLogo:teamLogo(m.away)};
 }
+/* a person's phone, only if they chose (in their app) to show it to their partners */
+function phoneOf(name){ const uid=uidForName(name), p=uid?profilesAll[uid]:null; return p?.phoneShare && p.phone ? String(p.phone) : ""; }
+/* when someone adds/changes/hides their phone, refresh their upcoming games so the partner's card shows it (no emails) */
+let phoneBusy=false, phoneTimer=0;
+function checkPhones(){ clearTimeout(phoneTimer); phoneTimer=setTimeout(async ()=>{
+  if(phoneBusy || !ready.sched || !ready.roster || !ready.links || !ready.profiles) return;
+  const t=today();
+  const list=sched.filter(m=>!m.hidden && (m.date||"")>=t && (m.sync?.op||m.sync?.as) && ["op","as"].some(r=>String(m.ph?.[r]||"")!==phoneOf(m[r])));
+  if(!list.length) return;
+  phoneBusy=true; muteNotes++;
+  try{ for(const m of list){ try{ await syncAndSave(m, m); }catch{} } } finally { muteNotes--; phoneBusy=false; }
+}, 1500); }
 /* venue details travel with each user's copy of the assignment (users cannot read the venues list itself) */
 function venueExtra(name){
   const v = venueOf(name);
@@ -1458,6 +1475,7 @@ async function syncAndSave(m, prev){
       await w(()=>db.doc(`mine/${sync[r]}/items/${m.id}_${r}`).set({...ni, changedAt:chg?.at||0, changed:chg?.f||[]}));
     }
   }
+  if(!m.hidden && ready.profiles) m.ph = {op:phoneOf(m.op), as:phoneOf(m.as)};   // remembered, to notice later phone changes
   const {id, ...body} = m;
   await w(()=>db.doc(`sched/${m.id}`).set({...body, sync}));
   noteChanges(prev, m);
@@ -2157,7 +2175,7 @@ $("btnXlsx").onclick = async ()=>{
 /* =================================================================
    USER (read-only, own assignments)
    ================================================================= */
-let myItems=[], myClaim=undefined, uRoster=[], showPast=false, myUnav={}, myUnavLoaded=false, mySeen={}, seenWriting=false, myCant={}, cantOpen=null;
+let myItems=[], myClaim=undefined, uRoster=[], showPast=false, myUnav={}, myUnavLoaded=false, mySeen={}, seenWriting=false, myCant={}, cantOpen=null, myPhone="", myPhoneShare=false, phoneOpen=false;
 /* «Το είδε»: when the user's page shows an upcoming assignment (new or changed), the time is saved in profiles/<uid>.seen,
    so the administrator knows the person has seen it. Nothing to press. */
 async function markSeen(list){
@@ -2188,7 +2206,17 @@ async function startUser(){
     if(c.dataset.unavgo){ unavOpen=true; renderUser(); const d=$("unavDet"); if(d){ d.scrollIntoView({behavior:"smooth",block:"start"}); d.querySelector(".day:not([disabled])")?.focus({preventScroll:true}); } return; }
     if(c.dataset.seen){ const seen = ls.get("cm.seen", {}); seen[c.dataset.seen] = Date.now(); ls.set("cm.seen", seen); renderUser(); toast("Σημειώθηκε ως ενημερωμένο"); return; }
   });
-  db.doc(`profiles/${uid}`).onSnapshot(s=>{ myUnav=(s.exists&&s.data().unavail)||{}; mySeen=(s.exists&&s.data().seen)||{}; myCant=(s.exists&&s.data().cant)||{}; myUnavLoaded=true; if(!document.querySelector("#unavBox :focus, .cantform :focus")) renderUser(); }, ()=>{});
+  db.doc(`profiles/${uid}`).onSnapshot(s=>{ myUnav=(s.exists&&s.data().unavail)||{}; mySeen=(s.exists&&s.data().seen)||{}; myCant=(s.exists&&s.data().cant)||{}; myPhone=(s.exists&&s.data().phone)||""; myPhoneShare=!!(s.exists&&s.data().phoneShare); myUnavLoaded=true; if(!document.querySelector("#unavBox :focus, .cantform :focus, .phonef :focus")) renderUser(); }, ()=>{});
+  /* «Το τηλέφωνό μου»: saved in the user's own profile; the admin's app copies it to the partner's card */
+  $("app").addEventListener("click", async e=>{
+    const b = e.target.closest("#phoneSave"); if(!b) return;
+    const ph = ($("myPhone")?.value||"").trim(), share = !!$("myPhoneShare")?.checked;
+    if(ph && !/^\+?[\d\s\-()]{7,20}$/.test(ph)){ toast("Γράψε το τηλέφωνο μόνο με αριθμούς, π.χ. 6912345678"); $("myPhone")?.focus(); return; }
+    if(share && !ph){ toast("Γράψε πρώτα το τηλέφωνό σου"); $("myPhone")?.focus(); return; }
+    b.disabled = true;
+    try{ await db.doc(`profiles/${uid}`).set({phone:ph, phoneShare:share}, {merge:true}); document.activeElement?.blur(); toast(share?"Αποθηκεύτηκε· θα φαίνεται στους συνεργάτες σου":"Αποθηκεύτηκε"); }
+    catch{ b.disabled=false; toast("Δεν αποθηκεύτηκε. Δοκίμασε ξανά."); }
+  });
   /* «Δεν μπορώ»: the user tells the admin they cannot cover an assignment (kept in their own profile, which the admin reads) */
   $("app").addEventListener("click", async e=>{
     const b = e.target.closest("[data-cant]"); if(!b) return;
@@ -2231,6 +2259,19 @@ function unavPanel(){
     <div class="pbody">
     <div class="note">Πάτησε τις μέρες που <b>δεν</b> μπορείς να δουλέψεις. Αν μπορείς όλες τις μέρες, πάτησε «Διαθέσιμος». Ο διαχειριστής βλέπει τις δηλώσεις σου.</div>
     <div class="unav-weeks" id="unavBox"></div></div></details>`; }
+function phonePanel(){
+  const st = myPhone ? (myPhoneShare ? `<span class="wk-st ok">Φαίνεται στους συνεργάτες</span>` : `<span class="wk-st">Δεν φαίνεται</span>`) : "";
+  return `<details class="panel unav" id="phoneDet"${phoneOpen?" open":""}>
+    <summary><span class="unav-t"><svg class="unav-ic" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="3" width="34" height="34" rx="8" fill="var(--sq)"/><path d="M12 10h5l2.5 6-3 2a13 13 0 0 0 6 6l2-3 6 2.5v5a2.5 2.5 0 0 1-2.5 2.5A20 20 0 0 1 9.5 12.5 2.5 2.5 0 0 1 12 10" fill="var(--blue)"/></svg>
+      <span><h2 class="sec">Το τηλέφωνό μου</h2><span class="unav-sub">Για να σε καλεί ο συνεργάτης σου στον αγώνα</span></span></span><span class="sumr">${st}<span class="chev" aria-hidden="true">▾</span></span></summary>
+    <div class="pbody"><div class="phonef">
+      <label for="myPhone">Κινητό</label>
+      <input type="tel" id="myPhone" inputmode="tel" autocomplete="tel" placeholder="π.χ. 6912345678" value="${esc(myPhone)}">
+      <label class="chk"><input type="checkbox" id="myPhoneShare"${myPhoneShare?" checked":""}> <span>Να φαίνεται στον <b>Χειριστή / Βοηθό</b> που είναι μαζί μου στους επόμενους αγώνες</span></label>
+      <div><button type="button" class="btn small primary" id="phoneSave">Αποθήκευση</button></div>
+      <div class="note">Το βλέπει μόνο ο συνεργάτης σου στην κάρτα του αγώνα, με κουμπί κλήσης. Μπορείς να το κρύψεις όποτε θέλεις βγάζοντας το ✓. Οι αλλαγές φαίνονται στον συνεργάτη αφού ανοίξει την εφαρμογή ο διαχειριστής.</div>
+    </div></div></details>`;
+}
 let myStatsOpen=false, myStatSeason=null;
 function myStatsPanel(){
   const items = myItems.filter(i=>i.date);
@@ -2258,6 +2299,7 @@ function myStatsPanel(){
 }
 function bindMyStats(){
   const d=$("statDet"); if(d) d.addEventListener("toggle",()=>{ myStatsOpen=d.open; });
+  const pd=$("phoneDet"); if(pd) pd.addEventListener("toggle",()=>{ phoneOpen=pd.open; });
   const s=$("mySeason"); if(s) s.onchange=e=>{ myStatSeason=e.target.value; renderUser(); };
 }
 function renderUnavUser(){
@@ -2348,7 +2390,7 @@ function renderUser(){
     <div class="teams">${teamsL(i,true)}</div>${(i.homeVar||i.awayVar)?`<div class="tfull"><span class="vtag">VAR</span> ${esc([i.homeVar||"—", i.away?(i.awayVar||"—"):""].filter(Boolean).join(" – "))}</div>`:""}
     ${venueCard(i)}
     <dl>${i.comp?`<dt>Διοργάνωση</dt><dd>${esc(i.comp)}</dd>`:""}<dt>Θέση</dt><dd><span class="role ${i.role}">${ROLE[i.role]}</span></dd>
-      ${i.partner?`<dt>${i.role==="op"?"Βοηθός":"Χειριστής"}</dt><dd>${esc(i.partner)}</dd>`:""}${i.vc?`<dt>VAR</dt><dd>${esc(i.vc)}</dd>`:""}${i.tv?`<dt>Κάλυψη</dt><dd>${esc(i.tv)}</dd>`:""}${i.dateTbc?`<dt>Σημ.</dt><dd>Η ημέρα/ώρα θα επιβεβαιωθεί</dd>`:""}
+      ${i.partner?`<dt>${i.role==="op"?"Βοηθός":"Χειριστής"}</dt><dd>${esc(i.partner)}${i.partnerPhone && i.date>=t?` <a class="tel" href="tel:${esc(i.partnerPhone.replace(/[^\d+]/g,""))}" aria-label="Κλήση ${esc(i.partner)}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>${esc(i.partnerPhone)}</a>`:""}</dd>`:""}${i.vc?`<dt>VAR</dt><dd>${esc(i.vc)}</dd>`:""}${i.tv?`<dt>Κάλυψη</dt><dd>${esc(i.tv)}</dd>`:""}${i.dateTbc?`<dt>Σημ.</dt><dd>Η ημέρα/ώρα θα επιβεβαιωθεί</dd>`:""}
       ${i.notes?`<dt>Σημειώσεις</dt><dd>${esc(i.notes)}</dd>`:""}</dl>
     ${i.date>=t ? cantHtml(i) : ""}
     <div class="bottom"><span class="fee">${eur(i.fee)} ${i.paid?"":payTag(i.pay)}</span><span class="pay ${i.paid?"yes":"no"}">${i.paid?`✓ Πληρώθηκε${i.paidDate?" "+fmtDate(i.paidDate).slice(0,5):""}`:"● Εκκρεμεί"}</span></div>
@@ -2366,6 +2408,7 @@ function renderUser(){
     <div class="sechead"><div><div class="hi">${greet}</div><h2 class="sec">Επόμενες αναθέσεις</h2></div></div>
     ${upcoming.length?`<div class="cards">${upcoming.map((i,k)=>card(i,k===0)).join("")}</div>`:`<div class="panel"><div class="empty"><strong>Δεν έχεις επόμενες αναθέσεις</strong><div>Θα εμφανιστούν εδώ μόλις σε ορίσει ο διαχειριστής.</div></div></div>`}
     ${unavPanel()}
+    ${phonePanel()}
     ${myStatsPanel()}
     ${past.length?`<div class="actions"><button class="btn" id="togglePast">${showPast?"Απόκρυψη":"Προβολή"} προηγούμενων (${past.length})</button></div>
       ${showPast?`<div class="cards">${past.map(i=>card(i,false)).join("")}</div>`:""}`:""}
