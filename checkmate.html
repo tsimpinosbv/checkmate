@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
 <meta charset="utf-8">
-<meta name="app-build" content="8eeb1a2c5b2b">
+<meta name="app-build" content="4f7d70fc4b3a">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <title>Check Mate Challenge</title>
@@ -395,9 +395,10 @@ table.grid tr.past td input:not([type=checkbox]){color:var(--muted)}
 .slot .nm{font-weight:600;font-size:14px;display:flex;gap:6px;align-items:center;overflow-wrap:anywhere}
 .slot .nm .dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--line)}
 .slot .nm .dot.on{background:var(--good)}
-.slot .nm .dot.seen-ok,.slot .nm .dot.seen-no{width:11px;height:11px;cursor:help}
-.slot .nm .dot.seen-ok{background:var(--good)}
-.slot .nm .dot.seen-no{background:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
+.seenic{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;flex:none;cursor:help}
+.seenic .ic{width:14px;height:14px;stroke-width:2.2}
+.seenic.seen-ok{background:var(--good-bg);color:var(--good)}
+.seenic.seen-no{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
 .slot .ln{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .role{display:inline-flex;align-items:center;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
 .role.op{background:var(--ink);color:var(--bg);border-color:var(--ink)}
@@ -1609,6 +1610,8 @@ const IC = {
   user:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>',
   eye:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
   eyeOff:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 5.1A10.6 10.6 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6C3.7 8.4 2 12 2 12s3.5 7 10 7c1.8 0 3.4-.5 4.7-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>',
+  thumb:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10v11H3V10zM7 10l4-8a2.5 2.5 0 0 1 2.5 2.5V9h5.6a2 2 0 0 1 2 2.3l-1.4 8A2 2 0 0 1 17.7 21H7"/></svg>',
+  wait:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12M6 22h12M7 2c0 5 5 6 5 10s-5 5-5 10M17 2c0 5-5 6-5 10s5 5 5 10"/></svg>',
   plus:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>'
 };
 /* «Σήμερα» / «Αύριο» next to the date */
@@ -1966,7 +1969,7 @@ function slotHtml(m, r){
   if(!m[r]) return `<div class="slot"><button type="button" class="add-slot" data-act="edit" data-id="${m.id}" title="Πάτα για να ορίσεις ${ROLE[r]}">${IC.plus} ${ROLE[r]}</button></div>`;
   const linked = !!uidForName(m[r]); const paid=!!m["paid_"+r];
   return `<div class="slot">
-    ${cantFlag(m, r)}<div class="nm">${(()=>{ const sv=seenTag(m, r), tip = sv ? sv.tip : linked ? "Συνδεδεμένος λογαριασμός – βλέπει την ανάθεση" : "Δεν έχει συνδεθεί λογαριασμός"; return `<span class="dot ${sv?sv.cls:linked?"on":""}" data-tip="${tip}" title="${tip}" role="img" aria-label="${tip}"></span>`; })()}${esc(m[r])}${(()=>{ const u=unavailOn(m[r], m.date); return u?`<span class="unav-flag" title="${esc(u.note?"Κώλυμα: "+u.note:"Έχει δηλώσει κώλυμα αυτή τη μέρα")}">${cmIcon("warn")} Κώλυμα</span>`:""; })()}</div>
+    ${cantFlag(m, r)}<div class="nm">${(()=>{ const sv=seenTag(m, r), tip = sv ? sv.tip : linked ? "Συνδεδεμένος λογαριασμός – βλέπει την ανάθεση" : "Δεν έχει συνδεθεί λογαριασμός"; return sv ? `<span class="seenic ${sv.cls}" data-tip="${tip}" title="${tip}" role="img" aria-label="${tip}">${sv.cls==="seen-ok"?IC.thumb:IC.wait}</span>` : `<span class="dot ${linked?"on":""}" title="${tip}"></span>`; })()}${esc(m[r])}${(()=>{ const u=unavailOn(m[r], m.date); return u?`<span class="unav-flag" title="${esc(u.note?"Κώλυμα: "+u.note:"Έχει δηλώσει κώλυμα αυτή τη μέρα")}">${cmIcon("warn")} Κώλυμα</span>`:""; })()}</div>
     <div class="ln"><span class="role ${r}">${ROLE[r]}</span><span class="fee${paid?" paid":""}">${eur(m["fee_"+r])}</span>
     <button class="pay ${paid?"yes mini":"no"}" data-act="pay" data-id="${m.id}" data-role="${r}" ${paid?`aria-label="Πληρώθηκε" title="Πληρώθηκε${m["paidDate_"+r]?" "+fmtDate(m["paidDate_"+r]).slice(0,5):""} · πάτα για αλλαγή"`:`title="Αλλαγή κατάστασης πληρωμής"`}>${paid?"✓":"● Εκκρεμεί"}</button></div>
   </div>`;
@@ -2848,7 +2851,7 @@ document.addEventListener("click", async e => {
 });
 $("btnAdd").onclick=()=>openForm(null);
 /* «Το είδε / Δεν το είδε»: an icon; tap (phone) shows the text */
-document.addEventListener("click", e=>{ const t=e.target.closest?.(".nm .dot[data-tip]"); if(t) toast(t.dataset.tip); });
+document.addEventListener("click", e=>{ const t=e.target.closest?.(".nm .seenic[data-tip]"); if(t) toast(t.dataset.tip); });
 /* phone: the round «+» shrinks while scrolling down, grows back when scrolling up */
 { let lastY = scrollY; addEventListener("scroll", ()=>{ const y=scrollY; if(Math.abs(y-lastY)<8) return; document.body.classList.toggle("fab-mini", y>lastY && y>120); lastY=y; }, {passive:true}); }
 $("btnImport").onclick=()=>openImport();
