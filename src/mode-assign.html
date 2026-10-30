@@ -685,8 +685,8 @@ function startAdmin(){
   db.collection("links").limit(1000).onSnapshot(s=>{ links={}; s.docs.forEach(d=>links[d.id]=d.data().uid); ready.links=true; renderAdmin(); }, loadErr);
   db.collection("claims").limit(1000).onSnapshot(s=>{ claims=s.docs.map(d=>({uid:d.id,...d.data()})); renderAdmin(); }, ()=>{});
   db.collection("profiles").limit(2000).onSnapshot(s=>{ profilesAll={}; s.docs.forEach(d=>profilesAll[d.id]=d.data()); ready.profiles=true; if(tab!=="lists") renderAdmin(); checkPhones(); }, ()=>{});
-  db.collection("teams").limit(1000).onSnapshot(s=>{ teamList=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.teams=true; dedupeLists(); seedLists(); upgradeItems(); if(tab==="lists") renderAdmin(); }, ()=>{});
-  db.collection("venues").limit(1000).onSnapshot(s=>{ venues=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.venues=true; dedupeLists(); seedLists(); upgradeItems(); if(tab==="lists") renderAdmin(); }, ()=>{});
+  db.collection("teams").limit(1000).onSnapshot(s=>{ teamList=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.teams=true; dedupeLists(); seedLists(); upgradeItems(); if(tab==="lists"||tab==="sched") renderAdmin(); }, ()=>{});
+  db.collection("venues").limit(1000).onSnapshot(s=>{ venues=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.venues=true; dedupeLists(); seedLists(); upgradeItems(); if(tab==="lists"||tab==="sched") renderAdmin(); }, ()=>{});
   db.collection("contacts").limit(1000).onSnapshot(s=>{ contacts={}; s.docs.forEach(d=>contacts[d.id]=d.data().email||""); ready.contacts=true; if(tab==="people") renderAdmin(); }, ()=>{});
   db.doc("config/notify").onSnapshot(s=>{ notify={email:false, endpoint:"", ...(s.exists?s.data():{})}; if(tab==="people") renderAdmin(); }, ()=>{});
   claude.use("mail").then(x=>{ mail=x; if(Object.keys(outbox).length) outboxTimer = setTimeout(flushNotes, 4000); }).catch(()=>{});
