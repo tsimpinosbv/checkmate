@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
 <meta charset="utf-8">
-<meta name="app-build" content="59b965eea6a0">
+<meta name="app-build" content="d4bac2a5cc39">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t);if(localStorage.getItem("cm-compact"))document.documentElement.classList.add("cm-compact")}catch(e){}</script>
 <title>Check Mate Challenge</title>
@@ -546,6 +546,18 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 .day:disabled{opacity:.4;cursor:not-allowed}
 .wk-f{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .wk-f input{flex:1 1 100%;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:13px}
+.cantbtn{align-self:flex-start;border:1px dashed color-mix(in srgb,var(--bad) 55%,transparent);background:none;color:var(--bad);font:600 13px var(--f-body);border-radius:999px;padding:5px 12px;cursor:pointer}
+.cantbox{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-radius:10px;padding:10px 12px;background:color-mix(in srgb,var(--bad) 10%,var(--surface));border:1px solid color-mix(in srgb,var(--bad) 35%,transparent);font-size:14px}
+.cantbox .grow{flex:1;min-width:160px}
+.cantform{flex-direction:column;align-items:stretch}.cantform label{font-weight:600}
+.cantform textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);resize:vertical}
+.cantform .cantbtns{display:flex;gap:8px;flex-wrap:wrap}
+.cant-flag{font-size:12.5px;font-weight:700;color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,transparent);border-radius:8px;padding:3px 9px;align-self:flex-start}
+.cant-flag.ack{opacity:.75;font-weight:600}
+.banner.cantban{background:color-mix(in srgb,var(--bad) 10%,var(--surface));border-color:color-mix(in srgb,var(--bad) 40%,transparent);align-items:flex-start}
+.cantban ul{margin:6px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.cantban li{display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.cantban .cantact{display:flex;gap:6px}
 .unav-flag{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:700;color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,transparent);border-radius:999px;padding:1px 8px}
 .ugrid{width:100%;border-collapse:collapse;font-size:14px}
 .ugrid th,.ugrid td{border-top:1px solid var(--line);padding:8px 6px;text-align:center}
@@ -1581,6 +1593,7 @@ const whenMain = m => esc(m.dateText || niceDate(m.date));
 const whenSub = m => [m.time||m.timeText||"", m.dateTbc?"ημ. αγωνιστικής":""].filter(Boolean).map(esc).join(" · ");
 const ls = {get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch{return d}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
 function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3000); }
+function toastLong(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; t.style.maxWidth="min(520px,calc(100vw - 32px))"; document.body.appendChild(t); setTimeout(()=>t.remove(),7000); }
 async function w(fn){ for(let i=0;;i++){ try{ return await fn(); }catch(e){ if(i<5 && (e?.code==="resource_exhausted"||e?.code==="unavailable")){ await sleep(400*2**i); continue; } throw e; } } }
 
 let db=null, user=null, me=null, isAdmin=false;
@@ -1634,12 +1647,12 @@ function startAdmin(){
   db.collection("roster").limit(1000).onSnapshot(s=>{ roster=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); ready.roster=true; renderAdmin(); }, loadErr);
   db.collection("links").limit(1000).onSnapshot(s=>{ links={}; s.docs.forEach(d=>links[d.id]=d.data().uid); ready.links=true; renderAdmin(); }, loadErr);
   db.collection("claims").limit(1000).onSnapshot(s=>{ claims=s.docs.map(d=>({uid:d.id,...d.data()})); renderAdmin(); }, ()=>{});
-  db.collection("profiles").limit(2000).onSnapshot(s=>{ profilesAll={}; s.docs.forEach(d=>profilesAll[d.id]=d.data()); if(tab!=="lists") renderAdmin(); }, ()=>{});
+  db.collection("profiles").limit(2000).onSnapshot(s=>{ profilesAll={}; s.docs.forEach(d=>profilesAll[d.id]=d.data()); ready.profiles=true; if(tab!=="lists") renderAdmin(); }, ()=>{});
   db.collection("teams").limit(1000).onSnapshot(s=>{ teamList=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.teams=true; dedupeLists(); seedLists(); upgradeItems(); if(tab==="lists") renderAdmin(); }, ()=>{});
   db.collection("venues").limit(1000).onSnapshot(s=>{ venues=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.venues=true; dedupeLists(); seedLists(); upgradeItems(); if(tab==="lists") renderAdmin(); }, ()=>{});
-  db.collection("contacts").limit(1000).onSnapshot(s=>{ contacts={}; s.docs.forEach(d=>contacts[d.id]=d.data().email||""); if(tab==="people") renderAdmin(); }, ()=>{});
+  db.collection("contacts").limit(1000).onSnapshot(s=>{ contacts={}; s.docs.forEach(d=>contacts[d.id]=d.data().email||""); ready.contacts=true; if(tab==="people") renderAdmin(); }, ()=>{});
   db.doc("config/notify").onSnapshot(s=>{ notify={email:false, endpoint:"", ...(s.exists?s.data():{})}; if(tab==="people") renderAdmin(); }, ()=>{});
-  claude.use("mail").then(x=>mail=x).catch(()=>{});
+  claude.use("mail").then(x=>{ mail=x; if(Object.keys(outbox).length) outboxTimer = setTimeout(flushNotes, 4000); }).catch(()=>{});
   db.doc("config/fees").onSnapshot(s=>{ if(s.exists) fees={op:80,as:40,...s.data()}; }, ()=>{});
 }
 function loadErr(){ $("app").innerHTML = `<div class="panel"><div class="empty"><strong>Δεν φορτώθηκαν τα δεδομένα</strong><div>Ανανέωσε τη σελίδα.</div></div></div>`; }
@@ -1679,6 +1692,8 @@ function renderAdmin(){
   <div style="display:flex;flex-direction:column;gap:18px">
     ${backupDue() ? `<div class="banner" role="status">${cmIcon("save")}<span class="grow">${ls.get("cm.lastBackup",0) ? "Πέρασε πάνω από μία εβδομάδα από το τελευταίο αντίγραφο ασφαλείας." : "Κράτα ένα αντίγραφο ασφαλείας με όλο το πρόγραμμα και τις πληρωμές."}</span>
       <button class="btn small primary" type="button" data-act="backup">${cmIcon("dl")} Αντίγραφο σε Excel</button><button class="btn small" type="button" data-act="backuplater">Αργότερα</button></div>` : ""}
+    ${(()=>{ const L=cantList(); return L.length ? `<div class="banner cantban" role="alert">✋<div class="grow"><b>${L.length===1?"Ένα άτομο δηλώνει":"Άτομα δηλώνουν"} ότι δεν μπορούν:</b><ul>${L.map(({m,r,c})=>`<li><span><b>${esc(m[r])}</b> (${ROLE[r]}) · ${esc(niceDate(m.date))} ${esc(m.time||"")} · ${esc(m.home)}${m.away?" – "+esc(m.away):""}${c.note?` · «${esc(c.note)}»`:""}</span>
+        <span class="cantact"><button class="btn small" type="button" data-act="edit" data-id="${m.id}">✎ Αλλαγή</button><button class="btn small" type="button" data-act="cantack" data-id="${m.id}" data-role="${r}">✓ Το είδα</button></span></li>`).join("")}</ul></div></div>` : ""; })()}
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="sched" aria-selected="${tab==="sched"}">Πρόγραμμα</button>
       <button role="tab" data-tab="lists" aria-selected="${tab==="lists"}">Ομάδες & γήπεδα</button>
@@ -1882,11 +1897,20 @@ function seenTag(m, r){
   if(at && at >= chg){ const d = new Date(at); return `<span class="seen ok" title="Το είδε στην εφαρμογή ${fmtDate(ymd(d)).slice(0,5)} ${pad(d.getHours())}:${pad(d.getMinutes())}">${cmIcon("eye")} Το είδε</span>`; }
   return `<span class="seen no" title="Δεν έχει ανοίξει ακόμα την εφαρμογή μετά ${at?"την αλλαγή":"την ανάθεση"}">${at?"Δεν είδε την αλλαγή":"Δεν το είδε ακόμα"}</span>`;
 }
+/* «Δεν μπορώ» declared by the person in this role (read from their profile) */
+function cantOf(m, r){ const uid = m.sync?.[r]; if(!uid || m.hidden || !m.date || m.date < today()) return null; return profilesAll[uid]?.cant?.[`${m.id}_${r}`] || null; }
+function cantFlag(m, r){ const c = cantOf(m, r); if(!c) return "";
+  const d = new Date(c.at||0);
+  return `<div class="cant-flag${c.ack?" ack":""}" title="Δήλωση στις ${fmtDate(ymd(d)).slice(0,5)} ${pad(d.getHours())}:${pad(d.getMinutes())}">✋ Δεν μπορεί${c.note?`: «${esc(c.note)}»`:""}</div>`; }
+function cantList(){
+  const out=[]; sched.forEach(m=>["op","as"].forEach(r=>{ const c=cantOf(m,r); if(c && m[r] && !c.ack) out.push({m,r,c}); }));
+  return out.sort((a,b)=>(a.m.date+(a.m.time||"")).localeCompare(b.m.date+(b.m.time||"")));
+}
 function slotHtml(m, r){
   if(!m[r]) return `<div class="slot"><div class="ln"><span class="empty-slot">${ROLE[r]}: κενό</span></div></div>`;
   const linked = !!uidForName(m[r]); const paid=!!m["paid_"+r];
   return `<div class="slot">
-    <div class="nm"><span class="dot ${linked?"on":""}" title="${linked?"Συνδεδεμένος λογαριασμός – βλέπει την ανάθεση":"Δεν έχει συνδεθεί λογαριασμός"}"></span>${esc(m[r])}${(()=>{ const u=unavailOn(m[r], m.date); return u?`<span class="unav-flag" title="${esc(u.note?"Κώλυμα: "+u.note:"Έχει δηλώσει κώλυμα αυτή τη μέρα")}">${cmIcon("warn")} Κώλυμα</span>`:""; })()}</div>
+    ${cantFlag(m, r)}<div class="nm"><span class="dot ${linked?"on":""}" title="${linked?"Συνδεδεμένος λογαριασμός – βλέπει την ανάθεση":"Δεν έχει συνδεθεί λογαριασμός"}"></span>${esc(m[r])}${(()=>{ const u=unavailOn(m[r], m.date); return u?`<span class="unav-flag" title="${esc(u.note?"Κώλυμα: "+u.note:"Έχει δηλώσει κώλυμα αυτή τη μέρα")}">${cmIcon("warn")} Κώλυμα</span>`:""; })()}</div>
     <div class="ln"><span class="role ${r}">${ROLE[r]}</span><span class="fee">${eur(m["fee_"+r])}</span>${seenTag(m, r)}
     <button class="pay ${paid?"yes":"no"}" data-act="pay" data-id="${m.id}" data-role="${r}" title="Αλλαγή κατάστασης πληρωμής">${paid?"✓ Πληρώθηκε":"● Εκκρεμεί"}</button></div>
   </div>`;
@@ -2277,10 +2301,14 @@ function bindNotify(){
   };
 }
 const NOTE_FIELDS = [["date","Ημερομηνία"],["time","Ώρα"],["home","Γηπεδούχος"],["away","Φιλοξενούμενη"],["comp","Διοργάνωση"],["venue","Γήπεδο"],["tv","Κάλυψη"],["vc","VAR"],["partner","Συνεργάτης"],["fee","Αμοιβή"],["notes","Σημειώσεις"]];
-let outbox = {}, outboxTimer = null, muteNotes = 0;
+/* emails wait 4 s (to group changes) in `outbox`; they are also kept on this device until sent,
+   so closing the app right after a change does not lose them: they go out the next time it opens */
+let outbox = (()=>{ try{ return JSON.parse(localStorage.getItem("cm.outbox")||"{}")||{}; }catch{ return {}; } })(), inflight = {}, outboxTimer = null, muteNotes = 0, flushTries = 0;
+function saveOutbox(){ try{ const all = {...inflight}; for(const [k,v] of Object.entries(outbox)) all[k] = [...(all[k]||[]), ...v];
+  if(Object.keys(all).length) localStorage.setItem("cm.outbox", JSON.stringify(all)); else localStorage.removeItem("cm.outbox"); }catch{} }
 function queueNote(uid, ev){
   if(muteNotes || !uid || !notify.email || !notify.endpoint) return;
-  (outbox[uid] = outbox[uid] || []).push(ev);
+  (outbox[uid] = outbox[uid] || []).push(ev); saveOutbox();
   clearTimeout(outboxTimer); outboxTimer = setTimeout(flushNotes, 4000);
 }
 /* who gets the email: the person in the role (by name), at their linked account's email or the email set in Άτομα */
@@ -2339,15 +2367,22 @@ function subjectFor(evs){
 }
 async function flushNotes(){
   clearTimeout(outboxTimer); outboxTimer = null;
-  const box = outbox; outbox = {};
-  const msgs = [];
+  if(!Object.keys(outbox).length) return;
+  /* not ready yet (just opened): try again shortly */
+  if(!mail || !notify.endpoint || !ready.roster || !ready.links || !ready.profiles || !ready.contacts){ if(flushTries++ < 20) outboxTimer = setTimeout(flushNotes, 3000); return; }
+  const box = outbox; outbox = {}; inflight = box;
+  const msgs = [], keys = [], missing = [];
   for(const [key, evs] of Object.entries(box)){
-    const to = emailForName(key); if(!to) continue;
-    msgs.push({to, subject:subjectFor(evs), html:mailHtml({name:nameForKey(key)}, evs)});
+    const to = emailForName(key);
+    if(!to){ missing.push(rosterByNorm()[key]?.name || key); continue; }
+    msgs.push({to, subject:subjectFor(evs), html:mailHtml({name:nameForKey(key)}, evs)}); keys.push(key);
   }
-  if(!msgs.length || !mail) return;
-  try{ const r = await mail.send(notify.endpoint, msgs, senderOpts()); toast(`Στάλθηκαν ${r.sent ?? msgs.length} email ειδοποίησης`); }
-  catch(err){ console.warn("notify", err); toast("Τα email ειδοποίησης δεν στάλθηκαν"); }
+  if(missing.length) setTimeout(()=>toastLong(`Δεν στάλθηκε email σε: ${missing.join(", ")} — δεν έχει email. Συμπλήρωσέ το στα «Άτομα».`), msgs.length ? 3200 : 0);
+  if(!msgs.length){ inflight = {}; saveOutbox(); return; }
+  try{ const r = await mail.send(notify.endpoint, msgs, senderOpts()); inflight = {}; saveOutbox(); toast(`Στάλθηκαν ${r.sent ?? msgs.length} email ειδοποίησης`); }
+  catch(err){ console.warn("notify", err);
+    for(const k of keys) outbox[k] = [...box[k], ...(outbox[k]||[])];   // keep them; sent at the next attempt
+    inflight = {}; saveOutbox(); toast("Τα email δεν στάλθηκαν τώρα· θα ξαναδοκιμάσει αργότερα"); if(flushTries++ < 20) outboxTimer = setTimeout(flushNotes, 60000); }
 }
 document.addEventListener("visibilitychange", () => { if(document.visibilityState==="hidden" && outboxTimer) flushNotes(); });
 
@@ -2586,6 +2621,11 @@ document.addEventListener("click", async e => {
   if(act==="logmode") $("logModeWrap").innerHTML = `<span class="confirm">Αλλαγή όλης της εφαρμογής σε «Ημερολόγιο αγώνων»; <button type="button" class="btn small primary" data-act="logmodeyes">Ναι</button><button type="button" class="btn small" data-act="logmodeno">Όχι</button></span>`;
   if(act==="logmodeno") $("logModeWrap").innerHTML = `<button class="btn small" type="button" data-act="logmode">Ενεργοποίηση ημερολογίου</button>`;
   if(act==="logmodeyes"){ try{ await db.doc("config/app").set({mode:"log", changedAt:Date.now()}); location.reload(); }catch{ toast("Η αλλαγή απέτυχε"); } }
+  if(act==="cantack"&&m){
+    const r=b.dataset.role, uid=m.sync?.[r]; if(!uid) return; b.disabled=true;
+    try{ await w(()=>db.doc(`profiles/${uid}`).update({[`cant.${m.id}_${r}.ack`]:true})); toast("Σημειώθηκε· η ένδειξη μένει στον αγώνα μέχρι να αλλάξει το άτομο"); }
+    catch{ b.disabled=false; toast("Η αλλαγή απέτυχε"); }
+  }
   if(act==="paym"&&m){
     const to = m.pay===b.dataset.to ? "" : b.dataset.to; b.closest(".paysw")?.querySelectorAll("button").forEach(x=>x.disabled=true);
     try{ await syncAndSave({...m, pay:to, updatedAt:Date.now()}, m); toast(to?`Πληρωμή: ${PAYM[to]}`:"Ο τρόπος πληρωμής αφαιρέθηκε"); }
@@ -3091,7 +3131,7 @@ $("btnXlsx").onclick = async ()=>{
 /* =================================================================
    USER (read-only, own assignments)
    ================================================================= */
-let myItems=[], myClaim=undefined, uRoster=[], showPast=false, myUnav={}, myUnavLoaded=false, mySeen={}, seenWriting=false;
+let myItems=[], myClaim=undefined, uRoster=[], showPast=false, myUnav={}, myUnavLoaded=false, mySeen={}, seenWriting=false, myCant={}, cantOpen=null;
 /* «Το είδε»: when the user's page shows an upcoming assignment (new or changed), the time is saved in profiles/<uid>.seen,
    so the administrator knows the person has seen it. Nothing to press. */
 async function markSeen(list){
@@ -3122,8 +3162,35 @@ async function startUser(){
     if(c.dataset.unavgo){ unavOpen=true; renderUser(); const d=$("unavDet"); if(d){ d.scrollIntoView({behavior:"smooth",block:"start"}); d.querySelector(".day:not([disabled])")?.focus({preventScroll:true}); } return; }
     if(c.dataset.seen){ const seen = ls.get("cm.seen", {}); seen[c.dataset.seen] = Date.now(); ls.set("cm.seen", seen); renderUser(); toast("Σημειώθηκε ως ενημερωμένο"); return; }
   });
-  db.doc(`profiles/${uid}`).onSnapshot(s=>{ myUnav=(s.exists&&s.data().unavail)||{}; mySeen=(s.exists&&s.data().seen)||{}; myUnavLoaded=true; if(!document.querySelector("#unavBox :focus")) renderUser(); }, ()=>{});
+  db.doc(`profiles/${uid}`).onSnapshot(s=>{ myUnav=(s.exists&&s.data().unavail)||{}; mySeen=(s.exists&&s.data().seen)||{}; myCant=(s.exists&&s.data().cant)||{}; myUnavLoaded=true; if(!document.querySelector("#unavBox :focus, .cantform :focus")) renderUser(); }, ()=>{});
+  /* «Δεν μπορώ»: the user tells the admin they cannot cover an assignment (kept in their own profile, which the admin reads) */
+  $("app").addEventListener("click", async e=>{
+    const b = e.target.closest("[data-cant]"); if(!b) return;
+    const id = b.dataset.cant, act = b.dataset.cantact;
+    if(act==="open"){ cantOpen=id; renderUser(); $("cantNote")?.focus(); return; }
+    if(act==="close"){ cantOpen=null; renderUser(); return; }
+    const ref = db.doc(`profiles/${uid}`);
+    if(act==="send"){
+      const it = myItems.find(x=>x.id===id); if(!it) return;
+      const note = ($("cantNote")?.value||"").trim().slice(0,300); b.disabled=true;
+      try{ await ref.set({cant:{[id]:{at:Date.now(), note, date:it.date||"", home:it.home||"", away:it.away||"", role:it.role}}}, {merge:true}); cantOpen=null; toast("Ενημερώθηκε ο διαχειριστής"); }
+      catch{ b.disabled=false; toast("Δεν στάλθηκε. Δοκίμασε ξανά."); }
+      return;
+    }
+    if(act==="undo"){
+      const rest = {...myCant}; delete rest[id]; b.disabled=true;
+      try{ await ref.update({cant:rest}); toast("Η δήλωση ακυρώθηκε"); }catch{ b.disabled=false; toast("Η ακύρωση απέτυχε"); }
+    }
+  });
   document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible" && !document.querySelector("#unavBox :focus")) renderUser(); });   // back to the app: count as seen
+}
+function cantHtml(i){
+  const c = myCant[i.id];
+  if(c) return `<div class="cantbox on" role="status">✋ <span class="grow"><b>Δήλωσες ότι δεν μπορείς.</b>${c.note?` «${esc(c.note)}»`:""} Ο διαχειριστής το βλέπει στην εφαρμογή.</span><button type="button" class="btn small" data-cant="${esc(i.id)}" data-cantact="undo">Ακύρωση</button></div>`;
+  if(cantOpen===i.id) return `<div class="cantbox cantform"><label for="cantNote">Δεν μπορείς να καλύψεις αυτόν τον αγώνα; Γράψε, αν θέλεις, τον λόγο:</label>
+    <textarea id="cantNote" rows="2" maxlength="300" placeholder="π.χ. ασθένεια, υποχρέωση στη δουλειά…"></textarea>
+    <div class="cantbtns"><button type="button" class="btn small primary" data-cant="${esc(i.id)}" data-cantact="send">✋ Ενημέρωση διαχειριστή</button><button type="button" class="btn small" data-cant="${esc(i.id)}" data-cantact="close">Άκυρο</button></div></div>`;
+  return `<button type="button" class="cantbtn" data-cant="${esc(i.id)}" data-cantact="open">✋ Δεν μπορώ</button>`;
 }
 /* weekly unavailability: the user marks the days they cannot work */
 let unavOpen = false;   // closed on entry; opens on tap and stays as the user leaves it
@@ -3254,6 +3321,7 @@ function renderUser(){
     <dl>${i.comp?`<dt>Διοργάνωση</dt><dd>${esc(i.comp)}</dd>`:""}<dt>Θέση</dt><dd><span class="role ${i.role}">${ROLE[i.role]}</span></dd>
       ${i.partner?`<dt>${i.role==="op"?"Βοηθός":"Χειριστής"}</dt><dd>${esc(i.partner)}</dd>`:""}${i.vc?`<dt>VAR</dt><dd>${esc(i.vc)}</dd>`:""}${i.tv?`<dt>Κάλυψη</dt><dd>${esc(i.tv)}</dd>`:""}${i.dateTbc?`<dt>Σημ.</dt><dd>Η ημέρα/ώρα θα επιβεβαιωθεί</dd>`:""}
       ${i.notes?`<dt>Σημειώσεις</dt><dd>${esc(i.notes)}</dd>`:""}</dl>
+    ${i.date>=t ? cantHtml(i) : ""}
     <div class="bottom"><span class="fee">${eur(i.fee)} ${i.paid?"":payTag(i.pay)}</span><span class="pay ${i.paid?"yes":"no"}">${i.paid?`✓ Πληρώθηκε${i.paidDate?" "+fmtDate(i.paidDate).slice(0,5):""}`:"● Εκκρεμεί"}</span></div>
   </article>`;
   const nxWk = nextWeeks(2)[1];
