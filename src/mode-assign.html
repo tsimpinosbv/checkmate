@@ -126,6 +126,25 @@ button.pay:hover{border-color:currentColor}
 .vis{display:inline-flex;align-items:center;gap:4px;margin-top:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:2px 9px;font:600 12px var(--f-body);color:var(--good);cursor:pointer;white-space:nowrap}
 .vis::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
 .vis.off{color:var(--muted);border-style:dashed}
+.vis.eyeb{padding:3px 7px}.vis.eyeb::before{display:none}.vis.eyeb .ic{width:15px;height:15px}
+.daytag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:6px;font:700 10.5px var(--f-body);letter-spacing:.06em;text-transform:uppercase;vertical-align:2px;background:var(--blue-bg);color:var(--blue)}
+.daytag.now{background:var(--accent);color:#fff}
+.row.is-today{box-shadow:inset 3px 0 0 var(--accent)}
+.row.is-past>.c-date,.row.is-past>.c-match,.row.is-past>.slot{opacity:.55}
+.row.is-past:hover>*{opacity:1}
+.add-slot{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;border:1.5px dashed color-mix(in srgb,var(--accent) 60%,transparent);background:color-mix(in srgb,var(--accent) 6%,transparent);color:var(--accent);font:700 13px var(--f-body);border-radius:10px;padding:7px 14px;cursor:pointer}
+.add-slot:hover{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.add-slot .ic{width:15px;height:15px}
+.pay.mini{padding:2px 8px;font-size:13px}
+.fee.paid{color:var(--good)}
+.cantbtn,.cantbox,.cant-flag,.cantban{--icw:16px}
+.cantbtn .ic,.cantbox .ic,.cant-flag .ic,.cantform .ic{width:15px;height:15px;vertical-align:-2px}
+.cantban>.ic{width:22px;height:22px;flex:none;color:var(--bad)}
+.asubar>.ic{width:20px;height:20px;flex:none;color:var(--blue)}
+.card .teams .sb{display:flex;flex-direction:column;gap:8px}
+.card .teams .sbt{display:flex;align-items:center;gap:12px;font-size:21px}
+.card .teams .sbt .tlg{width:38px;height:38px}
+.tlg.ph{display:inline-block;border-radius:50%;background:var(--sq)}
 .vis:hover{border-color:currentColor}
 .row.is-hidden>.c-match,.row.is-hidden>.slot{opacity:.5}
 .bulk{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;color:var(--muted);margin-top:12px}
@@ -596,9 +615,20 @@ const payTag = p => PAYM[p] ? `<span class="paym ${p}">${PAY_IC[p]} ${PAYM[p]}</
 const paySwitch = m => `<span class="paysw" role="group" aria-label="Τρόπος πληρωμής">${["credit","cash"].map(p=>`<button type="button" data-act="paym" data-id="${m.id}" data-to="${p}" aria-pressed="${m.pay===p}" title="${m.pay===p?"Πάτα ξανά για να το αφαιρέσεις":"Πληρωμή με "+PAYM[p]}">${PAY_IC[p]} ${PAYM[p]}</button>`).join("")}</span>`;
 /* team logos: uploaded once in «Ομάδες & γήπεδα»; users' copies carry them as homeLogo / awayLogo */
 const teamLogo = name => { const k=norm(name); const t = k ? teamList.find(x=>norm(x.name)===k) : null; return t?.logo || ""; };
+/* line icons used instead of emoji (emoji look different on every phone) */
+const IC = {
+  hand:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 12V5.5a1.5 1.5 0 0 1 3 0V11M11 10.5V4a1.5 1.5 0 0 1 3 0v6.5M14 10.5V5.5a1.5 1.5 0 0 1 3 0V14a7 7 0 0 1-7 7h-.6a6 6 0 0 1-5.2-3l-2-3.6a1.5 1.5 0 0 1 2.5-1.6L8 15"/></svg>',
+  user:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>',
+  eye:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  eyeOff:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 5.1A10.6 10.6 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6C3.7 8.4 2 12 2 12s3.5 7 10 7c1.8 0 3.4-.5 4.7-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>',
+  plus:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>'
+};
+/* «Σήμερα» / «Αύριο» next to the date */
+const dayTag = d => d===today() ? `<span class="daytag now">Σήμερα</span>` : d===addDays(today(),1) ? `<span class="daytag">Αύριο</span>` : "";
 const logoImg = (src, cls="tlg") => /^data:image\/(png|jpeg|webp);base64,/.test(src||"") ? `<img class="${cls}" src="${src}" alt="" loading="lazy">` : "";
 const teamsL = (m, user) => { const hl = user ? m.homeLogo : teamLogo(m.home), al = user ? m.awayLogo : teamLogo(m.away);
   if(!hl && !al) return teams(m);
+  if(user && m.away) return `<span class="sb"><span class="sbt">${logoImg(hl)||`<span class="tlg ph"></span>`}<span>${esc(m.home)}</span></span><span class="sbt">${logoImg(al)||`<span class="tlg ph"></span>`}<span>${esc(m.away)}</span></span></span>`;
   return `<span class="tml">${logoImg(hl)}<span>${esc(m.home)}</span></span>${m.away?`<span class="tvs">–</span><span class="tml">${logoImg(al)}<span>${esc(m.away)}</span></span>`:""}`; };
 /* teams: name = as written in the programme (often an acronym, e.g. ΟΣΦΠ), full = full team name */
 /* teams: name = as written in the programme, var = the short code used in the challenge/VAR system */
@@ -643,7 +673,7 @@ function roleSwitch(asUser){
   if(asUser){
     const bar = document.createElement("div");
     bar.className = "banner asubar"; bar.setAttribute("role","status");
-    bar.innerHTML = `<span aria-hidden="true">👤</span><span class="grow"><b>Προβολή χρήστη.</b> Βλέπεις την εφαρμογή όπως οι χρήστες, με τις δικές σου αναθέσεις.</span><button type="button" class="btn small primary">↩ Διαχειριστής</button>`;
+    bar.innerHTML = `${IC.user}<span class="grow"><b>Προβολή χρήστη.</b> Βλέπεις την εφαρμογή όπως οι χρήστες, με τις δικές σου αναθέσεις.</span><button type="button" class="btn small primary">↩ Διαχειριστής</button>`;
     bar.querySelector("button").onclick = () => go(false);
     $("app").before(bar);
   } else {
@@ -729,7 +759,7 @@ function renderAdmin(){
   <div style="display:flex;flex-direction:column;gap:18px">
     ${backupDue() ? `<div class="banner" role="status">${cmIcon("save")}<span class="grow">${ls.get("cm.lastBackup",0) ? "Πέρασε πάνω από μία εβδομάδα από το τελευταίο αντίγραφο ασφαλείας." : "Κράτα ένα αντίγραφο ασφαλείας με όλο το πρόγραμμα και τις πληρωμές."}</span>
       <button class="btn small primary" type="button" data-act="backup">${cmIcon("dl")} Αντίγραφο σε Excel</button><button class="btn small" type="button" data-act="backuplater">Αργότερα</button></div>` : ""}
-    ${(()=>{ const L=cantList(); return L.length ? `<div class="banner cantban" role="alert">✋<div class="grow"><b>${L.length===1?"Ένα άτομο δηλώνει":"Άτομα δηλώνουν"} ότι δεν μπορούν:</b><ul>${L.map(({m,r,c})=>`<li><span><b>${esc(m[r])}</b> (${ROLE[r]}) · ${esc(niceDate(m.date))} ${esc(m.time||"")} · ${esc(m.home)}${m.away?" – "+esc(m.away):""}${c.note?` · «${esc(c.note)}»`:""}</span>
+    ${(()=>{ const L=cantList(); return L.length ? `<div class="banner cantban" role="alert">${IC.hand}<div class="grow"><b>${L.length===1?"Ένα άτομο δηλώνει":"Άτομα δηλώνουν"} ότι δεν μπορούν:</b><ul>${L.map(({m,r,c})=>`<li><span><b>${esc(m[r])}</b> (${ROLE[r]}) · ${esc(niceDate(m.date))} ${esc(m.time||"")} · ${esc(m.home)}${m.away?" – "+esc(m.away):""}${c.note?` · «${esc(c.note)}»`:""}</span>
         <span class="cantact"><button class="btn small" type="button" data-act="edit" data-id="${m.id}">✎ Αλλαγή</button><button class="btn small" type="button" data-act="cantack" data-id="${m.id}" data-role="${r}">✓ Το είδα</button></span></li>`).join("")}</ul></div></div>` : ""; })()}
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="sched" aria-selected="${tab==="sched"}">Πρόγραμμα</button>
@@ -798,8 +828,9 @@ function renderSched(months, people, seasons=[]){
     let lastComp=null;
     list.forEach(m=>{
       if((m.comp||"")!==lastComp){ lastComp=m.comp||""; if(lastComp) html+=`<div class="comp-head">${esc(lastComp)}</div>`; }
-      html += `<div class="row${m.hidden?" is-hidden":""}">
-        <div class="date c-date">${whenMain(m)}<small>${whenSub(m)}</small><button type="button" class="vis${m.hidden?" off":""}" data-act="vis" data-id="${m.id}" title="${m.hidden?"Οι χρήστες δεν τη βλέπουν. Πάτα για εμφάνιση.":"Τη βλέπουν τα άτομα της ανάθεσης. Πάτα για απόκρυψη."}">${m.hidden?"Κρυφή":"Ορατή"}</button>${paySwitch(m)}</div>
+      const past = m.date && m.date < today();
+      html += `<div class="row${m.hidden?" is-hidden":""}${past?" is-past":""}${m.date===today()?" is-today":""}">
+        <div class="date c-date">${whenMain(m)}${dayTag(m.date)}<small>${whenSub(m)}</small><button type="button" class="vis eyeb${m.hidden?" off":""}" data-act="vis" data-id="${m.id}" aria-label="${m.hidden?"Κρυφή":"Ορατή"}" title="${m.hidden?"Κρυφή: οι χρήστες δεν τη βλέπουν. Πάτα για εμφάνιση.":"Ορατή: τη βλέπουν τα άτομα της ανάθεσης. Πάτα για απόκρυψη."}">${m.hidden?IC.eyeOff:IC.eye}</button>${paySwitch(m)}</div>
         <div class="match c-match"><b class="tmw">${teamsL(m)}</b>${(teamVar(m.home)||teamVar(m.away))?`<div class="meta tfull">VAR: ${esc([teamVar(m.home)||"—", m.away?(teamVar(m.away)||"—"):""].filter(Boolean).join(" – "))}</div>`:""}<div class="meta">${[m.venue?(mapUrl(m.venue)?`<a class="mlink" href="${esc(mapUrl(m.venue))}" target="_blank" rel="noopener" title="${esc(venueOf(m.venue)?.full||"Χάρτης")}">📍 ${esc(m.venue)}</a>`:esc(m.venue)):"",esc(m.tv||""),esc(m.vc||"")].filter(Boolean).join(" · ")||"&nbsp;"}</div></div>
         ${slotHtml(m,"op")}${slotHtml(m,"as")}
         <div class="c-edit"><button class="more" data-act="edit" data-id="${m.id}" aria-label="Επεξεργασία">✎</button></div>
@@ -938,18 +969,18 @@ function seenTag(m, r){
 function cantOf(m, r){ const uid = m.sync?.[r]; if(!uid || m.hidden || !m.date || m.date < today()) return null; return profilesAll[uid]?.cant?.[`${m.id}_${r}`] || null; }
 function cantFlag(m, r){ const c = cantOf(m, r); if(!c) return "";
   const d = new Date(c.at||0);
-  return `<div class="cant-flag${c.ack?" ack":""}" title="Δήλωση στις ${fmtDate(ymd(d)).slice(0,5)} ${pad(d.getHours())}:${pad(d.getMinutes())}">✋ Δεν μπορεί${c.note?`: «${esc(c.note)}»`:""}</div>`; }
+  return `<div class="cant-flag${c.ack?" ack":""}" title="Δήλωση στις ${fmtDate(ymd(d)).slice(0,5)} ${pad(d.getHours())}:${pad(d.getMinutes())}">${IC.hand} Δεν μπορεί${c.note?`: «${esc(c.note)}»`:""}</div>`; }
 function cantList(){
   const out=[]; sched.forEach(m=>["op","as"].forEach(r=>{ const c=cantOf(m,r); if(c && m[r] && !c.ack) out.push({m,r,c}); }));
   return out.sort((a,b)=>(a.m.date+(a.m.time||"")).localeCompare(b.m.date+(b.m.time||"")));
 }
 function slotHtml(m, r){
-  if(!m[r]) return `<div class="slot"><div class="ln"><span class="empty-slot">${ROLE[r]}: κενό</span></div></div>`;
+  if(!m[r]) return `<div class="slot"><button type="button" class="add-slot" data-act="edit" data-id="${m.id}" title="Πάτα για να ορίσεις ${ROLE[r]}">${IC.plus} ${ROLE[r]}</button></div>`;
   const linked = !!uidForName(m[r]); const paid=!!m["paid_"+r];
   return `<div class="slot">
     ${cantFlag(m, r)}<div class="nm"><span class="dot ${linked?"on":""}" title="${linked?"Συνδεδεμένος λογαριασμός – βλέπει την ανάθεση":"Δεν έχει συνδεθεί λογαριασμός"}"></span>${esc(m[r])}${(()=>{ const u=unavailOn(m[r], m.date); return u?`<span class="unav-flag" title="${esc(u.note?"Κώλυμα: "+u.note:"Έχει δηλώσει κώλυμα αυτή τη μέρα")}">${cmIcon("warn")} Κώλυμα</span>`:""; })()}</div>
-    <div class="ln"><span class="role ${r}">${ROLE[r]}</span><span class="fee">${eur(m["fee_"+r])}</span>${seenTag(m, r)}
-    <button class="pay ${paid?"yes":"no"}" data-act="pay" data-id="${m.id}" data-role="${r}" title="Αλλαγή κατάστασης πληρωμής">${paid?"✓ Πληρώθηκε":"● Εκκρεμεί"}</button></div>
+    <div class="ln"><span class="role ${r}">${ROLE[r]}</span><span class="fee${paid?" paid":""}">${eur(m["fee_"+r])}</span>
+    <button class="pay ${paid?"yes mini":"no"}" data-act="pay" data-id="${m.id}" data-role="${r}" ${paid?`aria-label="Πληρώθηκε" title="Πληρώθηκε${m["paidDate_"+r]?" "+fmtDate(m["paidDate_"+r]).slice(0,5):""} · πάτα για αλλαγή"`:`title="Αλλαγή κατάστασης πληρωμής"`}>${paid?"✓":"● Εκκρεμεί"}</button>${seenTag(m, r)}</div>
   </div>`;
 }
 
@@ -2262,11 +2293,11 @@ async function cantMail(it, note, undo){
 }
 function cantHtml(i){
   const c = myCant[i.id];
-  if(c) return `<div class="cantbox on" role="status">✋ <span class="grow"><b>Δήλωσες ότι δεν μπορείς.</b>${c.note?` «${esc(c.note)}»`:""} Ο διαχειριστής το βλέπει στην εφαρμογή.</span><button type="button" class="btn small" data-cant="${esc(i.id)}" data-cantact="undo">Ακύρωση</button></div>`;
+  if(c) return `<div class="cantbox on" role="status">${IC.hand}<span class="grow"><b>Δήλωσες ότι δεν μπορείς.</b>${c.note?` «${esc(c.note)}»`:""} Ο διαχειριστής το βλέπει στην εφαρμογή.</span><button type="button" class="btn small" data-cant="${esc(i.id)}" data-cantact="undo">Ακύρωση</button></div>`;
   if(cantOpen===i.id) return `<div class="cantbox cantform"><label for="cantNote">Δεν μπορείς να καλύψεις αυτόν τον αγώνα; Γράψε, αν θέλεις, τον λόγο:</label>
     <textarea id="cantNote" rows="2" maxlength="300" placeholder="π.χ. ασθένεια, υποχρέωση στη δουλειά…"></textarea>
-    <div class="cantbtns"><button type="button" class="btn small primary" data-cant="${esc(i.id)}" data-cantact="send">✋ Ενημέρωση διαχειριστή</button><button type="button" class="btn small" data-cant="${esc(i.id)}" data-cantact="close">Άκυρο</button></div></div>`;
-  return `<button type="button" class="cantbtn" data-cant="${esc(i.id)}" data-cantact="open">✋ Δεν μπορώ</button>`;
+    <div class="cantbtns"><button type="button" class="btn small primary" data-cant="${esc(i.id)}" data-cantact="send">${IC.hand} Ενημέρωση διαχειριστή</button><button type="button" class="btn small" data-cant="${esc(i.id)}" data-cantact="close">Άκυρο</button></div></div>`;
+  return `<button type="button" class="cantbtn" data-cant="${esc(i.id)}" data-cantact="open">${IC.hand} Δεν μπορώ</button>`;
 }
 /* weekly unavailability: the user marks the days they cannot work */
 let unavOpen = false;   // closed on entry; opens on tap and stays as the user leaves it
@@ -2404,7 +2435,7 @@ function renderUser(){
   const seen = ls.get("cm.seen", {});
   const isChg = i => i.changedAt && (seen[i.id]||0) < i.changedAt && i.date >= t;
   const card=(i,first)=>`<article class="card ${i.role} ${i.date<t?"past":""} ${isChg(i)?"changed":""}">
-    <div class="top"><div class="when">${whenMain(i)}${(i.time||i.timeText)?` <span class="tpill"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>${esc(i.time||i.timeText)}</span>`:""}${i.dateTbc?` <small>ημ. αγωνιστικής</small>`:""}</div>${first?`<span class="next">Επόμενη</span>`:""}</div>
+    <div class="top"><div class="when">${whenMain(i)}${(i.time||i.timeText)?` <span class="tpill"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>${esc(i.time||i.timeText)}</span>`:""}${i.dateTbc?` <small>ημ. αγωνιστικής</small>`:""}</div>${dayTag(i.date) || (first?`<span class="next">Επόμενη</span>`:"")}</div>
     ${isChg(i)?`<button type="button" class="chg" data-seen="${esc(i.id)}" title="Πάτα για να το σημειώσεις ως ενημερωμένο">${cmIcon("warn")} Άλλαξε: ${esc((i.changed||[]).join(", ").toLowerCase()||"λεπτομέρειες")} <small>· ΟΚ</small></button>`:""}
     <div class="teams">${teamsL(i,true)}</div>${(i.homeVar||i.awayVar)?`<div class="tfull"><span class="vtag">VAR</span> ${esc([i.homeVar||"—", i.away?(i.awayVar||"—"):""].filter(Boolean).join(" – "))}</div>`:""}
     ${venueCard(i)}
