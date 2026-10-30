@@ -116,6 +116,7 @@ table.grid tr.past td input:not([type=checkbox]){color:var(--muted)}
 .seenic{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;flex:none;cursor:help}
 .seenic .ic{width:14px;height:14px;stroke-width:2.2}
 .seenic.seen-ok{background:var(--good-bg);color:var(--good)}
+.seenic.seen-cant{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
 .seenic.seen-no{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
 .slot .ln{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .role{display:inline-flex;align-items:center;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
@@ -985,7 +986,7 @@ function slotHtml(m, r){
   if(!m[r]) return `<div class="slot"><button type="button" class="add-slot" data-act="edit" data-id="${m.id}" title="Πάτα για να ορίσεις ${ROLE[r]}">${IC.plus} ${ROLE[r]}</button></div>`;
   const linked = !!uidForName(m[r]); const paid=!!m["paid_"+r];
   return `<div class="slot">
-    ${cantFlag(m, r)}<div class="nm">${(()=>{ const sv=seenTag(m, r), tip = sv ? sv.tip : linked ? "Συνδεδεμένος λογαριασμός – βλέπει την ανάθεση" : "Δεν έχει συνδεθεί λογαριασμός"; return sv ? `<span class="seenic ${sv.cls}" data-tip="${tip}" title="${tip}" role="img" aria-label="${tip}">${sv.cls==="seen-ok"?IC.thumb:IC.wait}</span>` : `<span class="dot ${linked?"on":""}" title="${tip}"></span>`; })()}${esc(m[r])}${(()=>{ const u=unavailOn(m[r], m.date); return u?`<span class="unav-flag" title="${esc(u.note?"Κώλυμα: "+u.note:"Έχει δηλώσει κώλυμα αυτή τη μέρα")}">${cmIcon("warn")} Κώλυμα</span>`:""; })()}</div>
+    ${cantFlag(m, r)}<div class="nm">${(()=>{ const cn=cantOf(m, r), sv=cn ? {cls:"seen-cant", tip:`Δεν μπορεί${cn.note?": «"+esc(cn.note)+"»":""}`} : seenTag(m, r), tip = sv ? sv.tip : linked ? "Συνδεδεμένος λογαριασμός – βλέπει την ανάθεση" : "Δεν έχει συνδεθεί λογαριασμός"; return sv ? `<span class="seenic ${sv.cls}" data-tip="${tip}" title="${tip}" role="img" aria-label="${tip}">${sv.cls==="seen-ok"?IC.thumb:sv.cls==="seen-cant"?IC.hand:IC.wait}</span>` : `<span class="dot ${linked?"on":""}" title="${tip}"></span>`; })()}${esc(m[r])}${(()=>{ const u=unavailOn(m[r], m.date); return u?`<span class="unav-flag" title="${esc(u.note?"Κώλυμα: "+u.note:"Έχει δηλώσει κώλυμα αυτή τη μέρα")}">${cmIcon("warn")} Κώλυμα</span>`:""; })()}</div>
     <div class="ln"><span class="role ${r}">${ROLE[r]}</span><span class="fee${paid?" paid":""}">${eur(m["fee_"+r])}</span>
     <button class="pay ${paid?"yes mini":"no"}" data-act="pay" data-id="${m.id}" data-role="${r}" ${paid?`aria-label="Πληρώθηκε" title="Πληρώθηκε${m["paidDate_"+r]?" "+fmtDate(m["paidDate_"+r]).slice(0,5):""} · πάτα για αλλαγή"`:`title="Αλλαγή κατάστασης πληρωμής"`}>${paid?"✓":"● Εκκρεμεί"}</button></div>
   </div>`;
