@@ -1,0 +1,30 @@
+name: Εικονίδια
+# Ξαναφτιάχνει τα εικονίδια (PNG) από τα σχέδια του tools/make-icons.js κάθε φορά που αλλάζει.
+on:
+  push:
+    branches: [main]
+    paths: ['tools/make-icons.js', '.github/workflows/icons.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: icons
+  cancel-in-progress: true
+jobs:
+  icons:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm i --no-save playwright@1.47.2 && npx playwright install --with-deps chromium
+      - run: node tools/make-icons.js
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add -A -- '*.png' '*.svg' ':!node_modules'
+          git diff --cached --quiet && exit 0
+          git commit -m "Εικονίδια: αυτόματη ενημέρωση"
+          for i in 1 2 3; do git pull --rebase -X theirs origin main && git push && exit 0; sleep 5; done
+          exit 1
