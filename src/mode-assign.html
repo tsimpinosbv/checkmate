@@ -142,6 +142,27 @@ button.pay:hover{border-color:currentColor}
 .daytag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:6px;font:700 10.5px var(--f-body);letter-spacing:.06em;text-transform:uppercase;vertical-align:2px;background:var(--blue-bg);color:var(--blue)}
 .daytag.now{background:var(--accent);color:#fff}
 .row.is-today{box-shadow:inset 3px 0 0 var(--accent)}
+.empty .eart{width:96px;height:96px;margin-bottom:2px}
+/* statistics charts */
+.chart{padding:14px 16px 12px}
+.cleg{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-bottom:10px}
+.cleg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.c-op{background:var(--accent)}.c-as{background:var(--blue)}
+.mchart{display:flex;align-items:flex-end;gap:6px;height:180px;overflow-x:auto;padding-bottom:2px}
+.mcol{flex:1 0 34px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px}
+.mcol b{font:600 12px var(--f-mono)}
+.mcol small{color:var(--muted);font-size:11.5px;white-space:nowrap}
+.mcol .stk{width:min(36px,75%);display:flex;flex-direction:column;border-radius:6px 6px 2px 2px;overflow:hidden}
+.pchart{display:grid;grid-template-columns:minmax(80px,max-content) minmax(0,1fr) auto;gap:8px 10px;align-items:center;font-size:13px}
+.pchart .pn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px}
+.pchart .pb{display:flex;height:12px;border-radius:0 6px 6px 0;overflow:hidden}
+.pchart .n{font:600 12.5px var(--f-mono);color:var(--muted);text-align:right}
+.paybar{padding:12px 16px 14px}
+.paybar .pt{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13px;margin-bottom:8px}
+.paybar .pt b{font-family:var(--f-mono)}
+.paybar b.or{color:var(--warn)}
+.paybar .trk{height:12px;border-radius:6px;background:color-mix(in srgb,var(--accent) 22%,transparent);overflow:hidden}
+.paybar .trk>span{display:block;height:100%;background:var(--good);border-radius:6px}
 .row.is-past>.c-date,.row.is-past>.c-match,.row.is-past>.slot{opacity:.55}
 .row.is-past:hover>*{opacity:1}
 .add-slot{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;border:1.5px dashed color-mix(in srgb,var(--accent) 60%,transparent);background:color-mix(in srgb,var(--accent) 6%,transparent);color:var(--accent);font:700 13px var(--f-body);border-radius:10px;padding:7px 14px;cursor:pointer}
@@ -583,6 +604,21 @@ function statTotals(slots){
   t.due=t.fee-t.paid; return t;
 }
 function groupBy(arr, key){ const m=new Map(); arr.forEach(x=>{ const k=key(x); if(!m.has(k)) m.set(k,[]); m.get(k).push(x); }); return m; }
+function statCharts(slots, ppl, all){
+  if(!all.n) return "";
+  const leg = `<div class="cleg"><span><i class="c-op"></i>Χειριστής</span><span><i class="c-as"></i>Βοηθός</span></div>`;
+  const byM = [...groupBy(slots,x=>(x.date||"").slice(0,7)).entries()].filter(([k])=>k).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v])=>[k,statTotals(v)]);
+  const mx = Math.max(1,...byM.map(([,t])=>t.n)), H = 130;
+  const months = byM.map(([k,t])=>`<div class="mcol" title="${esc(monthLabel(k))}: ${t.n} (Χειριστής ${t.op} · Βοηθός ${t.as})"><b>${t.n}</b><div class="stk"><span class="c-as" style="height:${Math.round(H*t.as/mx)}px"></span><span class="c-op" style="height:${Math.round(H*t.op/mx)}px"></span></div><small>${MON_SHORT[+k.slice(5)-1]}${byM.length>12||k.slice(0,4)!==byM[0][0].slice(0,4)?" "+k.slice(2,4):""}</small></div>`).join("");
+  const top = ppl.slice().sort((a,b)=>b.n-a.n||a.name.localeCompare(b.name,"el")), pm = Math.max(1,...top.map(p=>p.n));
+  const people = top.map(p=>`<span class="pn" title="${esc(p.name)}">${esc(p.name)}</span><div class="pb" style="width:${Math.max(3,Math.round(100*p.n/pm))}%" title="Χειριστής ${p.op} · Βοηθός ${p.as}"><span class="c-op" style="flex:${p.op}"></span><span class="c-as" style="flex:${p.as}"></span></div><span class="n">${p.n}</span>`).join("");
+  const pct = all.fee ? Math.round(100*all.paid/all.fee) : 0;
+  return `<section class="panel paybar" aria-label="Πληρωμές"><div class="pt"><span>Πληρώθηκαν <b>${eur(all.paid)}</b> από <b>${eur(all.fee)}</b></span><span>${all.due?`Εκκρεμούν <b class="or">${eur(all.due)}</b> · `:""}<b>${pct}%</b></span></div><div class="trk"><span style="width:${pct}%"></span></div></section>
+    <div class="st-grid">
+      <section class="panel"><div class="st-h">Αναθέσεις ανά μήνα</div><div class="chart">${leg}<div class="mchart">${months||"—"}</div></div></section>
+      <section class="panel"><div class="st-h">Αναθέσεις ανά άτομο</div><div class="chart">${leg}<div class="pchart">${people}</div></div></section>
+    </div>`;
+}
 function statTables(slots){   // per month + per competition, used by both admin and user views
   const byM=[...groupBy(slots,x=>(x.date||"").slice(0,7)).entries()].filter(([k])=>k).sort((a,b)=>a[0].localeCompare(b[0]));
   const byC=[...groupBy(slots,x=>x.comp||"—").entries()].sort((a,b)=>b[1].length-a[1].length||a[0].localeCompare(b[0],"el"));
@@ -644,6 +680,11 @@ const IC = {
 const DAYS_LONG = ["Κυριακή","Δευτέρα","Τρίτη","Τετάρτη","Πέμπτη","Παρασκευή","Σάββατο"], MONTHS_GEN = ["Ιανουαρίου","Φεβρουαρίου","Μαρτίου","Απριλίου","Μαΐου","Ιουνίου","Ιουλίου","Αυγούστου","Σεπτεμβρίου","Οκτωβρίου","Νοεμβρίου","Δεκεμβρίου"];
 const longDate = d => { const t=new Date(d+"T12:00"); return `${DAYS_LONG[t.getDay()]} ${t.getDate()} ${MONTHS_GEN[t.getMonth()]}${t.getFullYear()!==new Date().getFullYear()?" "+t.getFullYear():""}`; };
 const dayTag = d => d===today() ? `<span class="daytag now">Σήμερα</span>` : d===addDays(today(),1) ? `<span class="daytag">Αύριο</span>` : "";
+const EART = {
+  cal:`<svg class="eart" viewBox="0 0 96 96" aria-hidden="true"><circle cx="48" cy="50" r="44" fill="var(--blue-bg)"/><rect x="22" y="26" width="52" height="46" rx="8" fill="var(--surface)" stroke="var(--blue)" stroke-width="3"/><path d="M22 40h52" stroke="var(--blue)" stroke-width="3"/><rect x="32" y="19" width="5" height="13" rx="2.5" fill="var(--blue)"/><rect x="59" y="19" width="5" height="13" rx="2.5" fill="var(--blue)"/><path d="M38 56l7 7 13-14" fill="none" stroke="var(--accent)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  week:`<svg class="eart" viewBox="0 0 96 96" aria-hidden="true"><circle cx="48" cy="50" r="44" fill="var(--blue-bg)"/><rect x="22" y="26" width="52" height="46" rx="8" fill="var(--surface)" stroke="var(--blue)" stroke-width="3"/><path d="M22 40h52" stroke="var(--blue)" stroke-width="3"/><rect x="32" y="19" width="5" height="13" rx="2.5" fill="var(--blue)"/><rect x="59" y="19" width="5" height="13" rx="2.5" fill="var(--blue)"/><g fill="var(--line)"><circle cx="35" cy="52" r="3.2"/><circle cx="48" cy="52" r="3.2"/><circle cx="61" cy="52" r="3.2"/><circle cx="35" cy="63" r="3.2"/><circle cx="48" cy="63" r="3.2"/></g></svg>`,
+  search:`<svg class="eart" viewBox="0 0 96 96" aria-hidden="true"><circle cx="48" cy="50" r="44" fill="var(--blue-bg)"/><circle cx="43" cy="44" r="17" fill="var(--surface)" stroke="var(--blue)" stroke-width="4"/><path d="M56 57l14 14" stroke="var(--blue)" stroke-width="6" stroke-linecap="round"/><path d="M36 44h14" stroke="var(--accent)" stroke-width="4" stroke-linecap="round"/></svg>`
+};
 const logoImg = (src, cls="tlg") => /^data:image\/(png|jpeg|webp);base64,/.test(src||"") ? `<img class="${cls}" src="${src}" alt="" loading="lazy">` : "";
 const teamsL = (m, user) => { const hl = user ? m.homeLogo : teamLogo(m.home), al = user ? m.awayLogo : teamLogo(m.away);
   if(!hl && !al) return teams(m);
@@ -838,8 +879,8 @@ function renderSched(months, people, seasons=[]){
     const prv = st.week ? sched.map(m=>m.date).filter(d=>d && d<st.week).sort().pop() : "";
     const anyInWeek = st.week && sched.some(m=>weekDays(st.week).includes(m.date));
     html += st.week && !anyInWeek
-      ? `<div class="empty"><strong>Δεν υπάρχουν αγώνες αυτή την εβδομάδα</strong><div class="actions">${prv?`<button class="btn" data-act="wkgo" data-w="${weekOf(prv)}">◀ Προηγούμενη με αγώνες (${weekLabel(weekOf(prv))})</button>`:""}${nxt?`<button class="btn" data-act="wkgo" data-w="${weekOf(nxt)}">Επόμενη με αγώνες (${weekLabel(weekOf(nxt))}) ▶</button>`:""}</div></div>`
-      : `<div class="empty"><strong>Καμία ανάθεση με αυτά τα φίλτρα</strong><button class="btn" data-act="clear">Καθαρισμός φίλτρων</button></div>`;
+      ? `<div class="empty">${EART.week}<strong>Δεν υπάρχουν αγώνες αυτή την εβδομάδα</strong><div class="actions">${prv?`<button class="btn" data-act="wkgo" data-w="${weekOf(prv)}">◀ Προηγούμενη με αγώνες (${weekLabel(weekOf(prv))})</button>`:""}${nxt?`<button class="btn" data-act="wkgo" data-w="${weekOf(nxt)}">Επόμενη με αγώνες (${weekLabel(weekOf(nxt))}) ▶</button>`:""}</div></div>`
+      : `<div class="empty">${EART.search}<strong>Καμία ανάθεση με αυτά τα φίλτρα</strong><button class="btn" data-act="clear">Καθαρισμός φίλτρων</button></div>`;
   } else if(viewNow()==="grid"){
     html += gridHtml(list);
   } else {
@@ -1136,6 +1177,7 @@ function renderStats(seasons){
       <div class="cell"><div class="k">Πληρώθηκαν</div><div class="v">${eur(all.paid)}</div></div>
       <div class="cell"><div class="k">Εκκρεμούν</div><div class="v or">${eur(all.due)}</div></div>
     </section>
+    ${statCharts(slots, ppl, all)}
     <section class="panel"><div class="st-h">Ανά άτομο</div><div class="uscroll"><table class="stbl" id="stPeople">
       <thead><tr>${th("name","Άτομο")}${th("n","Αναθ.")}${th("op","Χειριστής")}${th("as","Βοηθός")}${th("fee","Αμοιβές")}${th("paid","Πληρώθηκαν")}${th("due","Εκκρεμούν")}${th("last","Τελευταίος")}</tr></thead>
       <tbody>${ppl.map(p=>`<tr><td>${esc(p.name)}</td><td>${p.n}</td><td>${p.op}</td><td>${p.as}</td><td>${eur(p.fee)}</td><td>${eur(p.paid)}</td><td class="${p.due?"or":""}">${eur(p.due)}</td><td>${p.last?fmtDate(p.last):"—"}</td></tr>`).join("")||`<tr><td colspan="8">Δεν υπάρχουν αναθέσεις με αυτά τα φίλτρα.</td></tr>`}
@@ -2504,7 +2546,7 @@ function renderUser(){
       <div class="cell"><div class="k">Εκκρεμούν</div><div class="v or">${eur(total-paid)}</div></div>
     </section>
     <div class="sechead"><div><div class="hi">${greet}</div><h2 class="sec">Επόμενες αναθέσεις</h2></div></div>
-    ${upcoming.length?`<div class="cards">${upcoming.map((i,k)=>card(i,k===0)).join("")}</div>`:`<div class="panel"><div class="empty"><strong>Δεν έχεις επόμενες αναθέσεις</strong><div>Θα εμφανιστούν εδώ μόλις σε ορίσει ο διαχειριστής.</div></div></div>`}
+    ${upcoming.length?`<div class="cards">${upcoming.map((i,k)=>card(i,k===0)).join("")}</div>`:`<div class="panel"><div class="empty">${EART.cal}<strong>Δεν έχεις αγώνες για την ώρα</strong><div>Μόλις σε ορίσει ο διαχειριστής σε αγώνα, θα εμφανιστεί εδώ.</div></div></div>`}
     ${unavPanel()}
     ${phonePanel()}
     ${myStatsPanel()}
