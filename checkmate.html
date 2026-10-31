@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
 <meta charset="utf-8">
-<meta name="app-build" content="7ad43819e743">
+<meta name="app-build" content="59a530de887a">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <title>Check Mate Challenge</title>
@@ -683,7 +683,7 @@ table.grid select.gsel{width:100%;border:0;background:transparent;font:inherit;c
 :root[data-theme="dark"] .board{background:var(--head);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .skel{display:flex;flex-direction:column;gap:14px}
-.sk{border-radius:12px;background:linear-gradient(90deg,var(--sq) 25%,color-mix(in srgb,var(--sq) 40%,var(--surface)) 50%,var(--sq) 75%);background-size:300% 100%;animation:skm 1.3s ease-in-out infinite}
+.sk{border-radius:12px;background:linear-gradient(100deg,var(--sq) 30%,color-mix(in srgb,var(--surface) 85%,var(--blue-bg)) 50%,var(--sq) 70%);background-size:250% 100%;animation:skm 1.2s linear infinite}
 .sk-bar{height:64px}.sk-card{height:150px}
 @keyframes skm{from{background-position:100% 0}to{background-position:0 0}}
 @media (prefers-reduced-motion:reduce){.sk{animation:none}}
@@ -724,7 +724,18 @@ table.grid select.gsel{width:100%;border:0;background:transparent;font:inherit;c
 .sttiles .t .v{font-family:var(--f-mono);font-size:20px;margin-top:2px;font-variant-numeric:tabular-nums}
 .sttiles .t .v.or{color:var(--warn)}
 .tabs button{white-space:nowrap;flex:none}
-@media (max-width:720px){.tabs{flex-wrap:wrap;overflow:visible;border-bottom:0;gap:6px}.tabs button{border:1px solid var(--line);border-radius:999px;padding:7px 12px;margin:0;font-size:14px}.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}}
+/* tabs as pills with an icon */
+.tabs{border-bottom:0;gap:6px}
+.tabs button{display:inline-flex;align-items:center;gap:7px;border:1px solid transparent;border-radius:999px;padding:8px 15px;margin:0;cursor:pointer;transition:background .15s,color .15s}
+.tabs button:hover{background:var(--sq);color:var(--ink)}
+.tabs button .ti{width:17px;height:17px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tabs button[aria-selected="true"] .ti{color:var(--accent)}
+@media (max-width:720px){.tabs{flex-wrap:wrap;overflow:visible}.tabs button{border-color:var(--line);padding:7px 12px;font-size:14px}.tabs button .ti{width:15px;height:15px}}
+/* header: faint chessboard on the right */
+header{background:linear-gradient(90deg,var(--head) 35%,color-mix(in srgb,var(--head) 55%,transparent) 100%),repeating-conic-gradient(color-mix(in srgb,var(--head-ink) 12%,transparent) 0 25%,transparent 0 50%) 0 0/26px 26px,var(--head)}
+/* soft fade when the tab or the week changes */
+@media (prefers-reduced-motion:no-preference){#tabBody.fadein{animation:tbin .22s ease-out}@keyframes tbin{from{opacity:0;transform:translateY(5px)}}}
 details.unav>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:14px 16px}
 details.unav>summary::-webkit-details-marker{display:none}
 details.unav>summary .chev{color:var(--muted);transition:transform .15s}
@@ -1806,15 +1817,16 @@ function renderAdmin(){
     ${(()=>{ const L=cantList(); return L.length ? `<div class="banner cantban" role="alert">${IC.hand}<div class="grow"><b>${L.length===1?"Ένα άτομο δηλώνει":"Άτομα δηλώνουν"} ότι δεν μπορούν:</b><ul>${L.map(({m,r,c})=>`<li><span><b>${esc(m[r])}</b> (${ROLE[r]}) · ${esc(niceDate(m.date))} ${esc(m.time||"")} · ${esc(m.home)}${m.away?" – "+esc(m.away):""}${c.note?` · «${esc(c.note)}»`:""}</span>
         <span class="cantact"><button class="btn small" type="button" data-act="edit" data-id="${m.id}">✎ Αλλαγή</button><button class="btn small" type="button" data-act="cantack" data-id="${m.id}" data-role="${r}">✓ Το είδα</button></span></li>`).join("")}</ul></div></div>` : ""; })()}
     <nav class="tabs" role="tablist">
-      <button role="tab" data-tab="sched" aria-selected="${tab==="sched"}">Πρόγραμμα</button>
-      <button role="tab" data-tab="lists" aria-selected="${tab==="lists"}">Ομάδες & γήπεδα</button>
-      <button role="tab" data-tab="people" aria-selected="${tab==="people"}">Άτομα${pending.length?`<span class="badge">${pending.length}</span>`:""}</button>
-      <button role="tab" data-tab="unav" aria-selected="${tab==="unav"}">Κωλύματα</button>
-      <button role="tab" data-tab="stats" aria-selected="${tab==="stats"}">Στατιστικά</button>
+      <button role="tab" data-tab="sched" aria-selected="${tab==="sched"}"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Πρόγραμμα</button>
+      <button role="tab" data-tab="lists" aria-selected="${tab==="lists"}"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Ομάδες & γήπεδα</button>
+      <button role="tab" data-tab="people" aria-selected="${tab==="people"}"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/></svg>Άτομα${pending.length?`<span class="badge">${pending.length}</span>`:""}</button>
+      <button role="tab" data-tab="unav" aria-selected="${tab==="unav"}"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M9.5 13.5l5 5M14.5 13.5l-5 5"/></svg>Κωλύματα</button>
+      <button role="tab" data-tab="stats" aria-selected="${tab==="stats"}"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Στατιστικά</button>
     </nav>
     <div id="tabBody"></div>
   </div>`;
   if(tab==="sched") renderSched(months, people, seasons); else if(tab==="lists") renderLists(); else if(tab==="unav") renderUnav(); else if(tab==="stats") renderStats(seasons); else renderPeople(pending);
+  { const vk = tab+"|"+(st.week||""); if(vk!==renderAdmin.vk){ if(renderAdmin.vk) $("tabBody").classList.add("fadein"); renderAdmin.vk = vk; } }
   if($("gwrap")) $("gwrap").scrollLeft = gx;
   if(gd.id && !$(gd.id)) gdClose();
   if(focus && $(focus)){ const el=$(focus); if(typed!==null && el.value!==typed) el.value = typed; el.focus({preventScroll:true}); if(el.setSelectionRange && (el.type==="search"||el.type==="text")) try{ sel ? el.setSelectionRange(sel[0], sel[1]) : el.setSelectionRange(el.value.length, el.value.length); }catch{} if(gd.id===focus) gdOpen(el, typed!==null && typed!==(sched.find(x=>x.id===el.dataset.id)?.[el.dataset.g]??"") ? typed : ""); }
