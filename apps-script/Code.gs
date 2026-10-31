@@ -9,7 +9,7 @@
  * Emails go out from the Google account that deployed this script.
  *
  * Exception — «Δεν μπορώ»: any signed-in user may POST {idToken, kind:"cant", item:{…}}.
- * That email goes ONLY to the admin address saved in Firestore config/notify.adminAlert
+ * That email goes ONLY to the admin address(es) saved in Firestore config/notify.adminAlert (comma-separated)
  * (read with the caller's token), never to an address taken from the request, and at most
  * a few times per user every 10 minutes.
  *
@@ -85,8 +85,10 @@ function cantMail_(body) {
   );
   if (doc.getResponseCode() !== 200) return { ok: false, error: "no-config" };
   const f = JSON.parse(doc.getContentText()).fields || {};
-  const to = f.adminAlert && f.adminAlert.stringValue ? String(f.adminAlert.stringValue).trim() : "";
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return { ok: false, error: "no-recipient" };
+  const list = (f.adminAlert && f.adminAlert.stringValue ? String(f.adminAlert.stringValue) : "").split(/[,;\s]+/)
+    .map(x => x.trim()).filter(x => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x)).slice(0, 5);
+  if (!list.length) return { ok: false, error: "no-recipient" };
+  const to = list.join(",");
   const it = body.item || {}, t = k => esc_(String(it[k] || "").slice(0, 300));
   const who = t("name") || esc_(u.email || "Χρήστης");
   const game = [t("home"), t("away")].filter(String).join(" – ");
