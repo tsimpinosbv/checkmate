@@ -102,7 +102,12 @@ table.grid td.saved{background:var(--good-bg)}
 table.grid tr.is-hidden td{opacity:.55}
 table.grid tr.past td input:not([type=checkbox]){color:var(--muted)}
 .panel.sched{overflow:clip}
-.panel.sched .comp-head{position:sticky;top:0;z-index:3}
+.panel.sched .comp-head{position:sticky;top:38px;z-index:3}
+.day-head{position:sticky;top:0;z-index:4;height:38px;box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 16px;background:var(--surface);border-top:1px solid var(--line);font:700 14.5px var(--f-body);color:var(--ink)}
+.day-head .daytag{margin-left:0;vertical-align:0}
+.day-head small{margin-left:auto;color:var(--muted);font-weight:500;font-size:12px}
+.day-head.past{color:var(--muted)}
+.day-head.now{box-shadow:inset 3px 0 0 var(--accent)}
 .comp-head{padding:8px 16px;background:var(--blue-bg);color:var(--blue);font-weight:600;font-size:13px;letter-spacing:.03em;border-top:1px solid var(--line)}
 .date{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:14px}
 .date small{display:block;color:var(--muted);font-size:12px}
@@ -250,8 +255,10 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 .combo-list[hidden]{display:none}
 .combo-list li{padding:8px 10px;border-radius:7px;cursor:pointer;display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:14px}
 .combo-list li[aria-selected="true"],.combo-list li:hover{background:var(--blue-bg)}
-.combo-list li small{color:var(--muted);font-size:12px;white-space:nowrap}
+.combo-list li small{color:var(--muted);font-size:12px;text-align:right}
+.combo-list li .cn{white-space:nowrap}
 .combo-list li small.warn{color:var(--warn)}
+.combo-list li small.ok{color:var(--good)}
 .combo-list li.new{color:var(--blue);font-weight:600}
 .combo-list li.none{color:var(--muted);font-style:italic}
 .box .lbl{font-weight:700}
@@ -298,6 +305,8 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 .cantform .cantbtns{display:flex;gap:8px;flex-wrap:wrap}
 .cant-flag{font-size:12.5px;font-weight:700;color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,transparent);border-radius:8px;padding:3px 9px;align-self:flex-start}
 .cant-flag.ack{opacity:.75;font-weight:600}
+.cant-flag.clash{color:var(--warn);background:var(--warn-bg)}
+.cant-flag.clash .ic{width:14px;height:14px;vertical-align:-2px}
 .banner.cantban{background:color-mix(in srgb,var(--bad) 10%,var(--surface));border-color:color-mix(in srgb,var(--bad) 40%,transparent);align-items:flex-start}
 .cantban ul{margin:6px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
 .cantban li{display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
@@ -632,6 +641,8 @@ const IC = {
   plus:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>'
 };
 /* «Σήμερα» / «Αύριο» next to the date */
+const DAYS_LONG = ["Κυριακή","Δευτέρα","Τρίτη","Τετάρτη","Πέμπτη","Παρασκευή","Σάββατο"], MONTHS_GEN = ["Ιανουαρίου","Φεβρουαρίου","Μαρτίου","Απριλίου","Μαΐου","Ιουνίου","Ιουλίου","Αυγούστου","Σεπτεμβρίου","Οκτωβρίου","Νοεμβρίου","Δεκεμβρίου"];
+const longDate = d => { const t=new Date(d+"T12:00"); return `${DAYS_LONG[t.getDay()]} ${t.getDate()} ${MONTHS_GEN[t.getMonth()]}${t.getFullYear()!==new Date().getFullYear()?" "+t.getFullYear():""}`; };
 const dayTag = d => d===today() ? `<span class="daytag now">Σήμερα</span>` : d===addDays(today(),1) ? `<span class="daytag">Αύριο</span>` : "";
 const logoImg = (src, cls="tlg") => /^data:image\/(png|jpeg|webp);base64,/.test(src||"") ? `<img class="${cls}" src="${src}" alt="" loading="lazy">` : "";
 const teamsL = (m, user) => { const hl = user ? m.homeLogo : teamLogo(m.home), al = user ? m.awayLogo : teamLogo(m.away);
@@ -832,13 +843,15 @@ function renderSched(months, people, seasons=[]){
   } else if(viewNow()==="grid"){
     html += gridHtml(list);
   } else {
-    html += `<div class="row head"><div>Ημ/νία</div><div>Αγώνας</div><div>Χειριστής</div><div>Βοηθός</div><div></div></div>`;
-    let lastComp=null;
-    list.forEach(m=>{
+    html += `<div class="row head"><div>Ώρα</div><div>Αγώνας</div><div>Χειριστής</div><div>Βοηθός</div><div></div></div>`;
+    let lastComp=null, lastDay=null; const perDay={}; list.forEach(m=>{ perDay[m.date||""]=(perDay[m.date||""]||0)+1; });
+    list.slice().sort((a,b)=>(a.date||"9").localeCompare(b.date||"9") || (tmin(a.time)??1e4)-(tmin(b.time)??1e4)).forEach(m=>{
+      const dk=m.date||"";
+      if(dk!==lastDay){ lastDay=dk; html+=`<div class="day-head${dk===today()?" now":""}${dk&&dk<today()?" past":""}">${dk?longDate(dk):"Χωρίς ημερομηνία"}${dayTag(dk)}<small>${perDay[dk]} ${perDay[dk]===1?"αγώνας":"αγώνες"}</small></div>`; }
       if((m.comp||"")!==lastComp){ lastComp=m.comp||""; if(lastComp) html+=`<div class="comp-head">${esc(lastComp)}</div>`; }
       const past = m.date && m.date < today();
       html += `<div class="row${m.hidden?" is-hidden":""}${past?" is-past":""}${m.date===today()?" is-today":""}">
-        <div class="date c-date">${whenMain(m)}${dayTag(m.date)}<small>${whenSub(m)}</small><button type="button" class="vis eyeb${m.hidden?" off":""}" data-act="vis" data-id="${m.id}" aria-label="${m.hidden?"Κρυφή":"Ορατή"}" title="${m.hidden?"Κρυφή: οι χρήστες δεν τη βλέπουν. Πάτα για εμφάνιση.":"Ορατή: τη βλέπουν τα άτομα της ανάθεσης. Πάτα για απόκρυψη."}">${m.hidden?IC.eyeOff:IC.eye}</button>${paySwitch(m)}</div>
+        <div class="date c-date">${esc(m.time||m.timeText||"—")}<small>${[m.dateText||"", m.dateTbc?"ημ. αγωνιστικής":""].filter(Boolean).map(esc).join(" · ")}</small><button type="button" class="vis eyeb${m.hidden?" off":""}" data-act="vis" data-id="${m.id}" aria-label="${m.hidden?"Κρυφή":"Ορατή"}" title="${m.hidden?"Κρυφή: οι χρήστες δεν τη βλέπουν. Πάτα για εμφάνιση.":"Ορατή: τη βλέπουν τα άτομα της ανάθεσης. Πάτα για απόκρυψη."}">${m.hidden?IC.eyeOff:IC.eye}</button>${paySwitch(m)}</div>
         <div class="match c-match"><b class="tmw">${teamsL(m)}</b>${(teamVar(m.home)||teamVar(m.away))?`<div class="meta tfull">VAR: ${esc([teamVar(m.home)||"—", m.away?(teamVar(m.away)||"—"):""].filter(Boolean).join(" – "))}</div>`:""}<div class="meta">${[m.venue?(mapUrl(m.venue)?`<a class="mlink" href="${esc(mapUrl(m.venue))}" target="_blank" rel="noopener" title="${esc(venueOf(m.venue)?.full||"Χάρτης")}">📍 ${esc(m.venue)}</a>`:esc(m.venue)):"",esc(m.tv||""),esc(m.vc||"")].filter(Boolean).join(" · ")||"&nbsp;"}</div></div>
         ${slotHtml(m,"op")}${slotHtml(m,"as")}
         <div class="c-edit"><button class="more" data-act="edit" data-id="${m.id}" aria-label="Επεξεργασία">✎</button></div>
@@ -869,7 +882,7 @@ function gridHtml(list){
     if(t==="pay") return `<td><select ${base} class="gsel"><option value="">—</option>${Object.entries(PAYM).map(([k,l])=>`<option value="${k}" ${m.pay===k?"selected":""}>${l}</option>`).join("")}</select></td>`;
     if(t==="check"){ const on = f==="visible" ? !m.hidden : !!m[f]; return `<td class="ck"><input type="checkbox" ${base} ${on?"checked":""} ${f.startsWith("paid_")&&!m[f.slice(5)]?"disabled":""}></td>`; }
     const v = t==="num" ? (m[f]??"") : f==="date" ? (m.date||"") : f==="time" ? (m.time||m.timeText||"") : (m[f]??"");
-    const flag = (f==="op"||f==="as") && m[f] && unavailOn(m[f], m.date) ? " unav" : "";
+    const flag = (f==="op"||f==="as") && m[f] && (unavailOn(m[f], m.date) || clashOf(m, f)) ? " unav" : "";
     return `<td${dl?' class="dd"':""}><input ${base} class="${flag.trim()}" type="${t==="date"?"date":t==="num"?"number":"text"}" ${t==="num"?'inputmode="decimal" min="0" step="1"':""} value="${esc(v)}" autocomplete="off"${dl?' role="combobox" aria-autocomplete="list" aria-expanded="false"':""}>${dl?`<button type="button" class="gdd" tabindex="-1" data-dd="${id}" aria-label="Όλες οι επιλογές">▾</button>`:""}</td>`;
   };
   return `<div class="gwrap" id="gwrap"><table class="grid"><colgroup>${GCOLS.map(c=>`<col style="width:${c[3]}px">`).join("")}<col style="width:40px"></colgroup>
@@ -891,8 +904,7 @@ function gdEl(){ let ul=$("gdrop"); if(!ul){ ul=document.createElement("ul"); ul
   ul.addEventListener("mousedown", e=>e.preventDefault());
   ul.addEventListener("click", e=>{ const li=e.target.closest("li[data-i]"); if(li) gdPick(gd.items[+li.dataset.i].v); }); } return ul; }
 function gdHint(f, m, n){
-  if((f==="op"||f==="as") && m){ const other = f==="op" ? "as" : "op"; if(m[other] && norm(m[other])===norm(n)) return `⚠ ήδη ${ROLE[other]}`; }
-  if((f==="op"||f==="as") && m && m.date){ if(unavailOn(n, m.date)) return "⚠ κώλυμα"; const k=norm(n); if(sched.some(x=>x.id!==m.id && x.date===m.date && (norm(x.op)===k||norm(x.as)===k))) return "⚠ ίδια μέρα"; }
+  if((f==="op"||f==="as") && m) return personHint(n, f, {date:m.date, time:m.time, id:m.id, other:m[f==="op"?"as":"op"], m});
   if(f==="home") return homeVenueOf(n);
   return "";
 }
@@ -900,11 +912,12 @@ function gdOpen(inp, filter){
   const f=inp.dataset.g, src=GDROP[f]; if(!src) return;
   const m=sched.find(x=>x.id===inp.dataset.id), q=norm(filter||"");
   gd.id=inp.id;
-  const all=src().filter(Boolean), shown=all.filter(n=>!q||norm(n).includes(q));
+  let all=src().filter(Boolean); if((f==="op"||f==="as") && m) all=byFree(all, n=>gdHint(f,m,n));
+  const shown=all.filter(n=>!q||norm(n).includes(q));
   gd.items=[]; if(inp.value.trim() && f!=="home") gd.items.push({v:"",label:"— Κενό —",cls:"none"});
   shown.forEach(n=>gd.items.push({v:n,label:n,hint:gdHint(f,m,n)}));
   const ul=gdEl();
-  ul.innerHTML = gd.items.length ? gd.items.map((it,i)=>`<li role="option" data-i="${i}" class="${it.cls||""}" aria-selected="${i===gd.active}">${esc(it.label)}${it.hint?`<small class="${it.hint.startsWith("⚠")?"warn":""}">${esc(it.hint)}</small>`:""}</li>`).join("")
+  ul.innerHTML = gd.items.length ? gd.items.map((it,i)=>`<li role="option" data-i="${i}" class="${it.cls||""}" aria-selected="${i===gd.active}"><span class="cn">${esc(it.label)}</span>${it.hint?`<small class="${hintCls(it.hint)}">${esc(it.hint)}</small>`:""}</li>`).join("")
     : `<li class="none">${all.length?"Καμία επιλογή με αυτό το κείμενο: θα αποθηκευτεί όπως το γράψατε":"Η λίστα είναι άδεια: γράψτε μια τιμή"}</li>`;
   const r=inp.getBoundingClientRect(), below=innerHeight-r.bottom;
   ul.style.left=Math.max(4,Math.min(r.left, innerWidth-260))+"px"; ul.style.minWidth=Math.max(r.width,220)+"px";
@@ -973,6 +986,31 @@ function seenTag(m, r){   // → {cls, tip} for the dot before the name, or null
   if(at && at >= chg){ const d = new Date(at); return {cls:"seen-ok", tip:`Το είδε στην εφαρμογή ${fmtDate(ymd(d)).slice(0,5)} ${pad(d.getHours())}:${pad(d.getMinutes())}`}; }
   return {cls:"seen-no", tip: at ? "Δεν είδε ακόμα την αλλαγή" : "Δεν το είδε ακόμα"};
 }
+/* ---------- who is free that day / two matches at the same time ---------- */
+const CLASH_MIN = 120;   // two matches less than 2 hours apart cannot both be covered
+const tmin = t => { const x=/^(\d{1,2})[:.](\d{2})/.exec(t||""); return x ? +x[1]*60 + +x[2] : null; };
+function otherGames(name, date, exceptId){ const k=norm(name); if(!k || !date) return []; return sched.filter(x=>x.id!==exceptId && x.date===date && (norm(x.op)===k||norm(x.as)===k)); }
+function clashIn(games, time){ const a=tmin(time); return a==null ? null : games.find(x=>{ const b=tmin(x.time); return b!=null && Math.abs(a-b)<CLASH_MIN; }) || null; }
+function clashOf(m, r){ if(!m[r] || !m.date || m.date<today()) return null; return clashIn(otherGames(m[r], m.date, m.id), m.time); }
+function clashFlag(m, r){ const x=clashOf(m, r); if(!x) return "";
+  const tip=`Την ίδια ώρα έχει και: ${x.time} ${x.home||""}${x.away?" – "+x.away:""}${x.venue?" ("+x.venue+")":""}`;
+  return `<div class="cant-flag clash" title="${esc(tip)}">${cmIcon("warn")} Ίδια ώρα: ${esc(x.time)} ${teams(x)}</div>`; }
+/* hint next to a name in the person pickers; c = {date, time, id, other (name in the other role), m (the match)} */
+function personHint(n, r, c){
+  const k=norm(n); if(!k) return "";
+  const other = r==="op" ? "as" : "op";
+  if(c.other && norm(c.other)===k) return `⚠ ήδη ${ROLE[other]}`;
+  if(!c.date) return "";
+  if(c.m && c.m.date===c.date && ["op","as"].some(x=>norm(c.m[x])===k && cantOf(c.m, x))) return "✋ δεν μπορεί";
+  if(unavailOn(n, c.date)) return "⚠ κώλυμα";
+  const o=otherGames(n, c.date, c.id); if(!o.length) return "✓ ελεύθερος";
+  const cl=clashIn(o, c.time); if(cl) return `⚠ ίδια ώρα · ${cl.time}`;
+  if(tmin(c.time)==null || o.some(x=>tmin(x.time)==null)) return "⚠ ίδια μέρα";
+  return `ίδια μέρα · ${o.map(x=>x.time).join(", ")}`;
+}
+const hintRank = h => !h ? 1 : h.startsWith("✓") ? 0 : /^[⚠✋]/.test(h) ? (/^(✋|⚠ ήδη)/.test(h) ? 4 : 3) : 2;
+const byFree = (names, hint) => names.map(n=>[hintRank(hint(n)), n]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+const hintCls = h => /^[⚠✋]/.test(h) ? "warn" : h.startsWith("✓") ? "ok" : "";
 /* «Δεν μπορώ» declared by the person in this role (read from their profile) */
 function cantOf(m, r){ const uid = m.sync?.[r]; if(!uid || m.hidden || !m.date || m.date < today()) return null; return profilesAll[uid]?.cant?.[`${m.id}_${r}`] || null; }
 function cantFlag(m, r){ const c = cantOf(m, r); if(!c) return "";
@@ -986,7 +1024,7 @@ function slotHtml(m, r){
   if(!m[r]) return `<div class="slot"><button type="button" class="add-slot" data-act="edit" data-id="${m.id}" title="Πάτα για να ορίσεις ${ROLE[r]}">${IC.plus} ${ROLE[r]}</button></div>`;
   const linked = !!uidForName(m[r]); const paid=!!m["paid_"+r];
   return `<div class="slot">
-    ${cantFlag(m, r)}<div class="nm">${(()=>{ const cn=cantOf(m, r), sv=cn ? {cls:"seen-cant", tip:`Δεν μπορεί${cn.note?": «"+esc(cn.note)+"»":""}`} : seenTag(m, r), tip = sv ? sv.tip : linked ? "Συνδεδεμένος λογαριασμός – βλέπει την ανάθεση" : "Δεν έχει συνδεθεί λογαριασμός"; return sv ? `<span class="seenic ${sv.cls}" data-tip="${tip}" title="${tip}" role="img" aria-label="${tip}">${sv.cls==="seen-ok"?IC.thumb:sv.cls==="seen-cant"?IC.hand:IC.wait}</span>` : `<span class="dot ${linked?"on":""}" title="${tip}"></span>`; })()}${esc(m[r])}${(()=>{ const u=unavailOn(m[r], m.date); return u?`<span class="unav-flag" title="${esc(u.note?"Κώλυμα: "+u.note:"Έχει δηλώσει κώλυμα αυτή τη μέρα")}">${cmIcon("warn")} Κώλυμα</span>`:""; })()}</div>
+    ${cantFlag(m, r)}${clashFlag(m, r)}<div class="nm">${(()=>{ const cn=cantOf(m, r), sv=cn ? {cls:"seen-cant", tip:`Δεν μπορεί${cn.note?": «"+esc(cn.note)+"»":""}`} : seenTag(m, r), tip = sv ? sv.tip : linked ? "Συνδεδεμένος λογαριασμός – βλέπει την ανάθεση" : "Δεν έχει συνδεθεί λογαριασμός"; return sv ? `<span class="seenic ${sv.cls}" data-tip="${tip}" title="${tip}" role="img" aria-label="${tip}">${sv.cls==="seen-ok"?IC.thumb:sv.cls==="seen-cant"?IC.hand:IC.wait}</span>` : `<span class="dot ${linked?"on":""}" title="${tip}"></span>`; })()}${esc(m[r])}${(()=>{ const u=unavailOn(m[r], m.date); return u?`<span class="unav-flag" title="${esc(u.note?"Κώλυμα: "+u.note:"Έχει δηλώσει κώλυμα αυτή τη μέρα")}">${cmIcon("warn")} Κώλυμα</span>`:""; })()}</div>
     <div class="ln"><span class="role ${r}">${ROLE[r]}</span><span class="fee${paid?" paid":""}">${eur(m["fee_"+r])}</span>
     <button class="pay ${paid?"yes mini":"no"}" data-act="pay" data-id="${m.id}" data-role="${r}" ${paid?`aria-label="Πληρώθηκε" title="Πληρώθηκε${m["paidDate_"+r]?" "+fmtDate(m["paidDate_"+r]).slice(0,5):""} · πάτα για αλλαγή"`:`title="Αλλαγή κατάστασης πληρωμής"`}>${paid?"✓":"● Εκκρεμεί"}</button></div>
   </div>`;
@@ -1889,7 +1927,7 @@ function setupCombo(inp, o){
     if(inp.value.trim()) items.push({v:"",label:o.noneLabel||"— Κανένα —",cls:"none"});
     shown.forEach(n=>items.push({v:n,label:n,hint:o.hint?.(n)||""}));
     if(q && !exact) items.push({v:filter.trim(),label:`+ Νέο: «${filter.trim()}»`,cls:"new"});
-    list.innerHTML = items.length ? items.map((it,i)=>`<li role="option" id="${inp.id}-o${i}" data-i="${i}" class="${it.cls||""}" aria-selected="${i===active}">${esc(it.label)}${it.hint?`<small class="${it.hint.startsWith("⚠")?"warn":""}">${esc(it.hint)}</small>`:""}</li>`).join("")
+    list.innerHTML = items.length ? items.map((it,i)=>`<li role="option" id="${inp.id}-o${i}" data-i="${i}" class="${it.cls||""}" aria-selected="${i===active}"><span class="cn">${esc(it.label)}</span>${it.hint?`<small class="${hintCls(it.hint)}">${esc(it.hint)}</small>`:""}</li>`).join("")
       : `<li class="none">${o.emptyLabel||"Η λίστα είναι άδεια — γράψε ένα όνομα"}</li>`;
     list.hidden=false; inp.setAttribute("aria-expanded","true");
     const a=list.querySelector('[aria-selected="true"]'); if(a){ a.scrollIntoView({block:"nearest"}); inp.setAttribute("aria-activedescendant",a.id); }
@@ -1911,10 +1949,8 @@ function setupCombo(inp, o){
   inp.addEventListener("blur",()=>setTimeout(()=>{ if(document.activeElement!==inp) close(); },120));
   return {close};
 }
-function busyPerson(name){   // already assigned the same day (another match)
-  const d=$("iDate").value; if(!d) return ""; const k=norm(name);
-  if(unavailOn(name, d)) return "⚠ κώλυμα";
-  return sched.some(m=>m.id!==editing?.id && m.date===d && (norm(m.op)===k||norm(m.as)===k)) ? "⚠ ίδια μέρα" : "";
+function busyPerson(name, r){   // free / κώλυμα / another match that day, for the form's pickers
+  return personHint(name, r, {date:$("iDate").value, time:$("iTime").value, id:editing?.id, other:$(r==="op"?"iAs":"iOp").value, m:editing});
 }
 function homeVenueOf(team){
   const k=norm(team); if(!k) return "";
@@ -1922,9 +1958,9 @@ function homeVenueOf(team){
   const c={}; sched.forEach(m=>{ if(norm(m.home)===k && m.venue) c[m.venue]=(c[m.venue]||0)+1; });
   return Object.entries(c).sort((a,b)=>b[1]-a[1])[0]?.[0]||"";
 }
-const personOpts={source:()=>roster.map(r=>r.name), hint:busyPerson, noneLabel:"— Κανένα άτομο —", emptyLabel:"Κανένα άτομο ακόμα — γράψε ένα όνομα"};
+const personOpts = r => ({source:()=>byFree(roster.map(x=>x.name).sort((a,b)=>a.localeCompare(b,"el")), n=>busyPerson(n,r)), hint:n=>busyPerson(n,r), noneLabel:"— Κανένα άτομο —", emptyLabel:"Κανένα άτομο ακόμα — γράψε ένα όνομα"});
 const combos=[
-  setupCombo($("iOp"), personOpts), setupCombo($("iAs"), personOpts),
+  setupCombo($("iOp"), personOpts("op")), setupCombo($("iAs"), personOpts("as")),
   setupCombo($("iHome"), {source:teamNames, hint:n=>homeVenueOf(n), noneLabel:"— Καμία —",
     onPick:(v,before)=>{ const cur=$("iVenue").value.trim(), hv=homeVenueOf(v); if(hv && (!cur || norm(cur)===norm(homeVenueOf(before)))) $("iVenue").value=hv; }}),
   setupCombo($("iAway"), {source:teamNames, noneLabel:"— Καμία —"}),
