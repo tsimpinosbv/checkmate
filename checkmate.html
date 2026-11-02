@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
 <meta charset="utf-8">
-<meta name="app-build" content="59a530de887a">
+<meta name="app-build" content="1cc6e0e49fba">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <title>Check Mate Challenge</title>
@@ -724,6 +724,21 @@ table.grid select.gsel{width:100%;border:0;background:transparent;font:inherit;c
 .sttiles .t .v{font-family:var(--f-mono);font-size:20px;margin-top:2px;font-variant-numeric:tabular-nums}
 .sttiles .t .v.or{color:var(--warn)}
 .tabs button{white-space:nowrap;flex:none}
+/* «Βάση»: space, seasons, active people */
+.dbtab{display:flex;flex-direction:column;gap:18px}
+.dbuse{padding:14px 16px 12px}
+.dbuse .pt{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px;font-size:13.5px;color:var(--muted)}
+.dbuse .pt b{font:700 26px var(--f-mono);color:var(--good)}
+.dbuse .trk{height:14px;border-radius:7px;background:var(--sq);overflow:hidden}
+.dbuse .trk>span{display:block;height:100%;border-radius:7px;background:var(--good)}
+.dbuse.warn .pt b{color:var(--warn)}.dbuse.warn .trk>span{background:var(--accent)}
+.dbuse.bad .pt b{color:var(--bad)}.dbuse.bad .trk>span{background:var(--bad)}
+.dbuse .note{margin:10px 0 0}
+.dbsub{padding:8px 16px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--sq);border-top:1px solid var(--line)}
+.prow.off .who b{color:var(--muted)}
+.dbsteps{margin:0;padding:14px 18px 14px 38px;display:flex;flex-direction:column;gap:7px;font-size:14px;line-height:1.45}
+.dbsteps b{color:var(--ink)}
+.banner.dbwarn{background:var(--warn-bg);color:var(--warn)}
 /* tabs as pills with an icon */
 .tabs{border-bottom:0;gap:6px}
 .tabs button{display:inline-flex;align-items:center;gap:7px;border:1px solid transparent;border-radius:999px;padding:8px 15px;margin:0;cursor:pointer;transition:background .15s,color .15s}
@@ -1754,6 +1769,7 @@ const WIDE = matchMedia("(min-width:900px)");
 const viewNow = () => WIDE.matches ? view : "cards";
 WIDE.addEventListener?.("change", () => { if(isAdmin && tab==="sched") renderAdmin(); });   // week: Monday of the round shown ("" = all matches)
 
+const activeRoster = () => roster.filter(r=>!r.inactive);
 function rosterByNorm(){ const m={}; roster.forEach(r=>m[norm(r.name)]=r); return m; }
 function uidForName(name){ if(!name) return null; const r=rosterByNorm()[norm(name)]; return r ? (links[r.id]||null) : null; }
 function unavOf(uid, wk){ return uid ? (profilesAll[uid]?.unavail||{})[wk] || null : null; }
@@ -1774,6 +1790,7 @@ function startAdmin(){
   db.collection("venues").limit(1000).onSnapshot(s=>{ venues=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.venues=true; dedupeLists(); seedLists(); upgradeItems(); if(tab==="lists"||tab==="sched") renderAdmin(); }, ()=>{});
   db.collection("contacts").limit(1000).onSnapshot(s=>{ contacts={}; s.docs.forEach(d=>contacts[d.id]=d.data().email||""); ready.contacts=true; if(tab==="people") renderAdmin(); }, ()=>{});
   db.doc("config/notify").onSnapshot(s=>{ notify={email:false, endpoint:"", ...(s.exists?s.data():{})}; if(tab==="people") renderAdmin(); }, ()=>{});
+  db.doc("config/archive").onSnapshot(s=>{ archNotice = s.exists ? s.data() : null; if(tab==="db") renderAdmin(); }, ()=>{});
   claude.use("mail").then(x=>{ mail=x; if(Object.keys(outbox).length) outboxTimer = setTimeout(flushNotes, 4000); }).catch(()=>{});
   db.doc("config/fees").onSnapshot(s=>{ if(s.exists) fees={op:80,as:40,...s.data()}; }, ()=>{});
 }
@@ -1803,7 +1820,7 @@ function renderAdmin(){
   if(st.season && !seasons.includes(st.season)) st.season="";
   const months = uniq(sched.filter(m=>!st.season||seasonOf(m.date)===st.season).map(m=>(m.date||"").slice(0,7)));
   if(st.month && !months.includes(st.month)) st.month="";
-  const people = uniq([...roster.map(r=>r.name)]);
+  const people = uniq([...activeRoster().map(r=>r.name)]);
   const fill = (id,arr)=>$(id).innerHTML=uniq(arr).map(v=>`<option value="${esc(v)}">`).join("");
   fill("dlTeams", teamNames()); fill("dlComps", sched.map(m=>m.comp)); fill("dlVenues", venueNames()); fill("dlTv", sched.map(m=>m.tv)); fill("dlPeople", people);
 
@@ -1814,6 +1831,7 @@ function renderAdmin(){
   <div style="display:flex;flex-direction:column;gap:18px">
     ${backupDue() ? `<div class="banner" role="status">${cmIcon("save")}<span class="grow">${ls.get("cm.lastBackup",0) ? "Πέρασε πάνω από μία εβδομάδα από το τελευταίο αντίγραφο ασφαλείας." : "Κράτα ένα αντίγραφο ασφαλείας με όλο το πρόγραμμα και τις πληρωμές."}</span>
       <button class="btn small primary" type="button" data-act="backup">${cmIcon("dl")} Αντίγραφο σε Excel</button><button class="btn small" type="button" data-act="backuplater">Αργότερα</button></div>` : ""}
+    ${(()=>{ const u=dbUsage(); return u.pct>=75 && tab!=="db" ? `<div class="banner dbwarn" role="status">${cmIcon("warn")}<span class="grow">Η βάση έχει γεμίσει κατά <b>${u.pct}%</b>. Κράτα αντίγραφο μιας παλιάς σεζόν στο Drive και αφαίρεσέ την από τη βάση.</span><button class="btn small primary" type="button" data-tab="db">Βάση</button></div>` : ""; })()}
     ${(()=>{ const L=cantList(); return L.length ? `<div class="banner cantban" role="alert">${IC.hand}<div class="grow"><b>${L.length===1?"Ένα άτομο δηλώνει":"Άτομα δηλώνουν"} ότι δεν μπορούν:</b><ul>${L.map(({m,r,c})=>`<li><span><b>${esc(m[r])}</b> (${ROLE[r]}) · ${esc(niceDate(m.date))} ${esc(m.time||"")} · ${esc(m.home)}${m.away?" – "+esc(m.away):""}${c.note?` · «${esc(c.note)}»`:""}</span>
         <span class="cantact"><button class="btn small" type="button" data-act="edit" data-id="${m.id}">✎ Αλλαγή</button><button class="btn small" type="button" data-act="cantack" data-id="${m.id}" data-role="${r}">✓ Το είδα</button></span></li>`).join("")}</ul></div></div>` : ""; })()}
     <nav class="tabs" role="tablist">
@@ -1822,10 +1840,11 @@ function renderAdmin(){
       <button role="tab" data-tab="people" aria-selected="${tab==="people"}"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/></svg>Άτομα${pending.length?`<span class="badge">${pending.length}</span>`:""}</button>
       <button role="tab" data-tab="unav" aria-selected="${tab==="unav"}"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M9.5 13.5l5 5M14.5 13.5l-5 5"/></svg>Κωλύματα</button>
       <button role="tab" data-tab="stats" aria-selected="${tab==="stats"}"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Στατιστικά</button>
+      <button role="tab" data-tab="db" aria-selected="${tab==="db"}"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>Βάση</button>
     </nav>
     <div id="tabBody"></div>
   </div>`;
-  if(tab==="sched") renderSched(months, people, seasons); else if(tab==="lists") renderLists(); else if(tab==="unav") renderUnav(); else if(tab==="stats") renderStats(seasons); else renderPeople(pending);
+  if(tab==="sched") renderSched(months, people, seasons); else if(tab==="lists") renderLists(); else if(tab==="unav") renderUnav(); else if(tab==="stats") renderStats(seasons); else if(tab==="db") renderDb(); else renderPeople(pending);
   { const vk = tab+"|"+(st.week||""); if(vk!==renderAdmin.vk){ if(renderAdmin.vk) $("tabBody").classList.add("fadein"); renderAdmin.vk = vk; } }
   if($("gwrap")) $("gwrap").scrollLeft = gx;
   if(gd.id && !$(gd.id)) gdClose();
@@ -1934,7 +1953,7 @@ const GDROP = {
   venue: () => venueNames(),
   tv:    () => uniq(sched.map(m=>m.tv)),
   vc:    () => uniq(sched.map(m=>m.vc)),
-  op:    () => roster.map(r=>r.name).sort((a,b)=>a.localeCompare(b,"el")), as: () => roster.map(r=>r.name).sort((a,b)=>a.localeCompare(b,"el"))
+  op:    () => activeRoster().map(r=>r.name).sort((a,b)=>a.localeCompare(b,"el")), as: () => activeRoster().map(r=>r.name).sort((a,b)=>a.localeCompare(b,"el"))
 };
 const gd = {id:null, items:[], active:-1};
 function gdEl(){ let ul=$("gdrop"); if(!ul){ ul=document.createElement("ul"); ul.id="gdrop"; ul.className="combo-list gdrop"; ul.setAttribute("role","listbox"); ul.hidden=true; document.body.appendChild(ul);
@@ -2073,7 +2092,7 @@ function backupDue(){ const now=Date.now(); return sched.length>0 && now - ls.ge
 async function backupAll(){
   const saved = {...st};
   Object.assign(st, {season:"", month:"", person:"", paid:"", vis:"", q:"", week:""});
-  try{ await $("btnXlsx").onclick(); ls.set("cm.lastBackup", Date.now()); }
+  try{ if(await $("btnXlsx").onclick()) ls.set("cm.lastBackup", Date.now()); }
   finally{ Object.assign(st, saved); renderAdmin(); }
 }
 
@@ -2150,6 +2169,101 @@ function statSlots(){
 function personStats(slots){
   return [...groupBy(slots,x=>norm(x.name)).values()].map(v=>({name:v[0].name, ...statTotals(v)}));
 }
+/* ---------- tab: «Βάση» (space used, season archive, active / inactive people) ---------- */
+let archNotice = null;   // config/archive = {season, until, at}: users are told this season will be removed
+const DB_MAX_MATCHES = 2000;   // the programme loads at most this many matches
+const DB_BYTES = 1024**3;      // free Firestore storage
+const fmtMB = b => b < 1048576 ? Math.max(1,Math.round(b/1024))+" KB" : (b/1048576).toFixed(1).replace(".",",")+" MB";
+function dbUsage(){
+  const len = x => { try{ return JSON.stringify(x).length; }catch{ return 0; } };
+  let bytes = len(sched) + len(teamList) + len(venues) + len(roster) + len(profilesAll);
+  sched.forEach(m=>["op","as"].forEach(r=>{ if(m.sync?.[r]) bytes += 700 + (teamLogo(m.home)||"").length + (teamLogo(m.away)||"").length; }));   // the users' own copies
+  const pct = Math.min(100, Math.round(100*Math.max(sched.length/DB_MAX_MATCHES, bytes/DB_BYTES)));
+  return {n:sched.length, bytes, pct};
+}
+function renderDb(){
+  const u = dbUsage(), lvl = u.pct>=90 ? "bad" : u.pct>=75 ? "warn" : "ok", cs = curSeason();
+  const seasons = [...groupBy(sched.filter(m=>m.date), m=>seasonOf(m.date)).entries()].sort((a,b)=>b[0].localeCompare(a[0]));
+  const cnt = {}, last = {};
+  sched.forEach(m=>["op","as"].forEach(r=>{ if(!m[r]) return; const k=norm(m[r]); cnt[k]=(cnt[k]||0)+1; if(m.date && (!last[k] || m.date>last[k])) last[k]=m.date; }));
+  const prow = (r, off) => `<div class="prow${off?" off":""}"><div class="who"><b>${esc(r.name)}</b><span class="note">${cnt[norm(r.name)]||0} αναθέσεις${last[norm(r.name)]?` · τελευταίος αγώνας ${fmtDate(last[norm(r.name)])}`:""}${links[r.id]?" · έχει λογαριασμό":""}</span></div>
+    <div class="actions"><button class="btn small${off?" primary":""}" type="button" data-act="${off?"pon":"poff"}" data-rid="${r.id}">${off?"Ενεργοποίηση":"Απενεργοποίηση"}</button></div></div>`;
+  const act = activeRoster(), ina = roster.filter(r=>r.inactive);
+  $("tabBody").innerHTML = `<div class="dbtab">
+    <section class="panel"><div class="st-h">Χώρος της βάσης</div><div class="dbuse ${lvl}">
+      <div class="pt"><b>${u.pct}%</b><span>${u.n} αγώνες από ${DB_MAX_MATCHES} · περίπου ${fmtMB(u.bytes)} από 1 GB</span></div>
+      <div class="trk"><span style="width:${Math.max(2,u.pct)}%"></span></div>
+      <p class="note">${lvl==="ok" ? "Όλα καλά." : lvl==="warn" ? "Η βάση γεμίζει: κράτα αντίγραφο μιας παλιάς σεζόν και αφαίρεσέ την." : "Η βάση είναι σχεδόν γεμάτη: αφαίρεσε μια παλιά σεζόν τώρα."} Η εφαρμογή φορτώνει έως ${DB_MAX_MATCHES} αγώνες· από το 75% εμφανίζεται ειδοποίηση στο Πρόγραμμα.</p>
+    </div></section>
+    <section class="panel"><div class="st-h">Σεζόν στη βάση</div>
+      ${seasons.map(([s,list])=>{ const cur = s>=cs, d = ls.get("cm.arch."+s, 0);
+        return `<div class="prow"><div class="who"><b>${esc(s)}</b><span class="note">${list.length} αγώνες${cur?" · τρέχουσα σεζόν":""}${d?` · τα αρχεία κατέβηκαν ${fmtDate(ymd(new Date(d)))}`:""}</span></div>
+        <div class="actions">${cur ? `<span class="tag on">Σε χρήση</span>` : `${archNotice?.season===s ? `<span class="tag wait" title="Οι χρήστες βλέπουν ειδοποίηση να κατεβάσουν το ιστορικό τους">Ειδοποιήθηκαν · έως ${fmtDate(archNotice.until)}</span><button class="btn small" type="button" data-act="archnoteoff">Ακύρωση ειδοποίησης</button>` : `<button class="btn small" type="button" data-act="archnote" data-s="${esc(s)}" title="Οι χρήστες βλέπουν στην εφαρμογή ότι η σεζόν θα αφαιρεθεί και κατεβάζουν το ιστορικό τους"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 21h4"/></svg> Ειδοποίηση χρηστών</button>`}<button class="btn small" type="button" data-act="archdl" data-s="${esc(s)}">${cmIcon("dl")} 1 · Κατέβασμα αρχείων</button><button class="btn small danger" type="button" data-act="archdel" data-s="${esc(s)}"${d?"":` disabled title="Πρώτα κατέβασε τα αρχεία της σεζόν και ανέβασέ τα στο Drive"`}>2 · Αφαίρεση από τη βάση</button>`}</div></div>`; }).join("") || `<div class="prow"><span class="note">Δεν υπάρχουν αγώνες ακόμα.</span></div>`}
+      <div class="prow"><div class="who"><b>Επαναφορά σεζόν</b><span class="note">Από το αρχείο .json μιας σεζόν που αφαιρέθηκε. Οι αγώνες επανέρχονται κρυφοί από τους χρήστες, για τα στατιστικά.</span></div>
+        <div class="actions"><label class="btn small">${cmIcon("ul")} Επιλογή αρχείου<input type="file" id="archRestore" accept=".json,application/json" hidden></label></div></div>
+    </section>
+    <section class="panel"><div class="st-h">Αντίγραφο σεζόν στο Google Drive (videochallengemate@gmail.com)</div>
+      <ol class="dbsteps">
+        <li>Πρώτα πάτα <b>Ειδοποίηση χρηστών</b>: για 14 μέρες οι χρήστες βλέπουν στην εφαρμογή ότι η σεζόν θα αφαιρεθεί και κατεβάζουν το δικό τους ιστορικό σε Excel (μπορούν αργότερα να το ξαναφορτώσουν στο κινητό τους).</li>
+        <li>Πάτα <b>1 · Κατέβασμα αρχείων</b> στη σεζόν. Κατεβαίνουν δύο αρχεία: το <b>Excel</b> (για να το διαβάζεις) και το <b>.json</b> (για επαναφορά). Αν ο browser ρωτήσει για «πολλαπλές λήψεις», πάτα <b>Να επιτρέπεται</b>.</li>
+        <li>Άνοιξε το <a href="https://drive.google.com/drive/my-drive?authuser=videochallengemate@gmail.com" target="_blank" rel="noopener">Google Drive του videochallengemate</a>. Πάνω δεξιά, στο εικονίδιο του λογαριασμού, έλεγξε ότι γράφει <b>videochallengemate@gmail.com</b>.</li>
+        <li>Την πρώτη φορά: <b>+ Νέο → Νέος φάκελος</b> με όνομα <b>Check Mate Backup</b>. Μέσα του φτιάξε έναν φάκελο για τη σεζόν, π.χ. <b>2025-2026</b>.</li>
+        <li>Σύρε τα δύο αρχεία από τις Λήψεις μέσα στον φάκελο της σεζόν (ή <b>+ Νέο → Μεταφόρτωση αρχείου</b>).</li>
+        <li>Άνοιξε το Excel μέσα από το Drive και δες ότι έχει τους αγώνες.</li>
+        <li>Γύρνα εδώ και πάτα <b>2 · Αφαίρεση από τη βάση</b>. Γράψε τη σεζόν για επιβεβαίωση. Οι αγώνες φεύγουν από τη βάση και από τις σελίδες των χρηστών· τα στατιστικά τους μένουν στο Excel.</li>
+      </ol>
+      <p class="note" style="margin:0;padding:0 16px 14px">Το εβδομαδιαίο <b>Αντίγραφο σε Excel</b> συνεχίζει κανονικά· αυτό εδώ είναι για να μένει η βάση ελαφριά.</p>
+    </section>
+    <section class="panel"><div class="st-h">Ενεργά και ανενεργά άτομα</div>
+      <p class="note" style="margin:0;padding:10px 16px">Ο <b>ανενεργός</b> δεν εμφανίζεται στα Άτομα, στις λίστες επιλογής ατόμου και στο φίλτρο. Οι παλιοί του αγώνες, οι πληρωμές και τα στατιστικά μένουν. Αν έχει λογαριασμό, αποσυνδέεται. Με «Ενεργοποίηση» επιστρέφει.</p>
+      ${act.map(r=>prow(r,false)).join("")}
+      ${ina.length ? `<div class="dbsub">Ανενεργά (${ina.length})</div>${ina.map(r=>prow(r,true)).join("")}` : ""}
+    </section>
+  </div>`;
+}
+async function archiveDownload(s){
+  const list = sched.filter(m=>seasonOf(m.date)===s);
+  const blob = new Blob([JSON.stringify({app:"Check Mate", kind:"season-archive", season:s, exportedAt:new Date().toISOString(), count:list.length, sched:list})], {type:"application/json"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `CheckMate_Sezon_${s}.json`; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  const saved = {...st}; Object.assign(st, {season:s, month:"", person:"", paid:"", vis:"", q:"", week:""});
+  let ok = false;
+  try{ ok = await $("btnXlsx").onclick(); } finally { Object.assign(st, saved); }
+  if(ok) ls.set("cm.arch."+s, Date.now());
+  renderAdmin();
+}
+async function archiveDelete(s, btn){
+  if(!s || s>=curSeason()) return;
+  const list = sched.filter(m=>seasonOf(m.date)===s);
+  const ans = prompt(`Θα αφαιρεθούν ${list.length} αγώνες της σεζόν ${s} από τη βάση και από τις σελίδες των χρηστών.\nΒεβαιώσου ότι τα δύο αρχεία είναι στο Drive.\n\nΓράψε ${s} για επιβεβαίωση:`);
+  if(ans===null) return;
+  if(ans.trim()!==s){ toast("Δεν ταιριάζει: δεν αφαιρέθηκε τίποτα"); return; }
+  if(archNotice?.season===s && today() < archNotice.until && !confirm(`Οι χρήστες έχουν προθεσμία έως ${fmtDate(archNotice.until)} να κατεβάσουν το ιστορικό τους. Αφαίρεση τώρα;`)) return;
+  if(archNotice?.season!==s && !confirm("Οι χρήστες δεν έχουν ειδοποιηθεί να κρατήσουν το ιστορικό τους. Αφαίρεση χωρίς ειδοποίηση;")) return;
+  btn.disabled = true; let k = 0;
+  try{
+    for(let i=0;i<list.length;i+=10){
+      await Promise.all(list.slice(i,i+10).map(async m=>{
+        for(const r of ["op","as"]) if(m.sync?.[r]) await w(()=>db.doc(`mine/${m.sync[r]}/items/${m.id}_${r}`).delete()).catch(()=>{});
+        await w(()=>db.doc(`sched/${m.id}`).delete()); k++;
+      }));
+      toast(`Αφαίρεση… ${k}/${list.length}`);
+    }
+    toast(`Η σεζόν ${s} αφαιρέθηκε από τη βάση (${k} αγώνες)`);
+    if(archNotice?.season===s) await w(()=>db.doc("config/archive").delete()).catch(()=>{});
+  }catch{ toast(`Σταμάτησε στους ${k}/${list.length}. Πάτα ξανά για να συνεχίσει.`); btn.disabled = false; }
+}
+document.addEventListener("change", async e=>{
+  if(e.target.id!=="archRestore") return;
+  const f = e.target.files && e.target.files[0]; e.target.value = ""; if(!f) return;
+  let d; try{ d = JSON.parse(await f.text()); }catch{ d = null; }
+  if(!d || d.kind!=="season-archive" || !Array.isArray(d.sched)){ toast("Αυτό δεν είναι αρχείο σεζόν του Check Mate"); return; }
+  const have = new Set(sched.map(m=>m.id)), add = d.sched.filter(m=>m && m.id && !have.has(m.id));
+  if(!add.length){ toast("Οι αγώνες αυτού του αρχείου υπάρχουν ήδη στη βάση"); return; }
+  if(!confirm(`Επαναφορά σεζόν ${d.season}: ${add.length} αγώνες, κρυφοί από τους χρήστες. Συνέχεια;`)) return;
+  let k = 0;
+  try{ for(const m of add){ const {id, ...body} = m; await w(()=>db.doc(`sched/${id}`).set({...body, sync:{}, hidden:true})); k++; } toast(`Επανήλθαν ${k} αγώνες`); }
+  catch{ toast(`Σταμάτησε στους ${k}/${add.length}`); }
+});
 function renderStats(seasons){
   if(sst.season===null) sst.season = seasons.includes(curSeason()) ? curSeason() : (seasons[0]||"");
   const inSeason = sched.filter(m=>!sst.season||seasonOf(m.date)===sst.season);
@@ -2316,7 +2430,7 @@ async function renderPeople(pending){
       <div class="ph"><h2 class="sec">Άτομα</h2>
         <form id="addPerson" class="actions"><input id="newPerson" class="btn" style="font-weight:400;min-width:0;width:200px" placeholder="π.χ. ΤΣΙΜΠΙΝΟΣ Ι." aria-label="Νέο άτομο"><button class="btn small" type="submit">+ Προσθήκη</button></form>
       </div>
-      ${roster.length? roster.map(r=>{ const uid=links[r.id]; const waiting=pending.find(c=>c.rid===r.id);
+      ${roster.length? activeRoster().map(r=>{ const uid=links[r.id]; const waiting=pending.find(c=>c.rid===r.id);
         return `<div class="prow"><div class="who"><b>${esc(r.name)}</b><span class="note">${counts[norm(r.name)]||0} αναθέσεις${uid?` · ${esc(pname(uid))} · ${esc(profilesAll[uid]?.email||"")}`:""}</span></div>
         ${uid?"":`<label class="pmail" title="Εδώ στέλνονται οι ειδοποιήσεις όσο το άτομο δεν έχει συνδεδεμένο λογαριασμό">${cmIcon("mail")}<input type="email" data-rmail="${r.id}" value="${esc(contacts[r.id]||"")}" placeholder="email για ειδοποιήσεις" aria-label="Email για ${esc(r.name)}"></label>`}
         <div class="actions">${uid?`<span class="tag on">✓ Βλέπει τις αναθέσεις του</span><button class="btn small danger" data-act="unlink" data-rid="${r.id}">Αποσύνδεση</button>`:waiting?`<span class="tag wait">Αίτημα σε αναμονή</span>`:`<span class="tag off">Χωρίς λογαριασμό</span>`}
@@ -2324,6 +2438,7 @@ async function renderPeople(pending){
         ${!uid && !counts[norm(r.name)]?`<button class="btn small danger" data-act="delperson" data-rid="${r.id}" aria-label="Διαγραφή">✕</button>`:""}</div>
         <div class="mergebox" id="merge-${r.id}" hidden></div></div>`;}).join("")
       : `<div class="empty"><strong>Κανένα άτομο ακόμα</strong><div>Τα ονόματα προστίθενται αυτόματα από τις αναθέσεις και το Excel.</div></div>`}
+      ${roster.length-activeRoster().length ? `<div class="prow"><span class="note">Ανενεργά άτομα: ${roster.length-activeRoster().length} · δείτε την καρτέλα <button class="btn small" type="button" data-tab="db">Βάση</button></span></div>` : ""}
     </section>
     <div style="display:flex;flex-direction:column;gap:18px">
       ${registeredPanel(rmap)}
@@ -2404,7 +2519,7 @@ function registeredPanel(rmap){
     const tag = rid ? `<span class="tag on">✓ ${esc(rmap[rid]?.name||"συνδεδεμένος")}</span>`
       : pend ? `<span class="tag wait">Αίτημα: ${esc(rmap[pend.rid]?.name||"—")}</span>`
       : `<span class="tag off">${p.uid===me?.id?"Εσύ · ":""}Χωρίς όνομα</span>`;
-    const free = roster.filter(r=>!links[r.id]);
+    const free = activeRoster().filter(r=>!links[r.id]);
     const linker = rid ? "" : `<div class="ulink"><select data-linksel="${p.uid}" aria-label="Όνομα στο πρόγραμμα"><option value="">Σύνδεση με όνομα…</option>${free.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join("")}</select><button class="btn small" type="button" data-act="linkuser" data-uid="${p.uid}">Σύνδεση</button>${p.uid===me?.id?"":`<span data-delwrap="${p.uid}"><button class="btn small danger" type="button" data-act="deluser" data-uid="${p.uid}">Διαγραφή</button></span>`}</div>`;
     return `<div class="prow ureg"><div class="who"><b>${esc(p.name||"Χωρίς όνομα")}</b><span class="mail">${esc(p.email||"—")}</span>
       <span class="note">Εγγραφή ${fmtTs(p.joinedAt)}${p.via==="google"?" · Google":""} · τελευταία είσοδος ${fmtTs(p.seenAt,true)}</span></div><div class="ulink">${tag}${linker}</div></div>`;
@@ -2781,6 +2896,25 @@ document.addEventListener("click", async e => {
   if(act==="wkall"){ st.week=""; renderAdmin(); }
   if(act==="statxls") exportStats();
   if(act==="backup") backupAll();
+  if(act==="archdl") archiveDownload(b.dataset.s);
+  if(act==="archnote"){ const s=b.dataset.s, until=addDays(today(),14);
+    if(archNotice && archNotice.season!==s && !confirm(`Υπάρχει ήδη ειδοποίηση για τη σεζόν ${archNotice.season}. Να αντικατασταθεί;`)) return;
+    if(!confirm(`Οι χρήστες με αγώνες της σεζόν ${s} θα δουν στην εφαρμογή ότι η σεζόν αφαιρείται στις ${fmtDate(until)} και θα μπορούν να κατεβάσουν το ιστορικό τους. Συνέχεια;`)) return;
+    try{ await w(()=>db.doc("config/archive").set({season:s, until, at:Date.now()})); toast("Οι χρήστες ειδοποιήθηκαν"); }catch{ toast("Απέτυχε"); } }
+  if(act==="archnoteoff"){ try{ await w(()=>db.doc("config/archive").delete()); toast("Η ειδοποίηση ακυρώθηκε"); }catch{ toast("Απέτυχε"); } }
+  if(act==="archdel") archiveDelete(b.dataset.s, b);
+  if(act==="poff"||act==="pon"){
+    const rid=b.dataset.rid, off=act==="poff", r=roster.find(x=>x.id===rid); if(!r) return;
+    if(off && links[rid] && !confirm(`${r.name}: έχει συνδεδεμένο λογαριασμό. Θα αποσυνδεθεί και δεν θα βλέπει πλέον τις αναθέσεις του. Συνέχεια;`)) return;
+    b.disabled=true;
+    try{
+      if(off && links[rid]){ const uid=links[rid]; await w(()=>db.doc(`links/${rid}`).delete()); delete links[rid];
+        await w(()=>db.doc(`claims/${uid}`).update({status:"rejected", decidedAt:Date.now()})).catch(()=>{});
+        await resync(m=>m.sync?.op===uid||m.sync?.as===uid, "Αποσυνδέθηκε"); }
+      await w(()=>db.doc(`roster/${rid}`).update({inactive:off}));
+      toast(off ? `${r.name}: ανενεργός` : `${r.name}: ενεργός ξανά`);
+    }catch{ toast("Απέτυχε"); b.disabled=false; }
+  }
   if(act==="backuplater"){ ls.set("cm.backupSnooze", Date.now()+2*DAY_MS); renderAdmin(); }
   if(act==="unavmail"){ const n=unavPending(unavWk).length; $("unavMailWrap").innerHTML = `<span class="confirm">Αποστολή email σε ${n} ${n===1?"άτομο":"άτομα"}; <button class="btn small primary" type="button" data-act="unavmailyes">Ναι</button><button class="btn small" type="button" data-act="unavmailno">Όχι</button></span>`; }
   if(act==="unavmailno") renderAdmin();
@@ -2996,7 +3130,7 @@ function homeVenueOf(team){
   const c={}; sched.forEach(m=>{ if(norm(m.home)===k && m.venue) c[m.venue]=(c[m.venue]||0)+1; });
   return Object.entries(c).sort((a,b)=>b[1]-a[1])[0]?.[0]||"";
 }
-const personOpts = r => ({source:()=>byFree(roster.map(x=>x.name).sort((a,b)=>a.localeCompare(b,"el")), n=>busyPerson(n,r)), hint:n=>busyPerson(n,r), noneLabel:"— Κανένα άτομο —", emptyLabel:"Κανένα άτομο ακόμα — γράψε ένα όνομα"});
+const personOpts = r => ({source:()=>byFree(activeRoster().map(x=>x.name).sort((a,b)=>a.localeCompare(b,"el")), n=>busyPerson(n,r)), hint:n=>busyPerson(n,r), noneLabel:"— Κανένα άτομο —", emptyLabel:"Κανένα άτομο ακόμα — γράψε ένα όνομα"});
 const combos=[
   setupCombo($("iOp"), personOpts("op")), setupCombo($("iAs"), personOpts("as")),
   setupCombo($("iHome"), {source:teamNames, hint:n=>homeVenueOf(n), noneLabel:"— Καμία —",
@@ -3292,8 +3426,9 @@ $("btnXlsx").onclick = async ()=>{
     const buf=await wb.xlsx.writeBuffer();
     const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
     const dl=await claude.use("downloads");
-    await dl.save({filename:`CheckMate_${st.month||"ola"}_${today()}.xlsx`, data:blob});
+    await dl.save({filename:`CheckMate_${st.month||st.season||"ola"}_${today()}.xlsx`, data:blob});
     toast(`Εξήχθησαν ${n} αναθέσεις`);
+    return true;
   }catch(err){ console.warn(err); toast(err?.message==="load"?"Δεν φορτώθηκε η βιβλιοθήκη Excel. Έλεγξε τη σύνδεση.":"Η εξαγωγή απέτυχε"); }
   finally{ btn.disabled=false; btn.textContent=label; }
 };
@@ -3326,6 +3461,7 @@ async function startUser(){
   db.doc(`claims/${uid}`).onSnapshot(s=>{ myClaim = s.exists ? s.data() : null; renderUser(); }, ()=>{ myClaim=null; renderUser(); });
   db.collection("roster").limit(1000).onSnapshot(s=>{ uRoster=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); renderUser(); }, ()=>{});
   db.collection(`mine/${uid}/items`).limit(2000).onSnapshot(s=>{ myItems=s.docs.map(d=>({id:d.id,...d.data()})); renderUser(); }, ()=>{});
+  db.doc("config/archive").onSnapshot(s=>{ archNotice = s.exists ? s.data() : null; renderUser(); }, ()=>{});
   /* the «Άλλαξε» badge and the availability reminder (one listener for the whole user page) */
   $("app").addEventListener("click", e=>{
     const c = e.target.closest("[data-seen],[data-unavgo]"); if(!c) return;
@@ -3408,10 +3544,64 @@ function phonePanel(){
       <div class="note">Το βλέπει μόνο ο συνεργάτης σου στην κάρτα του αγώνα, με κουμπί κλήσης. Μπορείς να το κρύψεις όποτε θέλεις βγάζοντας το ✓. Οι αλλαγές φαίνονται στον συνεργάτη αφού ανοίξει την εφαρμογή ο διαχειριστής.</div>
     </div></div></details>`;
 }
+/* ---------- the user's own history of removed seasons: Excel out, Excel back in (kept on this device) ---------- */
+const myArch = () => { const a = ls.get("cm.myArchive", []); return Array.isArray(a) ? a : []; };
+function allMyItems(){
+  const have = new Set(myItems.map(i=>i.date+"|"+norm(i.home)+"|"+i.role));
+  return [...myItems, ...myArch().filter(i=>i && i.date && !have.has(i.date+"|"+norm(i.home)+"|"+i.role))];
+}
+const UX_COLS = ["Ημερομηνία","Ημέρα","Ώρα","Διοργάνωση","Γηπεδούχος","Φιλοξενούμενη","Γήπεδο","Θέση","Συνεργάτης","Αμοιβή (€)","Πληρώθηκε","Ημ. πληρωμής"];
+async function myExcel(season){
+  const items = allMyItems().filter(i=>i.date && seasonOf(i.date)===season).sort((a,b)=>(a.date+(a.time||"")).localeCompare(b.date+(b.time||"")));
+  if(!items.length){ toast("Δεν υπάρχουν αγώνες σε αυτή τη σεζόν"); return false; }
+  try{
+    const ExcelJS = await loadExcelJS();
+    const wb = new ExcelJS.Workbook(); wb.creator = "Check Mate";
+    const ws = wb.addWorksheet("Αγώνες", {views:[{state:"frozen",ySplit:1}]});
+    ws.columns = UX_COLS.map((h,k)=>({header:h, width:[12,7,7,26,20,20,16,11,22,11,11,13][k]}));
+    ws.getRow(1).eachCell(c=>{ c.font={bold:true,color:{argb:"FFFFFFFF"}}; c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF14213A"}}; });
+    items.forEach(i=>ws.addRow([fmtDate(i.date), dayName(i.date), i.time||i.timeText||"", i.comp||"", i.home||"", i.away||"", i.venue||"", ROLE[i.role]||"", i.partner||"", +i.fee||0, i.paid?"ΝΑΙ":"ΟΧΙ", i.paidDate?fmtDate(i.paidDate):""]));
+    const t = statTotals(items.map(i=>({date:i.date, comp:i.comp||"", role:i.role, fee:+i.fee||0, paid:!!i.paid})));
+    const r = ws.addRow(["Σύνολο","","","","","","","","",t.fee,`${eur(t.paid)} πληρωμένα`,""]); r.font={bold:true};
+    const buf = await wb.xlsx.writeBuffer();
+    const dl = await claude.use("downloads");
+    await dl.save({filename:`CheckMate_Oi_agones_mou_${season}.xlsx`, data:new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})});
+    ls.set("cm.udl."+season, Date.now()); toast(`Κατέβηκαν ${items.length} αγώνες της σεζόν ${season}`); return true;
+  }catch(err){ console.warn(err); toast(err?.message==="load"?"Δεν φορτώθηκε η βιβλιοθήκη Excel. Έλεγξε τη σύνδεση.":"Η λήψη απέτυχε"); return false; }
+}
+async function myExcelLoad(file){
+  try{
+    const ExcelJS = await loadExcelJS();
+    const wb = new ExcelJS.Workbook(); await wb.xlsx.load(await file.arrayBuffer());
+    const ws = wb.getWorksheet("Αγώνες"); if(!ws) throw new Error("fmt");
+    const head = {}; ws.getRow(1).eachCell((c,k)=>{ head[String(c.value||"").trim()] = k; });
+    if(!head["Ημερομηνία"] || !head["Γηπεδούχος"] || !head["Θέση"]) throw new Error("fmt");
+    const val = (row,h) => { const v = head[h] ? row.getCell(head[h]).value : ""; return v==null ? "" : (v instanceof Date ? ymd(v) : typeof v==="object" && v.result!=null ? v.result : v); };
+    const iso = v => { if(/^\d{4}-\d{2}-\d{2}$/.test(v)) return v; const x = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(v).trim()); return x ? `${x[3]}-${x[2].padStart(2,"0")}-${x[1].padStart(2,"0")}` : ""; };
+    const roleOf = v => String(v).startsWith("Βοηθ") ? "as" : String(v).startsWith("Χειρ") ? "op" : "";
+    const add = [];
+    ws.eachRow((row,n)=>{ if(n===1) return; const date = iso(val(row,"Ημερομηνία")), role = roleOf(val(row,"Θέση")); if(!date || !role) return;
+      add.push({id:`arch_${date}_${role}_${n}`, arch:true, date, time:String(val(row,"Ώρα")||""), comp:String(val(row,"Διοργάνωση")||""), home:String(val(row,"Γηπεδούχος")||""), away:String(val(row,"Φιλοξενούμενη")||""),
+        venue:String(val(row,"Γήπεδο")||""), role, partner:String(val(row,"Συνεργάτης")||""), fee:+val(row,"Αμοιβή (€)")||0, paid:String(val(row,"Πληρώθηκε")).toUpperCase()==="ΝΑΙ", paidDate:iso(val(row,"Ημ. πληρωμής"))}); });
+    if(!add.length) throw new Error("fmt");
+    const key = i => i.date+"|"+norm(i.home)+"|"+i.role, old = myArch(), have = new Set(old.map(key));
+    const merged = [...old, ...add.filter(i=>!have.has(key(i)))];
+    ls.set("cm.myArchive", merged);
+    toast(`Φορτώθηκαν ${merged.length-old.length} αγώνες στο ιστορικό σου (σε αυτή τη συσκευή)`); renderUser();
+  }catch(err){ console.warn(err); toast(err?.message==="load" ? "Δεν φορτώθηκε η βιβλιοθήκη Excel. Έλεγξε τη σύνδεση." : "Αυτό δεν είναι αρχείο «Οι αγώνες μου» του Check Mate"); }
+}
+document.addEventListener("click", async e=>{ const b = e.target.closest?.("[data-myxl]"); if(!b) return; b.disabled = true; await myExcel(b.dataset.myxl); b.disabled = false; renderUser(); });
+document.addEventListener("change", e=>{ if(e.target.id!=="myXlFile") return; const f = e.target.files && e.target.files[0]; e.target.value = ""; if(f) myExcelLoad(f); });
+function archBanner(){
+  const n = archNotice; if(!n?.season || !n.until || today() > n.until) return "";
+  if(!myItems.some(i=>i.date && seasonOf(i.date)===n.season) || ls.get("cm.udl."+n.season, 0)) return "";
+  return `<div class="banner dbwarn" role="status">${cmIcon("dl")}<span class="grow">Η σεζόν <b>${esc(n.season)}</b> θα αφαιρεθεί από την εφαρμογή στις <b>${fmtDate(n.until)}</b>. Κατέβασε το ιστορικό σου σε Excel για να το κρατήσεις· μπορείς αργότερα να το ξαναφορτώσεις εδώ, στα «Τα στατιστικά μου».</span><button type="button" class="btn small primary" data-myxl="${esc(n.season)}">Κατέβασμα</button></div>`;
+}
 let myStatsOpen=false, myStatSeason=null;
 function myStatsPanel(){
-  const items = myItems.filter(i=>i.date);
-  if(!items.length) return "";
+  const items = allMyItems().filter(i=>i.date);
+  if(!items.length) return `<details class="panel unav" id="statDet"${myStatsOpen?" open":""}><summary><span class="unav-t"><span><h2 class="sec">Τα στατιστικά μου</h2><span class="unav-sub">Φόρτωση παλιάς σεζόν από αρχείο</span></span></span><span class="sumr"><span class="chev" aria-hidden="true">▾</span></span></summary>
+    <div class="pbody"><div class="actions"><label class="btn small">${cmIcon("ul")} Φόρτωση αρχείου Excel<input type="file" id="myXlFile" accept=".xlsx" hidden></label></div></div></details>`;
   const seasons = uniq(items.map(i=>seasonOf(i.date))).reverse();
   if(myStatSeason===null) myStatSeason = seasons.includes(curSeason()) ? curSeason() : seasons[0];
   const slots = items.filter(i=>!myStatSeason||seasonOf(i.date)===myStatSeason).map(i=>({date:i.date, comp:i.comp||"", role:i.role, fee:+i.fee||0, paid:!!i.paid}));
@@ -3431,6 +3621,8 @@ function myStatsPanel(){
         <div class="t"><div class="k">Εκκρεμούν</div><div class="v or">${eur(t.due)}</div></div>
       </div>
       ${statTables(slots)}
+      <div class="actions"><button type="button" class="btn small" data-myxl="${esc(myStatSeason||"")}">${cmIcon("dl")} Excel σεζόν ${esc(myStatSeason||"")}</button><label class="btn small">${cmIcon("ul")} Φόρτωση αρχείου Excel<input type="file" id="myXlFile" accept=".xlsx" hidden></label></div>
+      <div class="note">Το Excel κρατά τους αγώνες σου. Αν μια παλιά σεζόν αφαιρεθεί από την εφαρμογή, με «Φόρτωση αρχείου Excel» τη βλέπεις ξανά εδώ (αποθηκεύεται μόνο σε αυτή τη συσκευή).</div>
     </div></details>`;
 }
 function bindMyStats(){
@@ -3515,7 +3707,7 @@ function renderUser(){
     return;
   }
   const t=today();
-  const items = myItems.slice().sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const items = allMyItems().slice().sort((a,b)=>((a.date||"")+(a.time||"")).localeCompare((b.date||"")+(b.time||"")));
   const upcoming = items.filter(i=>i.date>=t), past = items.filter(i=>i.date<t).reverse();
   const total=items.reduce((a,i)=>a+(+i.fee||0),0), paid=items.filter(i=>i.paid).reduce((a,i)=>a+(+i.fee||0),0);
   const seen = ls.get("cm.seen", {});
@@ -3534,6 +3726,7 @@ function renderUser(){
   const nxWk = nextWeeks(2)[1];
   const nudge = myUnavLoaded && !myUnav[nxWk] ? `<div class="banner nudge" role="status">${cmIcon("cal")}<span class="grow">Δεν έχεις δηλώσει κωλύματα για την επόμενη εβδομάδα (${weekLabel(nxWk)}).</span><button type="button" class="btn small primary" data-unavgo="1">Δήλωσε τώρα</button></div>` : "";
   $("app").innerHTML = `<div style="display:flex;flex-direction:column;gap:18px">
+    ${archBanner()}
     ${nudge}
     <section class="board four" aria-label="Σύνοψη">
       <div class="cell"><div class="k">Επόμενες</div><div class="v">${upcoming.length}</div></div>
