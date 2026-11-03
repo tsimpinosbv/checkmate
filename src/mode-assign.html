@@ -1211,6 +1211,11 @@ function renderDb(){
       <div class="trk"><span style="width:${Math.max(2,u.pct)}%"></span></div>
       <p class="note">${lvl==="ok" ? "Όλα καλά." : lvl==="warn" ? "Η βάση γεμίζει: κράτα αντίγραφο μιας παλιάς σεζόν και αφαίρεσέ την." : "Η βάση είναι σχεδόν γεμάτη: αφαίρεσε μια παλιά σεζόν τώρα."} Η εφαρμογή φορτώνει έως ${DB_MAX_MATCHES} αγώνες· από το 75% εμφανίζεται ειδοποίηση στο Πρόγραμμα.</p>
     </div></section>
+    <section class="panel"><div class="st-h">Αυτόματο πλήρες αντίγραφο</div>
+      <p class="note" style="margin:0;padding:12px 16px">Κάθε <b>Κυριακή στις 23:00</b> όλη η βάση (αγώνες, άτομα, συνδέσεις, ομάδες με σήματα, γήπεδα, ρυθμίσεις) αποθηκεύεται αυτόματα στο <a href="https://drive.google.com/drive/my-drive?authuser=videochallengemate@gmail.com" target="_blank" rel="noopener">Drive του videochallengemate</a> → <b>Check Mate Backup → Αυτόματα αντίγραφα</b>. Κρατούνται τα 12 πιο πρόσφατα (3 μήνες). Αν κάποιο αποτύχει, έρχεται email στον videochallengemate. Δεν χρειάζεται να κάνεις τίποτα.</p>
+      <div class="prow"><div class="who"><b>Επαναφορά από πλήρες αντίγραφο</b><span class="note">Κατέβασε από το Drive το αρχείο της ημερομηνίας που θέλεις και διάλεξέ το εδώ. Η βάση γυρίζει όπως ήταν εκείνη τη μέρα.</span></div>
+        <div class="actions"><label class="btn small danger">${cmIcon("ul")} Επιλογή αρχείου<input type="file" id="fullRestore" accept=".json,application/json" hidden></label></div></div>
+    </section>
     <section class="panel"><div class="st-h">Σεζόν στη βάση</div>
       ${seasons.map(([s,list])=>{ const cur = s>=cs, d = ls.get("cm.arch."+s, 0);
         return `<div class="prow"><div class="who"><b>${esc(s)}</b><span class="note">${list.length} αγώνες${cur?" · τρέχουσα σεζόν":""}${d?` · τα αρχεία κατέβηκαν ${fmtDate(ymd(new Date(d)))}`:""}</span></div>
@@ -1238,6 +1243,31 @@ function renderDb(){
     </section>
   </div>`;
 }
+/* full backup made by the Apps Script every Sunday (Firestore REST format) → back into the database */
+const fsVal = v => { if(!v || typeof v!=="object") return null;
+  if("stringValue" in v) return v.stringValue; if("integerValue" in v) return Number(v.integerValue); if("doubleValue" in v) return Number(v.doubleValue);
+  if("booleanValue" in v) return v.booleanValue; if("nullValue" in v) return null; if("timestampValue" in v) return new Date(v.timestampValue);
+  if("mapValue" in v) return fsFields(v.mapValue.fields || {}); if("arrayValue" in v) return (v.arrayValue.values || []).map(fsVal);
+  if("referenceValue" in v) return v.referenceValue; if("geoPointValue" in v) return v.geoPointValue; if("bytesValue" in v) return v.bytesValue;
+  return null; };
+const fsFields = f => Object.fromEntries(Object.entries(f || {}).map(([k,v])=>[k, fsVal(v)]));
+document.addEventListener("change", async e=>{
+  if(e.target.id!=="fullRestore") return;
+  const f = e.target.files && e.target.files[0]; e.target.value = ""; if(!f) return;
+  let d; try{ d = JSON.parse(await f.text()); }catch{ d = null; }
+  if(!d || d.kind!=="full-backup" || !d.docs || typeof d.docs!=="object"){ toast("Αυτό δεν είναι πλήρες αντίγραφο του Check Mate"); return; }
+  const paths = Object.keys(d.docs).filter(p => p.split("/").length % 2 === 0);
+  const when = d.createdAt ? new Date(d.createdAt).toLocaleString("el-GR") : "";
+  const ans = prompt(`Επαναφορά της βάσης όπως ήταν στις ${when} (${paths.length} έγγραφα).\nΌσα υπάρχουν στο αντίγραφο θα γραφτούν ξανά όπως ήταν· ό,τι προστέθηκε αργότερα μένει.\n\nΓράψε ΕΠΑΝΑΦΟΡΑ για επιβεβαίωση:`);
+  if(ans===null) return;
+  if(ans.trim().toUpperCase()!=="ΕΠΑΝΑΦΟΡΑ"){ toast("Δεν έγινε επαναφορά"); return; }
+  let k = 0, bad = 0;
+  for(let i=0;i<paths.length;i+=10){
+    await Promise.all(paths.slice(i,i+10).map(async p=>{ try{ await w(()=>db.doc(p).set(fsFields(d.docs[p]))); k++; }catch{ bad++; } }));
+    toast(`Επαναφορά… ${k+bad}/${paths.length}`);
+  }
+  toast(bad ? `Επανήλθαν ${k} έγγραφα · ${bad} απέτυχαν (πάτα ξανά)` : `Η βάση επανήλθε (${k} έγγραφα)`);
+});
 async function archiveDownload(s){
   const list = sched.filter(m=>seasonOf(m.date)===s);
   const blob = new Blob([JSON.stringify({app:"Check Mate", kind:"season-archive", season:s, exportedAt:new Date().toISOString(), count:list.length, sched:list})], {type:"application/json"});
