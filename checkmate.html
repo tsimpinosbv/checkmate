@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
 <meta charset="utf-8">
-<meta name="app-build" content="2c1793e8fa8a">
+<meta name="app-build" content="3c186a7529e5">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <title>Check Mate Challenge</title>
@@ -1791,6 +1791,7 @@ function startAdmin(){
   db.collection("contacts").limit(1000).onSnapshot(s=>{ contacts={}; s.docs.forEach(d=>contacts[d.id]=d.data().email||""); ready.contacts=true; if(tab==="people") renderAdmin(); }, ()=>{});
   db.doc("config/notify").onSnapshot(s=>{ notify={email:false, endpoint:"", ...(s.exists?s.data():{})}; if(tab==="people") renderAdmin(); }, ()=>{});
   db.doc("config/archive").onSnapshot(s=>{ archNotice = s.exists ? s.data() : null; if(tab==="db") renderAdmin(); }, ()=>{});
+  db.doc("config/season").onSnapshot(s=>{ seasonCfg = s.exists ? s.data() : null; if(tab==="db" && !document.querySelector("#seasonForm :focus")) renderAdmin(); }, ()=>{});
   claude.use("mail").then(x=>{ mail=x; if(Object.keys(outbox).length) outboxTimer = setTimeout(flushNotes, 4000); }).catch(()=>{});
   db.doc("config/fees").onSnapshot(s=>{ if(s.exists) fees={op:80,as:40,...s.data()}; }, ()=>{});
 }
@@ -2170,7 +2171,7 @@ function personStats(slots){
   return [...groupBy(slots,x=>norm(x.name)).values()].map(v=>({name:v[0].name, ...statTotals(v)}));
 }
 /* ---------- tab: «Βάση» (space used, season archive, active / inactive people) ---------- */
-let archNotice = null;   // config/archive = {season, until, at}: users are told this season will be removed
+let archNotice = null, seasonCfg = null;   // config/season = {end, to}: the Apps Script emails a reminder on that day   // config/archive = {season, until, at}: users are told this season will be removed
 const DB_MAX_MATCHES = 2000;   // the programme loads at most this many matches
 const DB_BYTES = 1024**3;      // free Firestore storage
 const fmtMB = b => b < 1048576 ? Math.max(1,Math.round(b/1024))+" KB" : (b/1048576).toFixed(1).replace(".",",")+" MB";
@@ -2195,6 +2196,15 @@ function renderDb(){
       <div class="trk"><span style="width:${Math.max(2,u.pct)}%"></span></div>
       <p class="note">${lvl==="ok" ? "Όλα καλά." : lvl==="warn" ? "Η βάση γεμίζει: κράτα αντίγραφο μιας παλιάς σεζόν και αφαίρεσέ την." : "Η βάση είναι σχεδόν γεμάτη: αφαίρεσε μια παλιά σεζόν τώρα."} Η εφαρμογή φορτώνει έως ${DB_MAX_MATCHES} αγώνες· από το 75% εμφανίζεται ειδοποίηση στο Πρόγραμμα.</p>
     </div></section>
+    ${(()=>{ const defEnd = cs.slice(5)+"-06-30", saved = seasonCfg?.end && seasonCfg.end >= today() ? seasonCfg.end : "";
+      const to = seasonCfg?.to || uniq([...String(notify.adminAlert||"").split(/[,;\s]+/).filter(Boolean), "videochallengemate@gmail.com"]).join(", ");
+      return `<section class="panel"><div class="st-h">Υπενθύμιση τέλους σεζόν</div>
+      <form id="seasonForm" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding:12px 16px">
+        <div class="f"><label for="seasonEnd">Τέλος σεζόν</label><input id="seasonEnd" type="date" value="${saved||defEnd}" min="${today()}"></div>
+        <div class="f grow" style="min-width:220px"><label for="seasonTo">Email σε (χωρίστε με κόμμα)</label><input id="seasonTo" type="text" value="${esc(to)}"></div>
+        <button class="btn small primary" type="submit">Αποθήκευση</button>
+      </form>
+      <p class="note" style="margin:0;padding:0 16px 12px">${saved ? `Στις <b>${fmtDate(saved)}</b> θα σταλεί email με τα βήματα για τα αντίγραφα ασφαλείας και την παλιά σεζόν.` : `<b>Δεν έχει οριστεί.</b> Βάλε την ημερομηνία που τελειώνει η σεζόν και πάτα Αποθήκευση.`} Αν αλλάξει το τέλος της σεζόν, άλλαξε την ημερομηνία εδώ.</p></section>`; })()}
     <section class="panel"><div class="st-h">Αυτόματο πλήρες αντίγραφο</div>
       <p class="note" style="margin:0;padding:12px 16px">Κάθε <b>Κυριακή στις 23:00</b> όλη η βάση (αγώνες, άτομα, συνδέσεις, ομάδες με σήματα, γήπεδα, ρυθμίσεις) αποθηκεύεται αυτόματα στο <a href="https://drive.google.com/drive/my-drive?authuser=videochallengemate@gmail.com" target="_blank" rel="noopener">Drive του videochallengemate</a> → <b>Check Mate Backup → Αυτόματα αντίγραφα</b>. Κρατούνται τα 12 πιο πρόσφατα (3 μήνες). Αν κάποιο αποτύχει, έρχεται email στον videochallengemate. Δεν χρειάζεται να κάνεις τίποτα.</p>
       <div class="prow"><div class="who"><b>Επαναφορά από πλήρες αντίγραφο</b><span class="note">Κατέβασε από το Drive το αρχείο της ημερομηνίας που θέλεις και διάλεξέ το εδώ. Η βάση γυρίζει όπως ήταν εκείνη τη μέρα.</span></div>
@@ -2227,6 +2237,14 @@ function renderDb(){
     </section>
   </div>`;
 }
+document.addEventListener("submit", async e=>{
+  if(e.target.id!=="seasonForm") return; e.preventDefault();
+  const end = $("seasonEnd").value, to = $("seasonTo").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);
+  if(!end || end < today()){ toast("Διάλεξε μια μελλοντική ημερομηνία"); return; }
+  if(!to.length || to.some(x=>!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))){ toast("Κάποιο email δεν είναι σωστό"); return; }
+  try{ await w(()=>db.doc("config/season").set({end, to:to.slice(0,5).join(", "), at:Date.now()})); toast(`Η υπενθύμιση θα σταλεί στις ${fmtDate(end)}`); }
+  catch{ toast("Η αποθήκευση απέτυχε"); }
+});
 /* full backup made by the Apps Script every Sunday (Firestore REST format) → back into the database */
 const fsVal = v => { if(!v || typeof v!=="object") return null;
   if("stringValue" in v) return v.stringValue; if("integerValue" in v) return Number(v.integerValue); if("doubleValue" in v) return Number(v.doubleValue);
