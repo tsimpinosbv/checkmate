@@ -207,3 +207,39 @@ function backupFolder_() {
   const get = (parent, name) => { const it = parent.getFoldersByName(name); return it.hasNext() ? it.next() : parent.createFolder(name); };
   return get(get(DriveApp.getRootFolder(), BACKUP_FOLDER), BACKUP_SUBFOLDER);
 }
+
+/* ---------- Reminder email at the end of the season ----------
+ * The admins set the date in Check Mate → Βάση → «Υπενθύμιση τέλους σεζόν» (Firestore config/season = {end, to}).
+ * A daily check (09:00 Athens) sends the email once, on that day. Run setupSeasonReminder() once from the editor. */
+function setupSeasonReminder() {
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === "seasonReminder").forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger("seasonReminder").timeBased().everyDays(1).atHour(9).inTimezone("Europe/Athens").create();
+  const r = seasonReminder();
+  Logger.log("Ημερήσιος έλεγχος τέλους σεζόν ενεργός. Τώρα: " + r);
+  return r;
+}
+
+function seasonReminder() {
+  const r = UrlFetchApp.fetch(FS_ROOT + "/config/season", { headers: { Authorization: "Bearer " + ScriptApp.getOAuthToken() }, muteHttpExceptions: true });
+  if (r.getResponseCode() !== 200) return "δεν έχει οριστεί ημερομηνία";
+  const f = JSON.parse(r.getContentText()).fields || {};
+  const end = f.end && f.end.stringValue; if (!end) return "δεν έχει οριστεί ημερομηνία";
+  const day = Utilities.formatDate(new Date(), "Europe/Athens", "yyyy-MM-dd");
+  if (day < end) return "αναμονή έως " + end;
+  const props = PropertiesService.getScriptProperties(), key = "seasonMail_" + end;
+  if (props.getProperty(key)) return "στάλθηκε ήδη";
+  const ok = x => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x);
+  let to = String(f.to && f.to.stringValue || "").split(/[,;\s]+/).filter(ok).slice(0, 5);
+  if (!to.length) to = [Session.getEffectiveUser().getEmail()];
+  const [y, m] = end.split("-").map(Number), season = m >= 7 ? y + "-" + (y + 1) : (y - 1) + "-" + y;
+  const drive = "https://drive.google.com/drive/my-drive?authuser=videochallengemate@gmail.com";
+  const html = '<div style="font-family:Arial,sans-serif;font-size:15px;color:#14213a;line-height:1.5">' +
+    "<p>Η σεζόν <b>" + season + "</b> ολοκληρώθηκε. Τρία γρήγορα βήματα για να μείνουν ασφαλή τα δεδομένα:</p><ol>" +
+    '<li><b>Αντίγραφο εκτός Google:</b> άνοιξε το <a href="' + drive + '">Drive του videochallengemate</a> → Check Mate Backup → Αυτόματα αντίγραφα, κατέβασε το πιο πρόσφατο αρχείο και κράτα το στον υπολογιστή ή σε USB.</li>' +
+    "<li><b>Παλιά σεζόν (όταν χρειαστεί χώρος):</b> από 1 Ιουλίου, Check Mate → Βάση → «Σεζόν στη βάση»: Ειδοποίηση χρηστών, μετά 1 · Κατέβασμα αρχείων και 2 · Αφαίρεση από τη βάση. Αν η μπάρα «Χώρος της βάσης» είναι χαμηλά, δεν χρειάζεται.</li>" +
+    "<li><b>Επόμενη σεζόν:</b> στο Check Mate → Βάση → «Υπενθύμιση τέλους σεζόν» βάλε την ημερομηνία λήξης της νέας σεζόν.</li></ol>" +
+    '<p style="color:#667;font-size:13px">Το αυτόματο αντίγραφο κάθε Κυριακής συνεχίζει κανονικά.</p></div>';
+  MailApp.sendEmail({ to: to.join(","), subject: "Check Mate: τέλος σεζόν " + season + " · αντίγραφα ασφαλείας", htmlBody: html, name: "Check Mate" });
+  props.setProperty(key, day);
+  return "στάλθηκε σε " + to.join(", ");
+}
