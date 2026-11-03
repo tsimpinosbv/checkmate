@@ -131,3 +131,79 @@ function json_(o) {
 function authorize() {
   MailApp.sendEmail(Session.getActiveUser().getEmail(), "Check Mate: η αποστολή email ενεργοποιήθηκε", "Οι ειδοποιήσεις του Check Mate θα στέλνονται από αυτόν τον λογαριασμό.");
 }
+
+/* ---------- Weekly full backup of the database to Google Drive ----------
+ * Every Sunday 23:00 (Athens) all Firestore documents are saved as one .json file in
+ * Drive → «Check Mate Backup» → «Αυτόματα αντίγραφα». The newest 12 are kept (older ones go to the Trash).
+ * Restore: Check Mate → Βάση → «Επαναφορά από πλήρες αντίγραφο».
+ * One-time setup: this Google account must have the role «Viewer» in the Firebase project;
+ * then run setupBackup() from the editor (Run) and allow the permissions.
+ * Only if a backup fails, an email is sent to this account. */
+const BACKUP_FOLDER = "Check Mate Backup";
+const BACKUP_SUBFOLDER = "Αυτόματα αντίγραφα";
+const BACKUP_KEEP = 12;
+const FS_ROOT = "https://firestore.googleapis.com/v1/projects/" + FIREBASE_PROJECT + "/databases/(default)/documents";
+
+function setupBackup() {
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === "backupWeekly").forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger("backupWeekly").timeBased().onWeekDay(ScriptApp.WeekDay.SUNDAY).atHour(23).inTimezone("Europe/Athens").create();
+  const r = backupNow();
+  Logger.log("Εβδομαδιαίο αντίγραφο ενεργό (Κυριακή 23:00). Πρώτο αντίγραφο: " + r);
+  return r;
+}
+
+function backupWeekly() {
+  try { backupNow(); }
+  catch (err) {
+    MailApp.sendEmail(Session.getEffectiveUser().getEmail(), "Check Mate: το αυτόματο αντίγραφο απέτυχε",
+      "Το εβδομαδιαίο αντίγραφο της βάσης δεν ολοκληρώθηκε.\n\nΣφάλμα: " + String(err && err.message || err) +
+      "\n\nΔοκιμάστε ξανά από το Apps Script «Check Mate - email»: επιλέξτε backupNow και πατήστε Run.");
+  }
+}
+
+function backupNow() {
+  const token = ScriptApp.getOAuthToken();
+  const call = (url, opt) => {
+    for (let i = 0; i < 4; i++) {
+      const r = UrlFetchApp.fetch(url, Object.assign({ headers: { Authorization: "Bearer " + token }, contentType: "application/json", muteHttpExceptions: true }, opt || {}));
+      const c = r.getResponseCode();
+      if (c === 200) return JSON.parse(r.getContentText() || "{}");
+      if (c === 429 || c >= 500) { Utilities.sleep(1500 * (i + 1)); continue; }
+      throw new Error("Firestore " + c + ": " + r.getContentText().slice(0, 300));
+    }
+    throw new Error("Firestore: δεν απαντά");
+  };
+  const collIds = url => { let ids = [], tok = "";
+    do { const j = call(url + ":listCollectionIds", { method: "post", payload: JSON.stringify(tok ? { pageSize: 100, pageToken: tok } : { pageSize: 100 }) });
+         ids = ids.concat(j.collectionIds || []); tok = j.nextPageToken; } while (tok);
+    return ids; };
+  const listDocs = path => { let out = [], tok = "";
+    do { const j = call(FS_ROOT + "/" + path + "?pageSize=300&showMissing=true" + (tok ? "&pageToken=" + encodeURIComponent(tok) : ""));
+         out = out.concat(j.documents || []); tok = j.nextPageToken; } while (tok);
+    return out; };
+  const docs = {};
+  const walk = (path, depth) => {
+    const list = listDocs(path);
+    list.forEach(d => { if (d.createTime) docs[d.name.split("/documents/")[1]] = d.fields || {}; });
+    if (depth >= 2) return;
+    // look for sub-collections under every document of small collections; in big ones (the programme) only under a few
+    const check = list.length <= 60 ? list : list.filter(d => !d.createTime).concat(list.filter(d => d.createTime).slice(0, 5));
+    check.forEach(d => collIds("https://firestore.googleapis.com/v1/" + d.name).forEach(c => walk(d.name.split("/documents/")[1] + "/" + c, depth + 1)));
+  };
+  collIds(FS_ROOT).forEach(c => walk(c, 0));
+  const n = Object.keys(docs).length;
+  if (!n) throw new Error("Η βάση φαίνεται άδεια ή δεν υπάρχει πρόσβαση");
+  const data = { app: "Check Mate", kind: "full-backup", project: FIREBASE_PROJECT, createdAt: new Date().toISOString(), count: n, docs: docs };
+  const name = "CheckMate_Backup_" + Utilities.formatDate(new Date(), "Europe/Athens", "yyyy-MM-dd_HHmm") + ".json";
+  const folder = backupFolder_();
+  folder.createFile(name, JSON.stringify(data), "application/json");
+  const files = []; const it = folder.getFiles();
+  while (it.hasNext()) { const f = it.next(); if (/^CheckMate_Backup_.*\.json$/.test(f.getName())) files.push(f); }
+  files.sort((a, b) => b.getDateCreated() - a.getDateCreated()).slice(BACKUP_KEEP).forEach(f => f.setTrashed(true));
+  return name + " · " + n + " έγγραφα";
+}
+
+function backupFolder_() {
+  const get = (parent, name) => { const it = parent.getFoldersByName(name); return it.hasNext() ? it.next() : parent.createFolder(name); };
+  return get(get(DriveApp.getRootFolder(), BACKUP_FOLDER), BACKUP_SUBFOLDER);
+}
