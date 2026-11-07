@@ -316,6 +316,13 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 .day[aria-pressed="true"]{background:var(--bad);border-color:var(--bad);color:#fff}
 .day[aria-pressed="true"] small{color:#fff;opacity:.85}
 .day:disabled{opacity:.4;cursor:not-allowed}
+.wk-more{grid-column:1/-1;border:1px dashed var(--line);border-radius:10px;background:var(--surface)}
+.wk-more>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;font-weight:600}
+.wk-more>summary::-webkit-details-marker{display:none}
+.wk-more>summary .wk-st{margin-left:auto}
+.wk-more>summary .chev{transition:transform .2s}
+.wk-more[open]>summary .chev{transform:rotate(180deg)}
+.wk-more>.unav-weeks{padding:0 10px 10px}
 .wk-f{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .wk-f input{flex:1 1 100%;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:13px}
 .cantbtn{align-self:flex-start;border:1px dashed color-mix(in srgb,var(--bad) 55%,transparent);background:none;color:var(--bad);font:600 13px var(--f-body);border-radius:999px;padding:5px 12px;cursor:pointer}
@@ -620,7 +627,7 @@ const nextWeeks = n => { const w0=weekOf(today()); return Array.from({length:n},
 const ddmm = d => { const [,m,dd]=d.split("-"); return `${+dd}/${+m}`; };
 const weekLabel = wk => `${ddmm(wk)} – ${ddmm(addDays(wk,6))}`;
 /* profiles/{uid}.unavail[weekMonday] = {days:[YYYY-MM-DD…], note, at}; days:[] means "available all week" */
-const UNAV_WEEKS = 2;
+const UNAV_WEEKS = 5;   // this week + the next 4 (about one month)
 const monthLabel = ym => ym ? `${MONTHS_FULL[+ym.slice(5)-1]} ${ym.slice(0,4)}` : "";
 const curSeason = () => { const d=today(); const [y,m]=d.split("-").map(Number); return m>=7?`${y}-${y+1}`:`${y-1}-${y}`; };
 /* slots: [{date, comp, role:"op"|"as", fee, paid}] -> totals */
@@ -2583,7 +2590,7 @@ function cantHtml(i){
   return `<button type="button" class="cantbtn" data-cant="${esc(i.id)}" data-cantact="open">${IC.hand} Δεν μπορώ</button>`;
 }
 /* weekly unavailability: the user marks the days they cannot work */
-let unavOpen = false;   // closed on entry; opens on tap and stays as the user leaves it
+let unavOpen = false, unavMoreOpen = false;   // closed on entry; opens on tap and stays as the user leaves it
 function unavPanel(){
   const nx = nextWeeks(2)[1], e = myUnav[nx];
   const st = !e ? `` : (e.days||[]).length ? `<span class="wk-st no">Επόμενη εβδομάδα: κώλυμα</span>` : `<span class="wk-st ok">Επόμενη εβδομάδα: ✓ διαθέσιμος</span>`;
@@ -2695,7 +2702,7 @@ function renderUnavUser(){
   const box=$("unavBox"); if(!box) return;
   const det=$("unavDet"); if(det && !det.dataset.bound){ det.dataset.bound="1"; det.addEventListener("toggle",()=>{ unavOpen=det.open; }); }
   const t=today();
-  box.innerHTML = nextWeeks(UNAV_WEEKS).map((wk,i)=>{
+  const card = (wk,i)=>{
     const e=myUnav[wk], sel=new Set(e?.days||[]);
     const st = !e ? `<span class="wk-st none">Δεν έχεις δηλώσει</span>` : sel.size ? `<span class="wk-st no">Κώλυμα: ${sel.size===7?"όλη την εβδομάδα":[...sel].sort().map(d=>DAYS[new Date(d+"T12:00").getDay()]).join(", ")}</span>` : `<span class="wk-st ok">✓ Διαθέσιμος</span>`;
     return `<div class="wk" data-wk="${wk}">
@@ -2703,7 +2710,11 @@ function renderUnavUser(){
       <div class="days">${weekDays(wk).map(d=>`<button type="button" class="day" data-day="${d}" aria-pressed="${sel.has(d)}" ${d<t?"disabled":""} title="${sel.has(d)?"Κώλυμα – πάτα για ακύρωση":"Πάτα αν έχεις κώλυμα"}"><b>${DAYS[new Date(d+"T12:00").getDay()]}</b><small>${ddmm(d)}</small></button>`).join("")}</div>
       <div class="wk-f"><input class="wk-note" placeholder="Σημείωση (προαιρετικά)" value="${esc(e?.note||"")}" maxlength="200">
         <button type="button" class="btn small" data-wkact="ok">Διαθέσιμος</button><button type="button" class="btn small" data-wkact="all">Κώλυμα όλη</button></div>
-    </div>`; }).join("");
+    </div>`; };
+  const wks = nextWeeks(UNAV_WEEKS), later = wks.slice(2), nDone = later.filter(w=>myUnav[w]).length;
+  box.innerHTML = wks.slice(0,2).map(card).join("")
+    + (later.length ? `<details class="wk-more" id="unavMore"${unavMoreOpen?" open":""}><summary>+3 εβδομάδες<span class="wk-st ${nDone?"ok":"none"}">Δηλωμένες ${nDone}/${later.length}</span><span class="chev" aria-hidden="true">▾</span></summary><div class="unav-weeks">${later.map((w,j)=>card(w,j+2)).join("")}</div></details>` : "");
+  const mo=$("unavMore"); if(mo) mo.addEventListener("toggle",()=>{ unavMoreOpen=mo.open; });
   box.onclick = async ev=>{
     const card=ev.target.closest(".wk"); if(!card) return; const wk=card.dataset.wk;
     const cur=new Set(myUnav[wk]?.days||[]), note=card.querySelector(".wk-note").value.trim();
