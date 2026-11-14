@@ -100,9 +100,13 @@ function runAssign(){{
 (async () => {{
   const HINT = {{log:"Οι χρήστες καταγράφουν μόνοι τους τους αγώνες τους.", assign:"Ο διαχειριστής ορίζει τις αναθέσεις· οι χρήστες βλέπουν μόνο τις δικές τους."}};
   const db = await claude.use("db"), user = await claude.use("user");
-  const isAdmin = user ? !!(await user.canEdit()) : false;
-  let mode = "assign";
-  if(db){{ try{{ const s = await db.doc("config/app").get(); if(s.exists && (s.data().mode==="log"||s.data().mode==="assign")) mode = s.data().mode; }}catch{{}} }}
+  /* the admin check and the mode are read together; the mode last seen on this device is used at once
+     (the listener below reloads the page if it has changed) */
+  const MK = "cm.appMode", okMode = m => m==="log" || m==="assign";
+  let cached = null; try{{ cached = localStorage.getItem(MK); }}catch{{}}
+  const modeP = db ? db.doc("config/app").get().then(s => s.exists && okMode(s.data().mode) ? s.data().mode : "assign", () => null) : Promise.resolve(null);
+  const [isAdmin, fresh] = await Promise.all([user ? user.canEdit().then(Boolean) : false, okMode(cached) ? null : modeP]);
+  let mode = okMode(cached) ? cached : (fresh || "assign");
   const root = document.getElementById("root");
   root.replaceChildren(document.getElementById("tpl-"+mode).content.cloneNode(true));
   (mode==="log" ? runLog : runAssign)();
@@ -121,7 +125,7 @@ function runAssign(){{
     }});
     document.getElementById("modehint").textContent = HINT[mode];
   }}
-  if(db) db.doc("config/app").onSnapshot(s => {{ const m = s.exists ? s.data().mode : "assign"; if((m==="log"||m==="assign") && m!==mode) location.reload(); }}, ()=>{{}});
+  if(db) db.doc("config/app").onSnapshot(s => {{ if(s.metadata && s.metadata.fromCache) return; const m = s.exists ? s.data().mode : "assign"; if(!okMode(m)) return; try{{ localStorage.setItem(MK, m); }}catch{{}} if(m!==mode) location.reload(); }}, ()=>{{}});
 }})();
 </script>
 </body>
