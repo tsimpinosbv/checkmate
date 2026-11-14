@@ -70,6 +70,10 @@ h1 .tag{font-style:normal;font-size:.5em;vertical-align:middle;background:var(--
 .f label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .f input,.f select{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
 .f.grow{flex:1 1 180px}
+.srow{display:flex;gap:6px}.srow input{flex:1 1 auto}
+.sortbtn{flex:0 0 auto;width:40px;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:0;color:var(--ink);cursor:pointer}
+.sortbtn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+.sortbtn.asc svg{transform:scaleY(-1)}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
 .seg button{border:0;background:none;padding:8px 12px;font-weight:500;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
@@ -187,7 +191,7 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
       <div class="seg" id="fRole"><button type="button" data-v="" aria-pressed="true">Όλες</button><button type="button" data-v="op" aria-pressed="false">Χειριστής</button><button type="button" data-v="as" aria-pressed="false">Βοηθός</button></div></div>
     <div class="f"><label>Πληρωμή</label>
       <div class="seg" id="fPaid"><button type="button" data-v="" aria-pressed="true">Όλα</button><button type="button" data-v="no" aria-pressed="false">Εκκρεμεί</button><button type="button" data-v="yes" aria-pressed="false">Πληρώθηκε</button></div></div>
-    <div class="f grow"><label for="fSearch">Αναζήτηση</label><input id="fSearch" type="search" placeholder="Ομάδα, γήπεδο, διοργάνωση…"></div>
+    <div class="f grow"><label for="fSearch">Αναζήτηση</label><div class="srow"><input id="fSearch" type="search" placeholder="Ομάδα, γήπεδο, διοργάνωση…"><button type="button" class="sortbtn" id="fOrder"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4"/><path d="M14 6h7M14 11h5M14 16h3"/></svg></button></div></div>
   </section>
 
   <section class="log" id="log" aria-live="polite">
@@ -253,7 +257,8 @@ let db = null, col = null, rows = [];
 let FEES = {op:80, as:40};
 let loadedOpen = false, canWrite = true, editingId = null;
 const isAdmin = true;   // the signed-in user owns everything in their own diary
-const st = {season:"", month:"", person:"", role:"", paid:"", q:""};
+const st = {season:"", month:"", person:"", role:"", paid:"", q:"", order:"desc"};
+try{ if(localStorage.getItem("cm.diaryOrder")==="asc") st.order="asc"; }catch{}   // the order is remembered on this device
 
 const ls = {get(k,d){try{const v=localStorage.getItem("diary."+k);return v==null?d:JSON.parse(v)}catch{return d}},
             set(k,v){try{localStorage.setItem("diary."+k,JSON.stringify(v))}catch{}}};
@@ -276,7 +281,7 @@ async function saveMatch(id, data){
 /* ---------- filters ---------- */
 function filtered(){
   const q = st.q.trim().toLowerCase();
-  return rows.filter(r =>
+  const out = rows.filter(r =>
     (!st.season || seasonOf(r.date)===st.season) &&
     (!st.month || (r.date||"").slice(0,7)===st.month) &&
     (!st.person || r.person===st.person) &&
@@ -284,6 +289,7 @@ function filtered(){
     (!st.paid || (st.paid==="yes") === !!r.paid) &&
     (!q || [r.home,r.away,r.comp,r.venue,r.notes,r.person].join(" ").toLowerCase().includes(q))
   );
+  return st.order==="asc" ? out.reverse() : out;   // rows are kept newest first
 }
 function fillSelect(sel, opts, allLabel, cur){
   sel.innerHTML = `<option value="">${allLabel}</option>` + opts.map(([v,l])=>`<option value="${esc(v)}"${v===cur?" selected":""}>${esc(l)}</option>`).join("");
@@ -438,8 +444,13 @@ $("fSeason").onchange = e => { st.season=e.target.value; st.month=""; render(); 
 $("fMonth").onchange = e => { st.month=e.target.value; render(); };
 $("fPerson").onchange = e => { st.person=e.target.value; render(); };
 $("fSearch").oninput = e => { st.q=e.target.value; render(); };
-function syncSeg(){ [["fRole","role"],["fPaid","paid"]].forEach(([id,k])=>$(id).querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===st[k])))); }
+function syncSeg(){
+  const ob=$("fOrder"), asc=st.order==="asc"; ob.classList.toggle("asc",asc);
+  ob.title = asc ? "Παλαιότεροι πρώτα (πάτα για νεότερους πρώτα)" : "Νεότεροι πρώτα (πάτα για παλαιότερους πρώτα)"; ob.setAttribute("aria-label", ob.title);
+  [["fRole","role"],["fPaid","paid"]].forEach(([id,k])=>$(id).querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===st[k])))); }
 [["fRole","role"],["fPaid","paid"]].forEach(([id,k])=>$(id).addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;st[k]=b.dataset.v;syncSeg();render();}));
+$("fOrder").onclick=()=>{ st.order = st.order==="asc" ? "desc" : "asc"; try{ localStorage.setItem("cm.diaryOrder",st.order); }catch{} syncSeg(); render(); };
+syncSeg();
 
 /* ---------- reports ---------- */
 function scopeLabel(){
