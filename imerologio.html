@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
 <meta charset="utf-8">
-<meta name="app-build" content="ee69e2a415b4">
+<meta name="app-build" content="0bb6b65f2776">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <title>Check Mate · Ημερολόγιο</title>
@@ -502,6 +502,8 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
     if(!configured){ document.addEventListener("DOMContentLoaded", showSetup); if(document.readyState!=="loading") showSetup(); return; }
     firebase.initializeApp(cfg);
     auth = firebase.auth(); fs = firebase.firestore();
+    /* keep a copy of the data on the device: the next opening shows it at once and updates it from the server */
+    try{ fs.enablePersistence({synchronizeTabs:true}).catch(()=>{}); }catch{}
     auth.languageCode = "el";   // password-reset emails in Greek
     let done = false;
     auth.onAuthStateChanged(async u => {
@@ -513,17 +515,28 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
       const joined = Date.parse(u.metadata && u.metadata.creationTime) || Date.now();
       const via = (u.providerData||[]).map(p=>p.providerId==="google.com"?"google":"email")[0] || "email";
       /* the diary is not linked to Check Mate: it never writes a profile, so using it does not register you there */
-      if(!DIARY) try{ await fs.doc(`profiles/${u.uid}`).set({name:u.displayName||"", email:u.email||"", joinedAt:joined, via, seenAt:Date.now()}, {merge:true}); }catch{}
+      if(!DIARY) fs.doc(`profiles/${u.uid}`).set({name:u.displayName||"", email:u.email||"", joinedAt:joined, via, seenAt:Date.now()}, {merge:true}).catch(()=>{});   // not awaited: the app does not wait for it
       updateDock();
       resolve(u);
     });
   });
 
   let adminP = null;
+  /* admin or not: both checks run together; the answer last seen on this device is used at once and checked in
+     the background (the page reloads if it changed). The Firestore rules still decide what anyone can read or write. */
   const isAdmin = () => adminP || (adminP = ready.then(async u => {
-    try{ const s = await fs.doc(`admins/${u.uid}`).get(); if(s.exists) return true; }catch{}
-    try{ if(u.email && u.emailVerified){ const s = await fs.doc(`users/${u.email.toLowerCase()}`).get(); if(s.exists && s.data().role === "admin") return true; } }catch{}
-    return false;
+    const check = async () => {
+      const a = fs.doc(`admins/${u.uid}`).get().then(s => s.exists, () => null);
+      const b = (u.email && u.emailVerified) ? fs.doc(`users/${u.email.toLowerCase()}`).get().then(s => s.exists && s.data().role === "admin", () => null) : false;
+      const ra = await a, rb = await b;
+      const r = ra || rb ? true : (ra === null || rb === null ? null : false);   // null = could not check (e.g. offline)
+      if(r !== null) try{ localStorage.setItem("cm.admin." + u.uid, r ? "1" : "0"); }catch{}
+      return r;
+    };
+    let c = null; try{ c = localStorage.getItem("cm.admin." + u.uid); }catch{}
+    if(c !== "1" && c !== "0") return !!(await check());
+    check().then(r => { if(r !== null && r !== (c === "1")) location.reload(); });
+    return c === "1";
   }));
 
   const userApi = {
