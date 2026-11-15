@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
 <meta charset="utf-8">
-<meta name="app-build" content="c1f3860334ea">
+<meta name="app-build" content="e89b3edfef8f">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <title>Check Mate Challenge</title>
@@ -3880,7 +3880,7 @@ function renderUser(){
   }
   const t=today();
   const items = allMyItems().slice().sort((a,b)=>((a.date||"")+(a.time||"")).localeCompare((b.date||"")+(b.time||"")));
-  const upcoming = items.filter(i=>i.date>=t), past = items.filter(i=>i.date<t).reverse();
+  const upcoming = items.filter(i=>i.date>=t), past = items.filter(i=>i.date<t);   // oldest first (calendar order)
   const total=items.reduce((a,i)=>a+(+i.fee||0),0), paid=items.filter(i=>i.paid).reduce((a,i)=>a+(+i.fee||0),0);
   const seen = ls.get("cm.seen", {});
   const isChg = i => i.changedAt && (seen[i.id]||0) < i.changedAt && i.date >= t;
