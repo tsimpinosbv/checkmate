@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
 <meta charset="utf-8">
-<meta name="app-build" content="40370bda153d">
+<meta name="app-build" content="4a2b017505fd">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <title>Check Mate Challenge</title>
@@ -2373,6 +2373,7 @@ function renderStats(seasons){
       <div class="f"><label for="sSeason">Σεζόν</label><select id="sSeason">${opt(seasons.map(x=>[x,x]),sst.season,"Όλες")}</select></div>
       <div class="f"><label for="sMonth">Μήνας</label><select id="sMonth">${opt(months.slice().reverse().map(m=>[m,monthLabel(m)]),sst.month,"Όλοι")}</select></div>
       <div class="f"><label for="sComp">Διοργάνωση</label><select id="sComp">${opt(comps.map(c=>[c,c]),sst.comp,"Όλες")}</select></div>
+      <div class="f"><label for="sEkk">Εκκαθαριστικό για</label><span style="display:flex;gap:6px"><select id="sEkk"><option value="">— Άτομο —</option>${ppl.slice().sort((a,b)=>a.name.localeCompare(b.name,"el")).map(p=>`<option value="${esc(p.name)}">${esc(p.name)}</option>`).join("")}</select><button class="btn" type="button" data-act="ekksel">${cmIcon("doc")} Εκκαθαριστικό</button></span></div>
       <div class="f" style="margin-left:auto"><label>&nbsp;</label><button class="btn" type="button" data-act="statxls">${cmIcon("dl")} Excel στατιστικών</button></div>
     </section>
     <section class="board" aria-label="Σύνολα">
@@ -3040,6 +3041,7 @@ document.addEventListener("click", async e => {
   if(act==="wkall"){ st.week=""; renderAdmin(); }
   if(act==="statxls") exportStats();
   if(act==="ekk") statement(b.dataset.p);
+  if(act==="ekksel"){ const n=$("sEkk")?.value; if(!n){ toast("Διάλεξε πρώτα το άτομο"); $("sEkk")?.focus(); } else statement(n); }
   if(act==="backup") backupAll();
   if(act==="archdl") archiveDownload(b.dataset.s);
   if(act==="archnote"){ const s=b.dataset.s, until=addDays(today(),14);
