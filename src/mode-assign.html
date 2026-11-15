@@ -224,6 +224,22 @@ button.pay:hover{border-color:currentColor}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;border-left:5px solid var(--blue)}
 .card.op{border-left-color:var(--accent)}
 .card.past{opacity:.85}
+/* finished assignments: waiting for payment (stand out) / paid (quiet) */
+.card.past.due{opacity:1;background:color-mix(in srgb,var(--warn-bg) 25%,var(--surface));border-top-color:color-mix(in srgb,var(--warn) 15%,var(--line));border-right-color:color-mix(in srgb,var(--warn) 15%,var(--line));border-bottom-color:color-mix(in srgb,var(--warn) 15%,var(--line))}
+.card.past.done{opacity:.72}
+.card .stchip{align-self:flex-start;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;border-radius:999px;padding:2px 10px}
+.card.due .stchip{background:var(--warn-bg);color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent)}
+.card.done .stchip{background:var(--good-bg);color:var(--good)}
+details.pastsec{border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+details.pastsec>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;font-weight:600}
+details.pastsec>summary .ttl{flex:1 1 auto;min-width:0}
+details.pastsec>summary::-webkit-details-marker{display:none}
+details.pastsec>summary .dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+details.pastsec.due>summary .dot{background:var(--warn)}details.pastsec.done>summary .dot{background:var(--good)}
+details.pastsec>summary .sum{white-space:nowrap;font-weight:600;font-variant-numeric:tabular-nums}
+details.pastsec.due>summary .sum{color:var(--warn)}details.pastsec.done>summary .sum{color:var(--good)}
+details.pastsec>summary .chev{color:var(--muted);transition:transform .15s}details.pastsec[open]>summary .chev{transform:rotate(180deg)}
+details.pastsec>.cards{padding:0 12px 12px}
 .card .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .card .when{font-family:var(--f-mono);font-size:15px}
 .card .when small{color:var(--muted);font-size:12.5px}
@@ -2591,7 +2607,7 @@ $("btnXlsx").onclick = async ()=>{
 /* =================================================================
    USER (read-only, own assignments)
    ================================================================= */
-let myItems=[], myClaim=undefined, uRoster=[], showPast=false, myUnav={}, myUnavLoaded=false, mySeen={}, seenWriting=false, myCant={}, cantOpen=null, myPhone="", myPhoneShare=false, phoneOpen=false;
+let myItems=[], myClaim=undefined, uRoster=[], showPast=false, pastOpen={due:false, done:false}, myUnav={}, myUnavLoaded=false, mySeen={}, seenWriting=false, myCant={}, cantOpen=null, myPhone="", myPhoneShare=false, phoneOpen=false;
 /* «Το είδε»: when the user's page shows an upcoming assignment (new or changed), the time is saved in profiles/<uid>.seen,
    so the administrator knows the person has seen it. Nothing to press. */
 async function markSeen(list){
@@ -2871,7 +2887,8 @@ function renderUser(){
   const total=items.reduce((a,i)=>a+(+i.fee||0),0), paid=items.filter(i=>i.paid).reduce((a,i)=>a+(+i.fee||0),0);
   const seen = ls.get("cm.seen", {});
   const isChg = i => i.changedAt && (seen[i.id]||0) < i.changedAt && i.date >= t;
-  const card=(i,first)=>`<article class="card ${i.role} ${i.date<t?"past":""} ${isChg(i)?"changed":""}">
+  const card=(i,first)=>`<article class="card ${i.role} ${i.date<t?"past "+(i.paid?"done":"due"):""} ${isChg(i)?"changed":""}">
+    ${i.date<t?`<span class="stchip">${i.paid?"✓ Ολοκληρώθηκε · πληρώθηκε":"● Ολοκληρώθηκε · αναμένεται πληρωμή"}</span>`:""}
     <div class="top"><div class="when">${whenMain(i)}${(i.time||i.timeText)?` <span class="tpill"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>${esc(i.time||i.timeText)}</span>`:""}${i.dateTbc?` <small>ημ. αγωνιστικής</small>`:""}</div>${dayTag(i.date) || (first?`<span class="next">Επόμενη</span>`:"")}</div>
     ${isChg(i)?`<button type="button" class="chg" data-seen="${esc(i.id)}" title="Πάτα για να το σημειώσεις ως ενημερωμένο">${cmIcon("warn")} Άλλαξε: ${esc((i.changed||[]).join(", ").toLowerCase()||"λεπτομέρειες")} <small>· ΟΚ</small></button>`:""}
     <div class="teams">${teamsL(i,true)}</div>${(i.homeVar||i.awayVar)?`<div class="tfull"><span class="vtag">VAR</span> ${esc([i.homeVar||"—", i.away?(i.awayVar||"—"):""].filter(Boolean).join(" – "))}</div>`:""}
@@ -2882,6 +2899,8 @@ function renderUser(){
     ${i.date>=t ? cantHtml(i) : ""}
     <div class="bottom"><span class="fee">${eur(i.fee)} ${i.paid?"":payTag(i.pay)}</span><span class="pay ${i.paid?"yes":"no"}">${i.paid?`✓ Πληρώθηκε${i.paidDate?" "+fmtDate(i.paidDate).slice(0,5):""}`:"● Εκκρεμεί"}</span></div>
   </article>`;
+  /* finished assignments in two groups, closed until tapped (the choice stays while the app is open) */
+  const pastSec=(k,title,list)=> list.length ? `<details class="pastsec ${k}" id="past_${k}"${pastOpen[k]?" open":""}><summary><span class="dot" aria-hidden="true"></span><span class="ttl">${title} (${list.length})</span><span class="sum">${eur(list.reduce((a,i)=>a+(+i.fee||0),0))}</span><span class="chev" aria-hidden="true">▾</span></summary><div class="cards">${list.map(i=>card(i,false)).join("")}</div></details>` : "";
   const nxWk = nextWeeks(2)[1];
   const nudge = myUnavLoaded && !myUnav[nxWk] ? `<div class="banner nudge" role="status">${cmIcon("cal")}<span class="grow">Δεν έχεις δηλώσει κωλύματα για την επόμενη εβδομάδα (${weekLabel(nxWk)}).</span><button type="button" class="btn small primary" data-unavgo="1">Δήλωσε τώρα</button></div>` : "";
   $("app").innerHTML = `<div style="display:flex;flex-direction:column;gap:18px">
@@ -2898,10 +2917,10 @@ function renderUser(){
     ${unavPanel()}
     ${phonePanel()}
     ${myStatsPanel()}
-    ${past.length?`<div class="actions"><button class="btn" id="togglePast">${showPast?"Απόκρυψη":"Προβολή"} προηγούμενων (${past.length})</button></div>
-      ${showPast?`<div class="cards">${past.map(i=>card(i,false)).join("")}</div>`:""}`:""}
+    ${pastSec("due", "Ολοκληρώθηκαν · εκκρεμεί πληρωμή", past.filter(i=>!i.paid))}
+    ${pastSec("done", "Ολοκληρώθηκαν · πληρώθηκαν", past.filter(i=>i.paid))}
   </div>`;
-  const tp=$("togglePast"); if(tp) tp.onclick=()=>{ showPast=!showPast; renderUser(); };
+  ["due","done"].forEach(k=>{ const d=$("past_"+k); if(d) d.addEventListener("toggle",()=>{ pastOpen[k]=d.open; }); });
   if(document.visibilityState==="visible") markSeen(upcoming);
   renderUnavUser(); bindMyStats();
 }
