@@ -287,6 +287,12 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 .check input{width:18px;height:18px;accent-color:var(--good)}
 .foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding-top:6px;border-top:1px solid var(--line)}
 .confirm{display:flex;gap:8px;align-items:center;font-size:13px}
+#repView{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;background:var(--bg)}
+#repView .rv-bar{display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;background:var(--surface);border-bottom:1px solid var(--line)}
+#repView .rv-t{flex:1;text-align:center;font-weight:700}
+#repView iframe{flex:1;width:100%;border:0;background:#fff}
+@media (max-width:480px){#repView .rv-t{display:none}#repView .rv-bar .btn{flex:1;justify-content:center}}
+.stbl .ekk{border:0;background:none;color:var(--accent);cursor:pointer;padding:2px 4px;border-radius:6px}.stbl .ekk:hover{background:var(--sq)}
 .drop{border:2px dashed var(--line);border-radius:12px;padding:22px;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:8px;align-items:center}
 .drop.over{border-color:var(--accent);background:var(--warn-bg)}
 .tbl{overflow:auto;max-height:46dvh;border:1px solid var(--line);border-radius:10px}
@@ -575,6 +581,7 @@ details.unav .pbody{padding-top:0}
         <span class="note">Στήλες: ΗΜΕΡΟΜΗΝΙΑ · ΩΡΑ · ΓΗΠΕΔΟ · ΑΓΩΝΑΣ · ΚΑΛΥΨΗ · VAR · ΣΥΝΕΡΓΑΤΕΣ (Χειριστής - Βοηθός). Οι γραμμές-τίτλοι (π.χ. «1Η ΑΓΩΝΙΣΤΙΚΗ») γίνονται η διοργάνωση. Αν ξαναφορτώσεις το αρχείο, ενημερώνονται μόνο οι αλλαγές.</span>
         <input type="file" id="impFile" accept=".xlsx,.xls,.xlsm,.csv" style="max-width:100%">
       </label>
+      <div style="text-align:center;margin-top:10px"><button class="btn small" type="button" id="impTpl" title="Άδειο αρχείο Excel με τις σωστές στήλες, για να το συμπληρώσεις"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg> Πρότυπο Excel</button></div>
     </div>
     <div id="impStep2" hidden style="display:flex;flex-direction:column;gap:12px">
       <div class="note" id="impSummary"></div>
@@ -1361,18 +1368,71 @@ function renderStats(seasons){
     </section>
     ${statCharts(slots, ppl, all)}
     <section class="panel"><div class="st-h">Ανά άτομο</div><div class="uscroll"><table class="stbl" id="stPeople">
-      <thead><tr>${th("name","Άτομο")}${th("n","Αναθ.")}${th("op","Χειριστής")}${th("as","Βοηθός")}${th("fee","Αμοιβές")}${th("paid","Πληρώθηκαν")}${th("due","Εκκρεμούν")}${th("last","Τελευταίος")}</tr></thead>
-      <tbody>${ppl.map(p=>`<tr><td>${esc(p.name)}</td><td>${p.n}</td><td>${p.op}</td><td>${p.as}</td><td>${eur(p.fee)}</td><td>${eur(p.paid)}</td><td class="${p.due?"or":""}">${eur(p.due)}</td><td>${p.last?fmtDate(p.last):"—"}</td></tr>`).join("")||`<tr><td colspan="8">Δεν υπάρχουν αναθέσεις με αυτά τα φίλτρα.</td></tr>`}
-      ${ppl.length?`<tr class="tot"><td>Σύνολο (${ppl.length} άτομα)</td><td>${all.n}</td><td>${all.op}</td><td>${all.as}</td><td>${eur(all.fee)}</td><td>${eur(all.paid)}</td><td class="${all.due?"or":""}">${eur(all.due)}</td><td></td></tr>`:""}</tbody>
+      <thead><tr>${th("name","Άτομο")}${th("n","Αναθ.")}${th("op","Χειριστής")}${th("as","Βοηθός")}${th("fee","Αμοιβές")}${th("paid","Πληρώθηκαν")}${th("due","Εκκρεμούν")}${th("last","Τελευταίος")}<th aria-label="Εκκαθαριστικό"></th></tr></thead>
+      <tbody>${ppl.map(p=>`<tr><td>${esc(p.name)}</td><td>${p.n}</td><td>${p.op}</td><td>${p.as}</td><td>${eur(p.fee)}</td><td>${eur(p.paid)}</td><td class="${p.due?"or":""}">${eur(p.due)}</td><td>${p.last?fmtDate(p.last):"—"}</td><td><button type="button" class="ekk" data-act="ekk" data-p="${esc(p.name)}" title="Εκκαθαριστικό για ${esc(p.name)} (PDF)" aria-label="Εκκαθαριστικό για ${esc(p.name)}">${cmIcon("doc")}</button></td></tr>`).join("")||`<tr><td colspan="8">Δεν υπάρχουν αναθέσεις με αυτά τα φίλτρα.</td></tr>`}
+      ${ppl.length?`<tr class="tot"><td>Σύνολο (${ppl.length} άτομα)</td><td>${all.n}</td><td>${all.op}</td><td>${all.as}</td><td>${eur(all.fee)}</td><td>${eur(all.paid)}</td><td class="${all.due?"or":""}">${eur(all.due)}</td><td></td><td></td></tr>`:""}</tbody>
     </table></div></section>
     ${statTables(slots)}
-    <div class="note">Μετράνε όλες οι αναθέσεις του προγράμματος (και οι επόμενες). «Τελευταίος» = ο πιο πρόσφατος αγώνας μέχρι σήμερα.</div>
+    <div class="note">Μετράνε όλες οι αναθέσεις του προγράμματος (και οι επόμενες). «Τελευταίος» = ο πιο πρόσφατος αγώνας μέχρι σήμερα. ${cmIcon("doc")} = εκκαθαριστικό του ατόμου για την περίοδο που έχεις διαλέξει, για εκτύπωση ή PDF.</div>
   </div>`;
   $("sSeason").onchange=e=>{ sst.season=e.target.value; sst.month=""; renderAdmin(); };
   $("sMonth").onchange=e=>{ sst.month=e.target.value; renderAdmin(); };
   $("sComp").onchange=e=>{ sst.comp=e.target.value; renderAdmin(); };
   $("stPeople").querySelector("thead").onclick=e=>{ const h=e.target.closest("[data-sort]"); if(!h) return; const key=h.dataset.sort; if(sst.sort===key) sst.dir=-sst.dir; else { sst.sort=key; sst.dir = key==="name"?1:-1; } renderAdmin(); };
 }
+/* «Εκκαθαριστικό»: one page per person for the season / month / competition chosen in the statistics */
+function statement(name){
+  const pn=norm(name);
+  const list=slotsOf(sched).filter(x=>norm(x.name)===pn && (!sst.season||seasonOf(x.m.date)===sst.season) && (!sst.month||(x.m.date||"").slice(0,7)===sst.month) && (!sst.comp||(x.m.comp||"")===sst.comp))
+    .sort((a,b)=>(a.m.date||"").localeCompare(b.m.date||"")||(a.m.time||"").localeCompare(b.m.time||""));
+  if(!list.length){ toast("Δεν υπάρχουν αναθέσεις για αυτό το άτομο"); return; }
+  const tot=list.reduce((a,x)=>a+x.fee,0), paid=list.filter(x=>x.paid).reduce((a,x)=>a+x.fee,0);
+  const nOp=list.filter(x=>x.role==="op").length;
+  const period=[sst.month?monthLabel(sst.month):(sst.season?`Σεζόν ${sst.season}`:"Όλες οι σεζόν"), sst.comp].filter(Boolean).join(" · ");
+  const logo=new URL("icons/icon-192.png", location.href).href;
+  const rows=list.map(x=>{ const m=x.m, pd=m["paidDate_"+x.role];
+    return `<tr><td>${fmtDate(m.date)||esc(m.dateText||"")}<small>${m.date?dayName(m.date):""}${m.time?" · "+esc(m.time):""}</small></td><td><b>${esc([m.home,m.away].filter(Boolean).join(" – "))}</b><small>${esc([m.comp,m.venue].filter(Boolean).join(" · "))}</small></td><td><span class="role${x.role==="op"?" op":""}">${ROLE[x.role]}</span></td><td class="n">${eur(x.fee)}</td><td>${x.paid?`<span class="ok">✓<span class="t"> Πληρώθηκε${pd?" "+fmtDate(pd).slice(0,5):""}</span></span>`:`<span class="due">●<span class="t"> Εκκρεμεί</span></span>`}</td></tr>`; }).join("");
+  const html=`<!doctype html><html lang="el"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Εκκαθαριστικό · ${esc(name)}</title><style>
+@page{size:A4;margin:16mm 14mm}
+body{font:12.5px/1.45 "Segoe UI",Arial,sans-serif;color:#14213a;margin:24px}
+.hd{display:flex;align-items:center;gap:14px;border-bottom:3px solid #14213a;padding-bottom:12px}.hd img{width:52px;height:52px;border-radius:12px}
+h1{font:800 24px "Arial Narrow",Arial,sans-serif;text-transform:uppercase;margin:0;letter-spacing:.02em}h1 span{color:#f0821e}
+.sub{color:#5d6b84;font-size:12px}.doc{margin-left:auto;text-align:right}.doc b{display:block;font-size:15px;text-transform:uppercase;letter-spacing:.06em}
+.who{display:flex;justify-content:space-between;margin:18px 0 14px;gap:20px}.who div span{display:block;color:#5d6b84;font-size:11px;text-transform:uppercase;letter-spacing:.08em}.who b{font-size:17px}
+.k{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}.k div{border:1px solid #d9dfea;border-radius:8px;padding:8px 12px;font-size:11px;color:#5d6b84;text-transform:uppercase;letter-spacing:.05em}.k b{display:block;font-size:18px;color:#14213a;letter-spacing:0}
+table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #d9dfea;padding:7px 8px;text-align:left;vertical-align:top}td small{display:block;color:#5d6b84;font-size:11px}
+th{background:#14213a;color:#fff;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em}.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.role{display:inline-block;border:1px solid #14213a;border-radius:20px;padding:1px 9px;font-size:11px;white-space:nowrap}.role.op{background:#14213a;color:#fff}
+.ok,.k b.ok{color:#1d8a52;font-weight:600}.due,.k b.due{color:#b4530b;font-weight:600}
+tr{break-inside:avoid}thead{display:table-header-group}
+tfoot td{font-weight:700;border-top:2px solid #14213a;border-bottom:0}tfoot tr.sm td{font-weight:600;padding-top:3px;padding-bottom:3px;border-top:0}
+.ft{margin-top:26px;color:#5d6b84;font-size:11px}
+@media screen and (max-width:640px){body{margin:14px;font-size:12px}.k{grid-template-columns:repeat(2,1fr)}.hd img{width:40px;height:40px}h1{font-size:19px}td,th{padding:6px 4px}th{font-size:9.5px;letter-spacing:.02em}.t{display:none}.role{padding:1px 6px;font-size:10px}}
+@media print{body{margin:0}th,.role.op{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body>
+<div class="hd"><img src="${logo}" alt=""><div><h1>Check <span>Mate</span></h1><div class="sub">Video Check · Αναθέσεις &amp; πληρωμές</div></div><div class="doc"><b>Εκκαθαριστικό</b><span class="sub">Εκδόθηκε ${fmtDate(today())}</span></div></div>
+<div class="who"><div><span>Συνεργάτης</span><b>${esc(name)}</b></div><div style="text-align:right"><span>Περίοδος</span><b>${esc(period)}</b></div></div>
+<div class="k"><div>Αγώνες<b>${list.length}</b></div><div>Χειριστής / Βοηθός<b>${nOp} / ${list.length-nOp}</b></div><div>Πληρώθηκαν<b class="ok">${eur(paid)}</b></div><div>Εκκρεμούν<b class="due">${eur(tot-paid)}</b></div></div>
+<table><thead><tr><th>Ημ/νία</th><th>Αγώνας</th><th>Θέση</th><th class="n">Αμοιβή</th><th title="Πληρωμή">Πληρ.</th></tr></thead><tbody>${rows}</tbody>
+<tfoot><tr><td colspan="3">Σύνολο αμοιβών</td><td class="n">${eur(tot)}</td><td></td></tr><tr class="sm"><td colspan="3">Πληρώθηκαν</td><td class="n ok">${eur(paid)}</td><td></td></tr><tr class="sm"><td colspan="3">Υπόλοιπο προς πληρωμή</td><td class="n due">${eur(tot-paid)}</td><td></td></tr></tfoot></table>
+<div class="ft">Check Mate · ${esc(location.host)}</div></body></html>`;
+  openReport(html, "Εκκαθαριστικό · "+name);
+}
+/* the report opens on top of the app, with a back button and print / save as PDF */
+function openReport(html, title){
+  closeReport(true);
+  const ov=document.createElement("div"); ov.id="repView"; ov.setAttribute("role","dialog"); ov.setAttribute("aria-label",title);
+  ov.innerHTML=`<div class="rv-bar"><button type="button" class="btn" id="rvBack">← Επιστροφή</button><span class="rv-t">${esc(title)}</span><button type="button" class="btn primary" id="rvPrint">${cmIcon("print")} Εκτύπωση / PDF</button></div><iframe title="${esc(title)}"></iframe>`;
+  document.body.appendChild(ov); document.documentElement.style.overflow="hidden";
+  ov.querySelector("iframe").srcdoc=html;
+  $("rvBack").onclick=()=>history.state?.cmReport ? history.back() : closeReport();
+  $("rvPrint").onclick=()=>{ try{ ov.querySelector("iframe").contentWindow.print(); }catch{ toast("Η εκτύπωση δεν είναι διαθέσιμη εδώ"); } };
+  try{ history.pushState({cmReport:1}, ""); }catch{}
+  $("rvBack").focus();
+}
+function closeReport(silent){ const ov=$("repView"); if(!ov) return; ov.remove(); document.documentElement.style.overflow=""; }
+window.addEventListener("popstate", ()=>closeReport());
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && $("repView")) $("rvBack").click(); });
 async function exportStats(){
   try{
     const X = await loadXLSX();
@@ -1963,6 +2023,7 @@ document.addEventListener("click", async e => {
   if(act==="wknow"){ st.week=weekOf(today()); renderAdmin(); }
   if(act==="wkall"){ st.week=""; renderAdmin(); }
   if(act==="statxls") exportStats();
+  if(act==="ekk") statement(b.dataset.p);
   if(act==="backup") backupAll();
   if(act==="archdl") archiveDownload(b.dataset.s);
   if(act==="archnote"){ const s=b.dataset.s, until=addDays(today(),14);
@@ -2323,6 +2384,32 @@ const drop=$("drop");
 ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,()=>drop.classList.remove("over")));
 drop.addEventListener("drop",e=>{e.preventDefault(); const f=e.dataTransfer.files[0]; if(f) readFile(f);});
 $("impFile").onchange=e=>{ const f=e.target.files[0]; if(f) readFile(f); };
+/* «Πρότυπο Excel»: an empty sheet with the columns the import reads (one sheet only: the import reads every sheet).
+   The header cells carry a note with an example; ΓΗΠΕΔΟ and ΚΑΛΥΨΗ offer the known values as a list. */
+$("impTpl").onclick=async ()=>{
+  const btn=$("impTpl"); btn.disabled=true;
+  try{
+    const ExcelJS=await loadExcelJS();
+    const wb=new ExcelJS.Workbook(); wb.creator="Check Mate";
+    const ws=wb.addWorksheet("Πρόγραμμα",{views:[{state:"frozen",ySplit:1}]});
+    const COLS=[["ΗΜΕΡΟΜΗΝΙΑ",13,"π.χ. 08.04.2026\nΓραμμές χωρίς ημερομηνία παίρνουν την ημερομηνία της αγωνιστικής."],["ΩΡΑ",8,"π.χ. 18:00"],["ΓΗΠΕΔΟ",22,"Το σύντομο όνομα του γηπέδου (λίστα)."],
+      ["ΑΓΩΝΑΣ",32,"Γηπεδούχος - Φιλοξενούμενη, π.χ. ΠΑΟ - ΟΣΦΠ\nΓραμμή με μόνο κείμενο εδώ (π.χ. «1Η ΑΓΩΝΙΣΤΙΚΗ») γίνεται η διοργάνωση των αγώνων από κάτω."],
+      ["ΚΑΛΥΨΗ",12,"Το κανάλι μετάδοσης (προαιρετικό)."],["VAR",10,"Το σετ VAR (προαιρετικό)."],["ΣΥΝΕΡΓΑΤΕΣ",34,"Χειριστής - Βοηθός, π.χ. ΠΑΠΑΔΟΠΟΥΛΟΣ Γ. - ΝΙΚΟΛΑΟΥ Κ."]];
+    ws.columns=COLS.map(([h,w])=>({header:h,width:w}));
+    const hr=ws.getRow(1); hr.height=22;
+    hr.eachCell((c,i)=>{ c.font={bold:true,color:{argb:"FFFFFFFF"}}; c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF14213A"}}; c.alignment={vertical:"middle"}; c.note=COLS[i-1][2]; });
+    const t=ws.getRow(2); t.getCell(4).value="1Η ΑΓΩΝΙΣΤΙΚΗ"; t.getCell(4).font={bold:true};
+    ws.getColumn(1).numFmt="dd.mm.yyyy"; ws.getColumn(2).numFmt="@";
+    const list=(col,vals)=>{ const v=[...new Set(vals.filter(Boolean))]; const f='"'+v.join(",")+'"';
+      if(!v.length || f.length>255 || v.some(x=>/[",]/.test(x))) return;
+      for(let r=2;r<=400;r++) ws.getCell(r,col).dataValidation={type:"list",allowBlank:true,showErrorMessage:false,formulae:[f]}; };
+    list(3, venues.map(v=>v.name)); list(5, sched.map(m=>m.tv));
+    const buf=await wb.xlsx.writeBuffer();
+    const dl=await claude.use("downloads");
+    await dl.save({filename:"CheckMate_Protypo.xlsx", data:new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})});
+  }catch(err){ console.warn(err); toast("Δεν δημιουργήθηκε το πρότυπο. Δοκίμασε ξανά."); }
+  finally{ btn.disabled=false; }
+};
 async function readFile(file){
   $("impErr").hidden=true;
   try{
