@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
 <meta charset="utf-8">
-<meta name="app-build" content="e89b3edfef8f">
+<meta name="app-build" content="40370bda153d">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <title>Check Mate Challenge</title>
@@ -516,10 +516,13 @@ details.pastsec{border:1px solid var(--line);border-radius:12px;background:var(-
 details.pastsec>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;font-weight:600}
 details.pastsec>summary .ttl{flex:1 1 auto;min-width:0}
 details.pastsec>summary::-webkit-details-marker{display:none}
-details.pastsec>summary .dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
-details.pastsec.due>summary .dot{background:var(--warn)}details.pastsec.done>summary .dot{background:var(--good)}
-details.pastsec>summary .sum{white-space:nowrap;font-weight:600;font-variant-numeric:tabular-nums}
-details.pastsec.due>summary .sum{color:var(--warn)}details.pastsec.done>summary .sum{color:var(--good)}
+details.pastsec>summary .sum{white-space:nowrap;font-weight:600;font-variant-numeric:tabular-nums;color:var(--warn)}
+.pastbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:0 12px 10px;font-size:12px;color:var(--muted)}
+.pastbar .lg{display:inline-flex;align-items:center;gap:5px}.pastbar .lg i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.pastbar .lg.due i{background:var(--warn)}.pastbar .lg.done i{background:var(--good)}
+.pastbar .sortbtn{margin-left:auto;width:36px;height:34px;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:0;color:var(--ink);cursor:pointer}
+.pastbar .sortbtn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+.pastbar .sortbtn.asc svg{transform:scaleY(-1)}
 details.pastsec>summary .chev{color:var(--muted);transition:transform .15s}details.pastsec[open]>summary .chev{transform:rotate(180deg)}
 details.pastsec>.cards{padding:0 12px 12px}
 .card .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
@@ -3604,7 +3607,7 @@ $("btnXlsx").onclick = async ()=>{
 /* =================================================================
    USER (read-only, own assignments)
    ================================================================= */
-let myItems=[], myClaim=undefined, uRoster=[], showPast=false, pastOpen={due:false, done:false}, myUnav={}, myUnavLoaded=false, mySeen={}, seenWriting=false, myCant={}, cantOpen=null, myPhone="", myPhoneShare=false, phoneOpen=false;
+let myItems=[], myClaim=undefined, uRoster=[], showPast=false, pastOpen=false, pastAsc=(()=>{ try{ return localStorage.getItem("cm.pastOrder")!=="desc"; }catch{ return true; } })(), myUnav={}, myUnavLoaded=false, mySeen={}, seenWriting=false, myCant={}, cantOpen=null, myPhone="", myPhoneShare=false, phoneOpen=false;
 /* «Το είδε»: when the user's page shows an upcoming assignment (new or changed), the time is saved in profiles/<uid>.seen,
    so the administrator knows the person has seen it. Nothing to press. */
 async function markSeen(list){
@@ -3897,7 +3900,13 @@ function renderUser(){
     <div class="bottom"><span class="fee">${eur(i.fee)} ${i.paid?"":payTag(i.pay)}</span><span class="pay ${i.paid?"yes":"no"}">${i.paid?`✓ Πληρώθηκε${i.paidDate?" "+fmtDate(i.paidDate).slice(0,5):""}`:"● Εκκρεμεί"}</span></div>
   </article>`;
   /* finished assignments in two groups, closed until tapped (the choice stays while the app is open) */
-  const pastSec=(k,title,list)=> list.length ? `<details class="pastsec ${k}" id="past_${k}"${pastOpen[k]?" open":""}><summary><span class="dot" aria-hidden="true"></span><span class="ttl">${title} (${list.length})</span><span class="sum">${eur(list.reduce((a,i)=>a+(+i.fee||0),0))}</span><span class="chev" aria-hidden="true">▾</span></summary><div class="cards">${list.map(i=>card(i,false)).join("")}</div></details>` : "";
+  /* finished assignments: one list in calendar order (the arrow switches oldest / newest first);
+     unpaid ones stand out by colour. Closed until tapped (the choice stays while the app is open). */
+  const pastList = pastAsc ? past : past.slice().reverse();
+  const dueSum = past.filter(i=>!i.paid).reduce((a,i)=>a+(+i.fee||0),0);
+  const pastSec = past.length ? `<details class="pastsec" id="past_all"${pastOpen?" open":""}><summary><span class="ttl">Αγώνες που έγιναν (${past.length})</span>${dueSum?`<span class="sum">Εκκρεμούν ${eur(dueSum)}</span>`:""}<span class="chev" aria-hidden="true">▾</span></summary>
+    <div class="pastbar"><span class="lg due"><i></i>Εκκρεμεί πληρωμή</span><span class="lg done"><i></i>Πληρώθηκε</span><button type="button" class="sortbtn${pastAsc?" asc":""}" id="pastOrder" title="${pastAsc?"Παλαιότεροι πρώτα (πάτα για νεότερους πρώτα)":"Νεότεροι πρώτα (πάτα για παλαιότερους πρώτα)"}" aria-label="${pastAsc?"Παλαιότεροι πρώτα (πάτα για νεότερους πρώτα)":"Νεότεροι πρώτα (πάτα για παλαιότερους πρώτα)"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4"/><path d="M14 6h7M14 11h5M14 16h3"/></svg></button></div>
+    <div class="cards">${pastList.map(i=>card(i,false)).join("")}</div></details>` : "";
   const nxWk = nextWeeks(2)[1];
   const nudge = myUnavLoaded && !myUnav[nxWk] ? `<div class="banner nudge" role="status">${cmIcon("cal")}<span class="grow">Δεν έχεις δηλώσει κωλύματα για την επόμενη εβδομάδα (${weekLabel(nxWk)}).</span><button type="button" class="btn small primary" data-unavgo="1">Δήλωσε τώρα</button></div>` : "";
   $("app").innerHTML = `<div style="display:flex;flex-direction:column;gap:18px">
@@ -3914,10 +3923,10 @@ function renderUser(){
     ${unavPanel()}
     ${phonePanel()}
     ${myStatsPanel()}
-    ${pastSec("due", "Ολοκληρώθηκαν · εκκρεμεί πληρωμή", past.filter(i=>!i.paid))}
-    ${pastSec("done", "Ολοκληρώθηκαν · πληρώθηκαν", past.filter(i=>i.paid))}
+    ${pastSec}
   </div>`;
-  ["due","done"].forEach(k=>{ const d=$("past_"+k); if(d) d.addEventListener("toggle",()=>{ pastOpen[k]=d.open; }); });
+  const pd=$("past_all"); if(pd) pd.addEventListener("toggle",()=>{ pastOpen=pd.open; });
+  const po=$("pastOrder"); if(po) po.onclick=()=>{ pastAsc=!pastAsc; try{ localStorage.setItem("cm.pastOrder", pastAsc?"asc":"desc"); }catch{} renderUser(); };
   if(document.visibilityState==="visible") markSeen(upcoming);
   renderUnavUser(); bindMyStats();
 }
