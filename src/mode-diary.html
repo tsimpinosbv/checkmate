@@ -108,6 +108,19 @@ h1 .tag{font-style:normal;font-size:.5em;vertical-align:middle;background:var(--
   .row>.c-match{grid-column:1/-1}
   .fee{text-align:right}
 }
+/* phone: each match as a one-line row (date, time, teams, fee) that opens into the full entry */
+#log .drows{display:flex;flex-direction:column;gap:6px;padding:10px}
+details.drow{border:1px solid var(--line);border-left:4px solid var(--good);border-radius:10px;background:var(--surface)}
+details.drow.due{border-left-color:var(--warn);background:color-mix(in srgb,var(--warn-bg) 25%,var(--surface))}
+details.drow>summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:1fr auto auto;align-items:center;column-gap:10px;padding:9px 12px}
+details.drow>summary::-webkit-details-marker{display:none}
+details.drow .dr-when{font-size:12.5px;color:var(--muted)}
+details.drow .dr-teams{grid-column:1;font-weight:600;line-height:1.25}
+details.drow .dr-fee{grid-row:1 / span 2;grid-column:2;font-family:var(--f-mono,monospace);font-size:13px;font-weight:600;white-space:nowrap}
+details.drow.due .dr-fee{color:var(--warn)}details.drow.done .dr-fee{color:var(--good)}
+details.drow .chev{grid-row:1 / span 2;grid-column:3;color:var(--muted);transition:transform .15s}
+details.drow[open] .chev{transform:rotate(180deg)}
+details.drow>.row{border-top:1px solid var(--line)}
 .empty{padding:40px 20px;text-align:center;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:10px}
 .empty .board-art{width:72px;height:72px;border-radius:6px;background:conic-gradient(var(--sq) 25%,var(--line) 0 50%,var(--sq) 0 75%,var(--line) 0) 0 0/25% 25%}
 .empty strong{color:var(--ink);font-size:16px}
@@ -256,6 +269,8 @@ const DAYS = ["Κυρ","Δευ","Τρι","Τετ","Πεμ","Παρ","Σαβ"];
 let db = null, col = null, rows = [];
 let FEES = {op:80, as:40};
 let loadedOpen = false, canWrite = true, editingId = null;
+const COMPACT = matchMedia("(max-width:720px)"), openRows = new Set();   // phone: short rows; which ones are open
+COMPACT.addEventListener?.("change", ()=>render());
 const isAdmin = true;   // the signed-in user owns everything in their own diary
 const st = {season:"", month:"", person:"", role:"", paid:"", q:"", order:"desc"};
 try{ if(localStorage.getItem("cm.diaryOrder")==="asc") st.order="asc"; }catch{}   // the order is remembered on this device
@@ -342,8 +357,7 @@ function render(){
   }
   if(!list.length){ log.innerHTML = `<div class="empty"><strong>Κανένας αγώνας με αυτά τα φίλτρα</strong><button class="btn" type="button" data-act="clear">Καθαρισμός φίλτρων</button></div>`; return; }
   const payTitle = isAdmin ? "Αλλαγή κατάστασης πληρωμής" : "Μόνο ο διαχειριστής αλλάζει την πληρωμή";
-  log.innerHTML = `<div class="row head"><div>Ημ/νία</div><div>Αγώνας</div><div>Θέση</div><div style="text-align:right">Αμοιβή</div><div>Πληρωμή</div><div></div></div>` +
-   list.map(r=>{
+  const rowHtml = r=>{
      const lk = locked(r);
      return `<div class="row">
      <div class="date c-date">${fmtDate(r.date)}<small>${dayName(r.date)}${r.time?" · "+esc(r.time):""}</small></div>
@@ -352,7 +366,11 @@ function render(){
      <div class="fee">${eur(r.fee)}</div>
      <div><button class="pay ${r.paid?"yes":"no"}" type="button" data-act="toggle" data-id="${r.id}" ${isAdmin?"":"disabled"} title="${payTitle}">${r.paid?`${lk?cmIcon("lock"):"✓"} Πληρώθηκε${r.paidDate?` <small>${fmtDate(r.paidDate).slice(0,5)}</small>`:""}`:"● Εκκρεμεί"}</button></div>
      <div><button class="more" type="button" data-act="edit" data-id="${r.id}" aria-label="${lk?"Κλειδωμένο – πληρώθηκε":"Επεξεργασία"}" title="${lk?"Πληρώθηκε – δεν αλλάζει":"Επεξεργασία"}" ${canWrite&&!lk?"":"disabled"}>${lk?cmIcon("lock"):"✎"}</button></div>
-   </div>`;}).join("");
+   </div>`;};
+  log.innerHTML = COMPACT.matches
+    ? `<div class="drows">${list.map(r=>`<details class="drow ${r.paid?"done":"due"}" data-rid="${esc(r.id)}"${openRows.has(r.id)?" open":""}><summary><span class="dr-when">${dayName(r.date)} ${fmtDate(r.date)}${r.time?" · "+esc(r.time):""}</span><span class="dr-fee">${r.paid?"✓":"●"} ${eur(r.fee)}</span><span class="chev" aria-hidden="true">▾</span><span class="dr-teams">${esc([r.home,r.away].filter(Boolean).join(" – ")||"—")}</span></summary>${rowHtml(r)}</details>`).join("")}</div>`
+    : `<div class="row head"><div>Ημ/νία</div><div>Αγώνας</div><div>Θέση</div><div style="text-align:right">Αμοιβή</div><div>Πληρωμή</div><div></div></div>` + list.map(rowHtml).join("");
+  log.querySelectorAll("details.drow").forEach(d=>d.addEventListener("toggle",()=>{ d.open ? openRows.add(d.dataset.rid) : openRows.delete(d.dataset.rid); }));
 }
 
 /* ---------- form ---------- */
