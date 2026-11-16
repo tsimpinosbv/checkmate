@@ -32,12 +32,14 @@ service cloud.firestore {
     // Each user's display name, shown to the admin when approving accounts.
     match /profiles/{uid} { allow read, write: if isSelf(uid); }
 
-    // Shared settings (which mode is active).
-    match /config/{doc} { allow read: if signedIn(); }
+    // Shared settings users need: which mode is active, default fees, the season-archive notice, and config/public
+    // (mail service address for «Δεν μπορώ»). Everything else in config (admin emails, season reminder…) is admin-only.
+    match /config/{doc} { allow read: if signedIn() && doc in ['app', 'fees', 'archive', 'public']; }
 
-    // Mode 1 (match log): users add and edit open matches; paid ones are read-only.
-    match /matches/{doc} { allow read, write: if signedIn(); }
-    match /paid/{doc}    { allow read: if signedIn(); }
+    // Mode 1 (match log): users add and edit open matches; paid ones are read-only. Closed unless that mode is switched on.
+    function logMode() { return get(/databases/$(database)/documents/config/app).data.get('mode', 'assign') == 'log'; }
+    match /matches/{doc} { allow read, write: if signedIn() && logMode(); }
+    match /paid/{doc}    { allow read: if signedIn() && logMode(); }
 
     // Mode 2 (assignments): users see the roster, manage their own claim, read their own assignments.
     match /roster/{doc}         { allow read: if signedIn(); }
