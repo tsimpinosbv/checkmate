@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
 <meta charset="utf-8">
-<meta name="app-build" content="df7f5bc5fa47">
+<meta name="app-build" content="ef6182aaaa6e">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <title>Check Mate Challenge</title>
@@ -525,6 +525,19 @@ details.pastsec>summary .sum{white-space:nowrap;font-weight:600;font-variant-num
 .pastbar .sortbtn.asc svg{transform:scaleY(-1)}
 details.pastsec>summary .chev{color:var(--muted);transition:transform .15s}details.pastsec[open]>summary .chev{transform:rotate(180deg)}
 details.pastsec>.cards{padding:0 12px 12px}
+/* phone: finished assignments as one-line rows that open into the full card */
+details.pastsec>.plist{display:flex;flex-direction:column;gap:6px;padding:0 12px 12px}
+details.pastc{border:1px solid var(--line);border-left:4px solid var(--good);border-radius:10px;background:var(--surface)}
+details.pastc.due{border-left-color:var(--warn);background:color-mix(in srgb,var(--warn-bg) 25%,var(--surface))}
+details.pastc>summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:1fr auto auto;align-items:center;column-gap:10px;padding:9px 12px}
+details.pastc>summary::-webkit-details-marker{display:none}
+details.pastc .pc-when{font-size:12.5px;color:var(--muted)}
+details.pastc .pc-teams{grid-column:1;font-weight:600;line-height:1.25}
+details.pastc .pc-fee{grid-row:1 / span 2;grid-column:2;font-family:var(--f-mono);font-size:13px;font-weight:600;white-space:nowrap}
+details.pastc.due .pc-fee{color:var(--warn)}details.pastc.done .pc-fee{color:var(--good)}
+details.pastc .chev{grid-row:1 / span 2;grid-column:3;color:var(--muted);transition:transform .15s}
+details.pastc[open] .chev{transform:rotate(180deg)}
+details.pastc>.card{border:0;border-top:1px solid var(--line);border-radius:0 0 10px 10px;background:transparent}
 .card .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .card .when{font-family:var(--f-mono);font-size:15px}
 .card .when small{color:var(--muted);font-size:12.5px}
@@ -3622,7 +3635,9 @@ $("btnXlsx").onclick = async ()=>{
 /* =================================================================
    USER (read-only, own assignments)
    ================================================================= */
-let myItems=[], myClaim=undefined, uRoster=[], showPast=false, pastOpen=false, pastAsc=(()=>{ try{ return localStorage.getItem("cm.pastOrder")!=="desc"; }catch{ return true; } })(), myUnav={}, myUnavLoaded=false, mySeen={}, seenWriting=false, myCant={}, cantOpen=null, myPhone="", myPhoneShare=false, phoneOpen=false;
+const COMPACT = matchMedia("(max-width:700px)");   // phone: finished assignments as short rows
+COMPACT.addEventListener?.("change", ()=>{ if(!isAdmin && myClaim) renderUser(); });
+let myItems=[], myClaim=undefined, uRoster=[], showPast=false, pastOpen=false, pastExp=new Set(), pastAsc=(()=>{ try{ return localStorage.getItem("cm.pastOrder")!=="desc"; }catch{ return true; } })(), myUnav={}, myUnavLoaded=false, mySeen={}, seenWriting=false, myCant={}, cantOpen=null, myPhone="", myPhoneShare=false, phoneOpen=false;
 /* «Το είδε»: when the user's page shows an upcoming assignment (new or changed), the time is saved in profiles/<uid>.seen,
    so the administrator knows the person has seen it. Nothing to press. */
 async function markSeen(list){
@@ -3921,7 +3936,8 @@ function renderUser(){
   const dueSum = past.filter(i=>!i.paid).reduce((a,i)=>a+(+i.fee||0),0);
   const pastSec = past.length ? `<details class="pastsec" id="past_all"${pastOpen?" open":""}><summary><span class="ttl">Αγώνες που έγιναν (${past.length})</span>${dueSum?`<span class="sum">Εκκρεμούν ${eur(dueSum)}</span>`:""}<span class="chev" aria-hidden="true">▾</span></summary>
     <div class="pastbar"><span class="lg due"><i></i>Εκκρεμεί πληρωμή</span><span class="lg done"><i></i>Πληρώθηκε</span><button type="button" class="sortbtn${pastAsc?" asc":""}" id="pastOrder" title="${pastAsc?"Παλαιότεροι πρώτα (πάτα για νεότερους πρώτα)":"Νεότεροι πρώτα (πάτα για παλαιότερους πρώτα)"}" aria-label="${pastAsc?"Παλαιότεροι πρώτα (πάτα για νεότερους πρώτα)":"Νεότεροι πρώτα (πάτα για παλαιότερους πρώτα)"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4"/><path d="M14 6h7M14 11h5M14 16h3"/></svg></button></div>
-    <div class="cards">${pastList.map(i=>card(i,false)).join("")}</div></details>` : "";
+    ${COMPACT.matches ? `<div class="plist">${pastList.map(i=>`<details class="pastc ${i.paid?"done":"due"}" data-pid="${esc(i.id)}"${pastExp.has(i.id)?" open":""}><summary><span class="pc-when">${whenMain(i)}${(i.time||i.timeText)?" · "+esc(i.time||i.timeText):""}</span><span class="pc-fee">${i.paid?"✓":"●"} ${eur(i.fee)}</span><span class="chev" aria-hidden="true">▾</span><span class="pc-teams">${esc([i.home,i.away].filter(Boolean).join(" – ")||"—")}</span></summary>${card(i,false)}</details>`).join("")}</div>`
+      : `<div class="cards">${pastList.map(i=>card(i,false)).join("")}</div>`}</details>` : "";
   const nxWk = nextWeeks(2)[1];
   const nudge = myUnavLoaded && !myUnav[nxWk] ? `<div class="banner nudge" role="status">${cmIcon("cal")}<span class="grow">Δεν έχεις δηλώσει κωλύματα για την επόμενη εβδομάδα (${weekLabel(nxWk)}).</span><button type="button" class="btn small primary" data-unavgo="1">Δήλωσε τώρα</button></div>` : "";
   $("app").innerHTML = `<div style="display:flex;flex-direction:column;gap:18px">
@@ -3941,6 +3957,7 @@ function renderUser(){
     ${pastSec}
   </div>`;
   const pd=$("past_all"); if(pd) pd.addEventListener("toggle",()=>{ pastOpen=pd.open; });
+  document.querySelectorAll("details.pastc").forEach(d=>d.addEventListener("toggle",()=>{ d.open ? pastExp.add(d.dataset.pid) : pastExp.delete(d.dataset.pid); }));
   const po=$("pastOrder"); if(po) po.onclick=()=>{ pastAsc=!pastAsc; try{ localStorage.setItem("cm.pastOrder", pastAsc?"asc":"desc"); }catch{} renderUser(); };
   if(document.visibilityState==="visible") markSeen(upcoming);
   renderUnavUser(); bindMyStats();
