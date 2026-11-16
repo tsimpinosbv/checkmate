@@ -79,9 +79,10 @@ function cantMail_(body) {
   const cache = CacheService.getScriptCache(), key = "cant_" + u.localId, n = Number(cache.get(key) || 0);
   if (n >= 6) return { ok: false, error: "too-many" };
   cache.put(key, String(n + 1), 600);
+  /* read with the script's own access (config/notify is readable by admins only, not by the user who sent this) */
   const doc = UrlFetchApp.fetch(
     "https://firestore.googleapis.com/v1/projects/" + FIREBASE_PROJECT + "/databases/(default)/documents/config/notify",
-    { headers: { Authorization: "Bearer " + body.idToken }, muteHttpExceptions: true }
+    { headers: { Authorization: "Bearer " + ScriptApp.getOAuthToken() }, muteHttpExceptions: true }
   );
   if (doc.getResponseCode() !== 200) return { ok: false, error: "no-config" };
   const f = JSON.parse(doc.getContentText()).fields || {};
