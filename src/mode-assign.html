@@ -165,6 +165,13 @@ button.pay:hover{border-color:currentColor}
 .paybar .trk>span{display:block;height:100%;background:var(--good);border-radius:6px}
 .row.is-past>.c-date,.row.is-past>.c-match,.row.is-past>.slot{opacity:.55}
 .row.is-past:hover>*{opacity:1}
+/* finished but not (fully) paid: not faded, soft orange */
+.row.is-due{background:color-mix(in srgb,var(--warn-bg) 30%,var(--surface));box-shadow:inset 3px 0 0 var(--warn)}
+.row.is-past.is-due>.c-date,.row.is-past.is-due>.c-match,.row.is-past.is-due>.slot{opacity:1}
+table.grid tr.due td{background:color-mix(in srgb,var(--warn-bg) 30%,var(--surface))}
+table.grid tr.due td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
+.emptybtn{display:inline-flex;align-items:center;gap:6px;border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);background:var(--warn-bg);color:var(--warn);border-radius:999px;padding:6px 12px;font-weight:600;font-size:13px;cursor:pointer}
+.emptybtn[aria-pressed="true"]{background:var(--warn);color:#fff;border-color:var(--warn)}
 .add-slot{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;border:1.5px dashed color-mix(in srgb,var(--accent) 60%,transparent);background:color-mix(in srgb,var(--accent) 6%,transparent);color:var(--accent);font:700 13px var(--f-body);border-radius:10px;padding:7px 14px;cursor:pointer}
 .add-slot:hover{background:color-mix(in srgb,var(--accent) 14%,transparent)}
 .add-slot .ic{width:15px;height:15px}
@@ -873,7 +880,12 @@ async function syncPublic(){
 function loadErr(){ $("app").innerHTML = `<div class="panel"><div class="empty"><strong>Δεν φορτώθηκαν τα δεδομένα</strong><div>Ανανέωσε τη σελίδα.</div></div></div>`; }
 
 function slotsOf(list){ const s=[]; list.forEach(m=>["op","as"].forEach(r=>{ if(m[r]) s.push({m, role:r, name:m[r], fee:+m["fee_"+r]||0, paid:!!m["paid_"+r]}); })); return s; }
+/* a match that has already been played and someone assigned to it is not marked paid */
+const isDue = m => ["op","as"].some(r=>m[r] && !m["paid_"+r] && (+m["fee_"+r]||0)>0);
+/* an upcoming match still missing the Χειριστής or the Βοηθός */
+const isEmptySlot = m => m.date && m.date>=today() && (!m.op || !m.as);
 function filteredSched(){
+  if(st.empty) return sched.filter(isEmptySlot);   // «Χωρίς άτομο»: every upcoming match with a free place, other filters aside
   const q=st.q.trim().toLowerCase(), pn=st.person?norm(st.person):"";
   const wkDays = st.week ? new Set(weekDays(st.week)) : null;
   return sched.filter(m =>
@@ -951,7 +963,8 @@ function renderSched(months, people, seasons=[]){
     :`<div class="wkcur"><span class="k">Προβολή</span><b>Όλοι οι αγώνες</b></div><span class="wkgap"></span>
       <button type="button" class="btn small primary" data-act="wknow">Ανά αγωνιστική εβδομάδα</button>`}
   </section>
-  <section class="filters" aria-label="Φίλτρα" style="margin-top:12px">
+  ${(()=>{ const n=sched.filter(isEmptySlot).length; return n||st.empty ? `<div style="margin-top:12px"><button type="button" class="emptybtn" data-act="empty" aria-pressed="${!!st.empty}" title="${st.empty?"Πάτα για να δεις ξανά όλο το πρόγραμμα":"Επόμενοι αγώνες χωρίς Χειριστή ή Βοηθό"}">⚠ Χωρίς άτομο (${n})${st.empty?" · εμφάνιση όλων":""}</button></div>` : ""; })()}
+  <section class="filters" aria-label="Φίλτρα" style="margin-top:12px${st.empty?";display:none":""}">
     ${st.week?"":`<div class="f"><label for="fSeason">Σεζόν</label><select id="fSeason">${opt(seasons.map(x=>[x,x]),st.season,"Όλες")}</select></div>
     <div class="f"><label for="fMonth">Μήνας</label><select id="fMonth">${opt(months.slice().reverse().map(m=>[m,MONTHS_FULL[+m.slice(5)-1]+" "+m.slice(0,4)]),st.month,"Όλοι")}</select></div>`}
     <div class="f"><label for="fPerson">Άτομο</label><select id="fPerson">${opt(people.map(p=>[p,p]),st.person,"Όλα")}</select></div>
@@ -982,7 +995,7 @@ function renderSched(months, people, seasons=[]){
       if(dk!==lastDay){ lastDay=dk; html+=`<div class="day-head${dk===today()?" now":""}${dk&&dk<today()?" past":""}">${dk?longDate(dk):"Χωρίς ημερομηνία"}${dayTag(dk)}<small>${perDay[dk]} ${perDay[dk]===1?"αγώνας":"αγώνες"}</small></div>`; }
       if((m.comp||"")!==lastComp){ lastComp=m.comp||""; if(lastComp) html+=`<div class="comp-head">${esc(lastComp)}</div>`; }
       const past = m.date && m.date < today();
-      html += `<div class="row${m.hidden?" is-hidden":""}${past?" is-past":""}${m.date===today()?" is-today":""}">
+      html += `<div class="row${m.hidden?" is-hidden":""}${past?" is-past":""}${past&&isDue(m)?" is-due":""}${m.date===today()?" is-today":""}">
         <div class="date c-date">${esc(m.time||m.timeText||"—")}<small>${[m.dateText||"", m.dateTbc?"ημ. αγωνιστικής":""].filter(Boolean).map(esc).join(" · ")}</small><button type="button" class="vis eyeb${m.hidden?" off":""}" data-act="vis" data-id="${m.id}" aria-label="${m.hidden?"Κρυφή":"Ορατή"}" title="${m.hidden?"Κρυφή: οι χρήστες δεν τη βλέπουν. Πάτα για εμφάνιση.":"Ορατή: τη βλέπουν τα άτομα της ανάθεσης. Πάτα για απόκρυψη."}">${m.hidden?IC.eyeOff:IC.eye}</button>${paySwitch(m)}</div>
         <div class="match c-match"><b class="tmw">${teamsL(m)}</b>${(teamVar(m.home)||teamVar(m.away))?`<div class="meta tfull">VAR: ${esc([teamVar(m.home)||"—", m.away?(teamVar(m.away)||"—"):""].filter(Boolean).join(" – "))}</div>`:""}<div class="meta">${[m.venue?(mapUrl(m.venue)?`<a class="mlink" href="${esc(mapUrl(m.venue))}" target="_blank" rel="noopener" title="${esc(venueOf(m.venue)?.full||"Χάρτης")}">📍 ${esc(m.venue)}</a>`:esc(m.venue)):"",esc(m.tv||""),esc(m.vc||"")].filter(Boolean).join(" · ")||"&nbsp;"}</div></div>
         ${slotHtml(m,"op")}${slotHtml(m,"as")}
@@ -1019,7 +1032,7 @@ function gridHtml(list){
   };
   return `<div class="gwrap" id="gwrap"><table class="grid"><colgroup>${GCOLS.map(c=>`<col style="width:${c[3]}px">`).join("")}<col style="width:40px"></colgroup>
     <thead><tr>${GCOLS.map(c=>`<th>${c[1]}</th>`).join("")}<th></th></tr></thead>
-    <tbody>${list.map(m=>`<tr class="${m.hidden?"is-hidden":""}${m.date&&m.date<today()?" past":""}">${GCOLS.map(c=>cell(m,c)).join("")}<td class="ck"><button class="more" data-act="edit" data-id="${m.id}" aria-label="Άνοιγμα φόρμας" title="Όλα τα στοιχεία και διαγραφή">✎</button></td></tr>`).join("")}</tbody></table></div>
+    <tbody>${list.map(m=>`<tr class="${m.hidden?"is-hidden":""}${m.date&&m.date<today()?" past":""}${m.date&&m.date<today()&&isDue(m)?" due":""}">${GCOLS.map(c=>cell(m,c)).join("")}<td class="ck"><button class="more" data-act="edit" data-id="${m.id}" aria-label="Άνοιγμα φόρμας" title="Όλα τα στοιχεία και διαγραφή">✎</button></td></tr>`).join("")}</tbody></table></div>
     <div class="actions" style="padding:10px 12px"><button class="btn small" data-act="add">+ Νέα ανάθεση</button></div>`;
 }
 /* one dropdown for the sheet: all choices of the column, filtered as you type */
@@ -2064,10 +2077,11 @@ document.addEventListener("click", async e => {
   if(act==="view"){ view=b.dataset.v; try{ localStorage.setItem("cm.view", view); }catch{} renderAdmin(); return; }
   if(act==="import") openImport();
   if(act==="edit"&&m) openForm(m);
-  if(act==="clear"){ Object.assign(st,{season:"",month:"",person:"",paid:"",vis:"",q:""}); renderAdmin(); }
+  if(act==="clear"){ Object.assign(st,{season:"",month:"",person:"",paid:"",vis:"",q:"",empty:false}); renderAdmin(); }
   if(act==="wk"){ st.week=addDays(st.week||weekOf(today()), +b.dataset.d); renderAdmin(); }
   if(act==="wknow"){ st.week=weekOf(today()); renderAdmin(); }
   if(act==="wkall"){ st.week=""; renderAdmin(); }
+  if(act==="empty"){ st.empty=!st.empty; renderAdmin(); }
   if(act==="statxls") exportStats();
   if(act==="ekk") statement(b.dataset.p);
   if(act==="ekksel"){ const n=$("sEkk")?.value; if(!n){ toast("Διάλεξε πρώτα το άτομο"); $("sEkk")?.focus(); } else statement(n); }
