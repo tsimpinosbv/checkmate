@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
 <meta charset="utf-8">
-<meta name="app-build" content="f06aed2f3693">
+<meta name="app-build" content="dd34186acf3b">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <title>Check Mate Challenge</title>
@@ -452,8 +452,6 @@ button.pay:hover{border-color:currentColor}
 .row.is-past.is-due>.c-date,.row.is-past.is-due>.c-match,.row.is-past.is-due>.slot{opacity:1}
 table.grid tr.due td{background:color-mix(in srgb,var(--warn-bg) 30%,var(--surface))}
 table.grid tr.due td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
-.emptybtn{display:inline-flex;align-items:center;gap:6px;border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);background:var(--warn-bg);color:var(--warn);border-radius:999px;padding:6px 12px;font-weight:600;font-size:13px;cursor:pointer}
-.emptybtn[aria-pressed="true"]{background:var(--warn);color:#fff;border-color:var(--warn)}
 .add-slot{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;border:1.5px dashed color-mix(in srgb,var(--accent) 60%,transparent);background:color-mix(in srgb,var(--accent) 6%,transparent);color:var(--accent);font:700 13px var(--f-body);border-radius:10px;padding:7px 14px;cursor:pointer}
 .add-slot:hover{background:color-mix(in srgb,var(--accent) 14%,transparent)}
 .add-slot .ic{width:15px;height:15px}
@@ -1879,10 +1877,7 @@ function loadErr(){ $("app").innerHTML = `<div class="panel"><div class="empty">
 function slotsOf(list){ const s=[]; list.forEach(m=>["op","as"].forEach(r=>{ if(m[r]) s.push({m, role:r, name:m[r], fee:+m["fee_"+r]||0, paid:!!m["paid_"+r]}); })); return s; }
 /* a match that has already been played and someone assigned to it is not marked paid */
 const isDue = m => ["op","as"].some(r=>m[r] && !m["paid_"+r] && (+m["fee_"+r]||0)>0);
-/* an upcoming match still missing the Χειριστής or the Βοηθός */
-const isEmptySlot = m => m.date && m.date>=today() && (!m.op || !m.as);
 function filteredSched(){
-  if(st.empty) return sched.filter(isEmptySlot);   // «Χωρίς άτομο»: every upcoming match with a free place, other filters aside
   const q=st.q.trim().toLowerCase(), pn=st.person?norm(st.person):"";
   const wkDays = st.week ? new Set(weekDays(st.week)) : null;
   return sched.filter(m =>
@@ -1960,8 +1955,7 @@ function renderSched(months, people, seasons=[]){
     :`<div class="wkcur"><span class="k">Προβολή</span><b>Όλοι οι αγώνες</b></div><span class="wkgap"></span>
       <button type="button" class="btn small primary" data-act="wknow">Ανά αγωνιστική εβδομάδα</button>`}
   </section>
-  ${(()=>{ const n=sched.filter(isEmptySlot).length; return n||st.empty ? `<div style="margin-top:12px"><button type="button" class="emptybtn" data-act="empty" aria-pressed="${!!st.empty}" title="${st.empty?"Πάτα για να δεις ξανά όλο το πρόγραμμα":"Επόμενοι αγώνες χωρίς Χειριστή ή Βοηθό"}">⚠ Χωρίς άτομο (${n})${st.empty?" · εμφάνιση όλων":""}</button></div>` : ""; })()}
-  <section class="filters" aria-label="Φίλτρα" style="margin-top:12px${st.empty?";display:none":""}">
+  <section class="filters" aria-label="Φίλτρα" style="margin-top:12px">
     ${st.week?"":`<div class="f"><label for="fSeason">Σεζόν</label><select id="fSeason">${opt(seasons.map(x=>[x,x]),st.season,"Όλες")}</select></div>
     <div class="f"><label for="fMonth">Μήνας</label><select id="fMonth">${opt(months.slice().reverse().map(m=>[m,MONTHS_FULL[+m.slice(5)-1]+" "+m.slice(0,4)]),st.month,"Όλοι")}</select></div>`}
     <div class="f"><label for="fPerson">Άτομο</label><select id="fPerson">${opt(people.map(p=>[p,p]),st.person,"Όλα")}</select></div>
@@ -3074,11 +3068,10 @@ document.addEventListener("click", async e => {
   if(act==="view"){ view=b.dataset.v; try{ localStorage.setItem("cm.view", view); }catch{} renderAdmin(); return; }
   if(act==="import") openImport();
   if(act==="edit"&&m) openForm(m);
-  if(act==="clear"){ Object.assign(st,{season:"",month:"",person:"",paid:"",vis:"",q:"",empty:false}); renderAdmin(); }
+  if(act==="clear"){ Object.assign(st,{season:"",month:"",person:"",paid:"",vis:"",q:""}); renderAdmin(); }
   if(act==="wk"){ st.week=addDays(st.week||weekOf(today()), +b.dataset.d); renderAdmin(); }
   if(act==="wknow"){ st.week=weekOf(today()); renderAdmin(); }
   if(act==="wkall"){ st.week=""; renderAdmin(); }
-  if(act==="empty"){ st.empty=!st.empty; renderAdmin(); }
   if(act==="statxls") exportStats();
   if(act==="ekk") statement(b.dataset.p);
   if(act==="ekksel"){ const n=$("sEkk")?.value; if(!n){ toast("Διάλεξε πρώτα το άτομο"); $("sEkk")?.focus(); } else statement(n); }
