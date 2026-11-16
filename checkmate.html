@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
 <meta charset="utf-8">
-<meta name="app-build" content="4a2b017505fd">
+<meta name="app-build" content="4a024c9425c9">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <title>Check Mate Challenge</title>
@@ -1835,11 +1835,19 @@ function startAdmin(){
   db.collection("teams").limit(1000).onSnapshot(s=>{ teamList=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.teams=true; dedupeLists(); seedLists(); upgradeItems(); if(tab==="lists"||tab==="sched") renderAdmin(); }, ()=>{});
   db.collection("venues").limit(1000).onSnapshot(s=>{ venues=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.venues=true; dedupeLists(); seedLists(); upgradeItems(); if(tab==="lists"||tab==="sched") renderAdmin(); }, ()=>{});
   db.collection("contacts").limit(1000).onSnapshot(s=>{ contacts={}; s.docs.forEach(d=>contacts[d.id]=d.data().email||""); ready.contacts=true; if(tab==="people") renderAdmin(); }, ()=>{});
-  db.doc("config/notify").onSnapshot(s=>{ notify={email:false, endpoint:"", ...(s.exists?s.data():{})}; if(tab==="people") renderAdmin(); }, ()=>{});
+  db.doc("config/notify").onSnapshot(s=>{ notify={email:false, endpoint:"", ...(s.exists?s.data():{})}; if(tab==="people") renderAdmin(); if(!s.metadata?.fromCache) syncPublic(); }, ()=>{});
   db.doc("config/archive").onSnapshot(s=>{ archNotice = s.exists ? s.data() : null; if(tab==="db") renderAdmin(); }, ()=>{});
   db.doc("config/season").onSnapshot(s=>{ seasonCfg = s.exists ? s.data() : null; if(tab==="db" && !document.querySelector("#seasonForm :focus")) renderAdmin(); }, ()=>{});
   claude.use("mail").then(x=>{ mail=x; if(Object.keys(outbox).length) outboxTimer = setTimeout(flushNotes, 4000); }).catch(()=>{});
   db.doc("config/fees").onSnapshot(s=>{ if(s.exists) fees={op:80,as:40,...s.data()}; }, ()=>{});
+}
+/* config/notify (admin emails etc.) is readable by admins only. What the users' «Δεν μπορώ» needs is copied to
+   config/public: the mail service address, whether an admin address is set, the sender name. */
+async function syncPublic(){
+  const pub = {endpoint:notify.endpoint||"", cant:!!notify.adminAlert, senderName:notify.senderName||"Check Mate"};
+  try{ const s = await db.doc("config/public").get(); const cur = s.exists ? s.data() : {};
+    if(cur.endpoint!==pub.endpoint || cur.cant!==pub.cant || cur.senderName!==pub.senderName) await db.doc("config/public").set(pub);
+  }catch(e){ console.warn("config/public", e); }
 }
 function loadErr(){ $("app").innerHTML = `<div class="panel"><div class="empty"><strong>Δεν φορτώθηκαν τα δεδομένα</strong><div>Ανανέωσε τη σελίδα.</div></div></div>`; }
 
@@ -2701,7 +2709,7 @@ function bindNotify(){
     const n = {...notify, email:$("nOn").checked, endpoint:$("nUrl").value.trim(), senderName:$("nName").value.trim()||"Check Mate", replyTo:$("nReply").value.trim(), footer:$("nFooter").value.trim(), adminAlert:$("nAdmin").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean).join(", ")};
     if(n.adminAlert && n.adminAlert.split(", ").some(x=>!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))){ toast("Κάποιο email διαχειριστή δεν είναι σωστό"); return; }
     if(n.email && !/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(n.endpoint)){ toast("Βάλε πρώτα τη διεύθυνση της υπηρεσίας αποστολής"); return; }
-    try{ await db.doc("config/notify").set(n); notify=n; toast(n.email?"Οι ειδοποιήσεις email ενεργοποιήθηκαν":"Οι ειδοποιήσεις email απενεργοποιήθηκαν"); }catch{ toast("Η αποθήκευση απέτυχε"); } };
+    try{ await db.doc("config/notify").set(n); notify=n; syncPublic(); toast(n.email?"Οι ειδοποιήσεις email ενεργοποιήθηκαν":"Οι ειδοποιήσεις email απενεργοποιήθηκαν"); }catch{ toast("Η αποθήκευση απέτυχε"); } };
   $("nTest").onclick = async () => {
     const ep = $("nUrl").value.trim();
     if(!ep){ toast("Βάλε πρώτα τη διεύθυνση της υπηρεσίας αποστολής"); return; }
@@ -3679,8 +3687,8 @@ async function startUser(){
 /* email to the admin for «Δεν μπορώ» (address set by the admin in Ειδοποιήσεις email). Best effort: the in-app notice is what counts. */
 async function cantMail(it, note, undo){
   try{
-    const s = await db.doc("config/notify").get(); const n = s.exists ? s.data() : {};
-    if(!n.endpoint || !n.adminAlert) return;
+    const s = await db.doc("config/public").get(); const n = s.exists ? s.data() : {};
+    if(!n.endpoint || !n.cant) return;
     const m = await claude.use("mail"); if(!m) return;
     const rn = uRoster.find(r=>r.id===myClaim?.rid)?.name || me?.name || me?.email || "";
     await m.send(n.endpoint, [], {senderName:n.senderName, extra:{kind:"cant", item:{name:rn, email:me?.email||"", role:ROLE[it.role]||"", date:it.date?`${dayName(it.date)} ${fmtDate(it.date)}`:"", time:it.time||"", home:it.home||"", away:it.away||"", venue:it.venue||"", note:note||"", undo:!!undo}}});
