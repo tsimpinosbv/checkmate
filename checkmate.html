@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
 <meta charset="utf-8">
-<meta name="app-build" content="1c4f0193b4d4">
+<meta name="app-build" content="df7f5bc5fa47">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <title>Check Mate Challenge</title>
@@ -508,7 +508,7 @@ button.pay:hover{border-color:currentColor}
 .card.past{opacity:.85}
 /* finished assignments: waiting for payment (stand out) / paid (quiet) */
 .card.past.due{opacity:1;background:color-mix(in srgb,var(--warn-bg) 25%,var(--surface));border-top-color:color-mix(in srgb,var(--warn) 15%,var(--line));border-right-color:color-mix(in srgb,var(--warn) 15%,var(--line));border-bottom-color:color-mix(in srgb,var(--warn) 15%,var(--line))}
-.card.past.done{opacity:.72}
+.card.past.done{opacity:1}
 .card .stchip{align-self:flex-start;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;border-radius:999px;padding:2px 10px}
 .card.due .stchip{background:var(--warn-bg);color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent)}
 .card.done .stchip{background:var(--good-bg);color:var(--good)}
@@ -740,6 +740,9 @@ table.grid select.gsel{width:100%;border:0;background:transparent;font:inherit;c
 .stbl td{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:13.5px}
 .stbl td:first-child{font-family:var(--f-body);font-weight:600;font-size:14px}
 .stbl tr.tot td{font-weight:700;border-top:2px solid var(--ink)}
+/* the name column stays in place while the table scrolls sideways (phone) */
+.stbl th:first-child,.stbl td:first-child{position:sticky;left:0;z-index:1;background:var(--surface);box-shadow:inset -1px 0 0 var(--line)}
+.stbl th:first-child{background:var(--sq)}
 .stbl tbody tr:hover td{background:var(--sq)}
 .stbl td.or{color:var(--warn)}
 .stbl td.nw{white-space:nowrap}
@@ -783,10 +786,10 @@ table.grid select.gsel{width:100%;border:0;background:transparent;font:inherit;c
 header{background:linear-gradient(90deg,var(--head) 35%,color-mix(in srgb,var(--head) 55%,transparent) 100%),repeating-conic-gradient(color-mix(in srgb,var(--head-ink) 12%,transparent) 0 25%,transparent 0 50%) 0 0/26px 26px,var(--head)}
 /* soft fade when the tab or the week changes */
 @media (prefers-reduced-motion:no-preference){#tabBody.fadein{animation:tbin .22s ease-out}@keyframes tbin{from{opacity:0;transform:translateY(5px)}}}
-details.unav>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:14px 16px}
+details.unav>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:14px 44px 14px 16px;position:relative}
 details.unav>summary::-webkit-details-marker{display:none}
-details.unav>summary .chev{color:var(--muted);transition:transform .15s}
-details.unav[open]>summary .chev{transform:rotate(180deg)}
+details.unav>summary .chev{color:var(--muted);transition:transform .15s;position:absolute;right:16px;top:50%;transform:translateY(-50%)}
+details.unav[open]>summary .chev{transform:translateY(-50%) rotate(180deg)}
 details.unav>summary .unav-t{display:flex;align-items:center;gap:12px}
 details.unav>summary .unav-ic{width:40px;height:40px;flex:none}
 details.unav>summary .unav-sub{display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
