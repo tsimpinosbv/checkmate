@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
 <meta charset="utf-8">
-<meta name="app-build" content="4a024c9425c9">
+<meta name="app-build" content="1c4f0193b4d4">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <title>Check Mate Challenge</title>
@@ -1835,7 +1835,8 @@ function startAdmin(){
   db.collection("teams").limit(1000).onSnapshot(s=>{ teamList=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.teams=true; dedupeLists(); seedLists(); upgradeItems(); if(tab==="lists"||tab==="sched") renderAdmin(); }, ()=>{});
   db.collection("venues").limit(1000).onSnapshot(s=>{ venues=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,"el")); listsReady.venues=true; dedupeLists(); seedLists(); upgradeItems(); if(tab==="lists"||tab==="sched") renderAdmin(); }, ()=>{});
   db.collection("contacts").limit(1000).onSnapshot(s=>{ contacts={}; s.docs.forEach(d=>contacts[d.id]=d.data().email||""); ready.contacts=true; if(tab==="people") renderAdmin(); }, ()=>{});
-  db.doc("config/notify").onSnapshot(s=>{ notify={email:false, endpoint:"", ...(s.exists?s.data():{})}; if(tab==="people") renderAdmin(); if(!s.metadata?.fromCache) syncPublic(); }, ()=>{});
+  db.doc("config/notify").onSnapshot(s=>{ notify={email:false, endpoint:"", ...(s.exists?s.data():{})}; if(tab==="people") renderAdmin(); }, ()=>{});
+  syncPublic();
   db.doc("config/archive").onSnapshot(s=>{ archNotice = s.exists ? s.data() : null; if(tab==="db") renderAdmin(); }, ()=>{});
   db.doc("config/season").onSnapshot(s=>{ seasonCfg = s.exists ? s.data() : null; if(tab==="db" && !document.querySelector("#seasonForm :focus")) renderAdmin(); }, ()=>{});
   claude.use("mail").then(x=>{ mail=x; if(Object.keys(outbox).length) outboxTimer = setTimeout(flushNotes, 4000); }).catch(()=>{});
@@ -1844,8 +1845,9 @@ function startAdmin(){
 /* config/notify (admin emails etc.) is readable by admins only. What the users' «Δεν μπορώ» needs is copied to
    config/public: the mail service address, whether an admin address is set, the sender name. */
 async function syncPublic(){
-  const pub = {endpoint:notify.endpoint||"", cant:!!notify.adminAlert, senderName:notify.senderName||"Check Mate"};
-  try{ const s = await db.doc("config/public").get(); const cur = s.exists ? s.data() : {};
+  try{ const ns = await db.doc("config/notify").get(); const n = ns.exists ? ns.data() : {};
+    const pub = {endpoint:n.endpoint||"", cant:!!n.adminAlert, senderName:n.senderName||"Check Mate"};
+    const s = await db.doc("config/public").get(); const cur = s.exists ? s.data() : {};
     if(cur.endpoint!==pub.endpoint || cur.cant!==pub.cant || cur.senderName!==pub.senderName) await db.doc("config/public").set(pub);
   }catch(e){ console.warn("config/public", e); }
 }
