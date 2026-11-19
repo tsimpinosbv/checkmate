@@ -302,3 +302,36 @@
     }
   };
 })();
+
+/* «📵 Χωρίς σύνδεση»: a small label at the top while there is no internet (e.g. data off at the venue),
+   with the time the app last had a connection, so it is clear the information may not be the latest */
+(function(){
+  const K = "cm.lastOnline";
+  const mark = () => { if(navigator.onLine) try{ localStorage.setItem(K, String(Date.now())); }catch{} };
+  const pad = n => String(n).padStart(2, "0"), DAYS = ["Κυρ","Δευ","Τρι","Τετ","Πεμ","Παρ","Σαβ"];
+  function label(){
+    let t = 0; try{ t = +localStorage.getItem(K) || 0; }catch{}
+    if(!t) return "📵 Χωρίς σύνδεση";
+    const d = new Date(t), now = new Date(), hm = pad(d.getHours()) + ":" + pad(d.getMinutes());
+    const same = d.toDateString() === now.toDateString();
+    return "📵 Χωρίς σύνδεση · ενημέρωση " + (same ? hm : DAYS[d.getDay()] + " " + pad(d.getDate()) + "/" + pad(d.getMonth()+1) + " " + hm);
+  }
+  function show(){
+    let el = document.getElementById("cm-off");
+    if(navigator.onLine){ if(el) el.remove(); mark(); return; }
+    if(!document.body) return;
+    if(!document.getElementById("cm-off-css")){
+      const st = document.createElement("style"); st.id = "cm-off-css";
+      st.textContent = "#cm-off{position:fixed;left:50%;top:calc(6px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:2147482000;" +
+        "background:rgba(20,33,58,.92);color:#fff;border-radius:999px;padding:5px 12px;font:600 12.5px/1.3 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;" +
+        "white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.25);pointer-events:none;max-width:calc(100vw - 24px);overflow:hidden;text-overflow:ellipsis}" +
+        "@media print{#cm-off{display:none}}";
+      document.head.appendChild(st);
+    }
+    if(!el){ el = document.createElement("div"); el.id = "cm-off"; el.setAttribute("role", "status"); document.body.appendChild(el); }
+    el.textContent = label();
+  }
+  addEventListener("online", show); addEventListener("offline", show);
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
+  setInterval(mark, 60000);
+})();
