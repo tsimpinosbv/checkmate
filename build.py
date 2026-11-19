@@ -1,4 +1,4 @@
-import re, hashlib
+import re, hashlib, os
 def stamp(html):
     """<meta name="app-build">: a fingerprint of the page; the app compares it with the server's copy to offer «Νέα έκδοση»."""
     h = hashlib.sha256(html.encode()).hexdigest()[:12]
@@ -131,7 +131,7 @@ function runAssign(){{
 </body>
 </html>
 '''
-open('checkmate.html','w').write(stamp(out))
+PAGES={'cm':out}
 
 
 # ---------- second app: personal diary (imerologio.html), installs separately, not linked to Check Mate ----------
@@ -195,4 +195,31 @@ diary=f'''<!doctype html>
 </body>
 </html>
 '''
-open('imerologio.html','w').write(stamp(diary))
+PAGES['di']=diary
+
+# ---------- versions: a number and date for every build that changed an app (versions.json, shown in «Σχετικά») ----------
+# Each page carries <meta name="app-version"> and <meta name="app-date"> of the build where it last changed;
+# app-build is the fingerprint of the page without those two lines, so a rebuild with no change keeps its version.
+# Note for a new version: python3 build.py "what changed"
+import json, sys, datetime, zoneinfo
+vers = json.load(open('versions.json', encoding='utf-8')) if os.path.exists('versions.json') else []
+fp = {k: hashlib.sha256(v.encode()).hexdigest()[:12] for k, v in PAGES.items()}
+last = vers[0] if vers else {}
+if any(last.get(k) != fp[k] for k in fp):
+    now = datetime.datetime.now(zoneinfo.ZoneInfo('Europe/Athens')).strftime('%Y-%m-%dT%H:%M')
+    note = ' '.join(sys.argv[1:]).strip() or 'Ενημέρωση'
+    if vers and len(sys.argv) > 1 and last.get('note') == note and 'commit' not in last:
+        last.update({'date': now, **fp})   # rebuilt with the same note before upload: still the same version
+    else:
+        vers.insert(0, {'n': (last.get('n') or 0) + 1, 'date': now, 'note': note, **fp})
+    open('versions.json', 'w', encoding='utf-8').write('[\n' + ',\n'.join(json.dumps(e, ensure_ascii=False, separators=(',', ':')) for e in vers) + '\n]\n')
+def ver_of(k):
+    hit = None   # newest first: the oldest of the newest run of versions with this same page = when it last changed
+    for e in vers:
+        if e.get(k) == fp[k]: hit = e
+        elif hit: break
+    return hit or vers[0]
+for k, name in (('cm', 'checkmate.html'), ('di', 'imerologio.html')):
+    e = ver_of(k)
+    html = stamp(PAGES[k]).replace('<meta name="app-build"', f'<meta name="app-version" content="{e["n"]}">\n<meta name="app-date" content="{e["date"]}">\n<meta name="app-build"', 1)
+    open(name, 'w').write(html)
