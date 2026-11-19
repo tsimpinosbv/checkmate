@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
 <meta charset="utf-8">
-<meta name="app-build" content="30deb91ebc9b">
+<meta name="app-build" content="d556d86fe88f">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <title>Check Mate · Ημερολόγιο</title>
@@ -125,6 +125,12 @@ h1 .tag{font-style:normal;font-size:.5em;vertical-align:middle;background:var(--
 .pay{border:1px solid transparent;border-radius:999px;padding:5px 10px;font-size:13px;font-weight:600;display:inline-flex;gap:6px;align-items:center;justify-self:start}
 .pay.yes{background:var(--good-bg);color:var(--good)}
 .pay.no{background:var(--warn-bg);color:var(--warn)}
+.pay.up{background:var(--sq);color:var(--muted)}
+.ftog{display:none;position:relative;flex:0 0 auto;width:40px;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:0;color:var(--ink);cursor:pointer}
+.ftog svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
+.ftog[aria-expanded="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.ftog .n{position:absolute;top:-6px;right:-6px;min-width:17px;height:17px;border-radius:9px;background:var(--accent);color:#fff;font:700 10.5px/17px system-ui,sans-serif;text-align:center;padding:0 4px;font-style:normal}
+@media (max-width:720px){ .ftog{display:flex} .filters.fold>.f:not(.grow){display:none} .filters>.f.grow{flex:1 1 100%;order:-1} }
 .pay:not([disabled]):hover{border-color:currentColor}
 .pay[disabled]{cursor:default}
 .pay small{font-weight:400;opacity:.85}
@@ -148,6 +154,7 @@ details.drow .dr-when{font-size:12.5px;color:var(--muted)}
 details.drow .dr-teams{grid-column:1;font-weight:600;line-height:1.25}
 details.drow .dr-fee{grid-row:1 / span 2;grid-column:2;font-family:var(--f-mono,monospace);font-size:13px;font-weight:600;white-space:nowrap}
 details.drow.due .dr-fee{color:var(--warn)}details.drow.done .dr-fee{color:var(--good)}
+details.drow.up{border-left-color:var(--line)}details.drow.up .dr-fee{color:var(--muted)}
 details.drow .chev{grid-row:1 / span 2;grid-column:3;color:var(--muted);transition:transform .15s}
 details.drow[open] .chev{transform:rotate(180deg)}
 details.drow>.row{border-top:1px solid var(--line)}
@@ -233,7 +240,7 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
     <div class="cell"><div class="k">Εκκρεμούν</div><div class="v or" id="sDue">0 €</div></div>
   </section>
 
-  <section class="filters" aria-label="Φίλτρα">
+  <section class="filters fold" id="filters" aria-label="Φίλτρα">
     <div class="f"><label for="fSeason">Σεζόν</label><select id="fSeason"></select></div>
     <div class="f"><label for="fMonth">Μήνας</label><select id="fMonth"></select></div>
     <div class="f"><label for="fPerson">Συνεργάτης</label><select id="fPerson"></select></div>
@@ -241,7 +248,7 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
       <div class="seg" id="fRole"><button type="button" data-v="" aria-pressed="true">Όλες</button><button type="button" data-v="op" aria-pressed="false">Χειριστής</button><button type="button" data-v="as" aria-pressed="false">Βοηθός</button></div></div>
     <div class="f"><label>Πληρωμή</label>
       <div class="seg" id="fPaid"><button type="button" data-v="" aria-pressed="true">Όλα</button><button type="button" data-v="no" aria-pressed="false">Εκκρεμεί</button><button type="button" data-v="yes" aria-pressed="false">Πληρώθηκε</button></div></div>
-    <div class="f grow"><label for="fSearch">Αναζήτηση</label><div class="srow"><input id="fSearch" type="search" placeholder="Ομάδα, γήπεδο, διοργάνωση…"><button type="button" class="sortbtn" id="fOrder"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4"/><path d="M14 6h7M14 11h5M14 16h3"/></svg></button></div></div>
+    <div class="f grow"><label for="fSearch">Αναζήτηση</label><div class="srow"><input id="fSearch" type="search" placeholder="Ομάδα, γήπεδο, διοργάνωση…"><button type="button" class="sortbtn" id="fOrder"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4"/><path d="M14 6h7M14 11h5M14 16h3"/></svg></button><button type="button" class="ftog" id="fTog" aria-expanded="false" aria-label="Φίλτρα" title="Φίλτρα"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8.5V19l-4 2v-7.5z"/></svg><i class="n" hidden></i></button></div></div>
   </section>
 
   <section class="log" id="log" aria-live="polite">
@@ -733,7 +740,7 @@ const teamsHtml = r => { if(!tlogo(r.home) && !tlogo(r.away)) return `${esc(r.ho
 /* ---------- render ---------- */
 function render(){
   refreshOptions();
-  const list = filtered();
+  const list = filtered(); filtCount();
   /* amounts count the matches already played (upcoming ones are not owed yet); a match paid in advance still counts as paid */
   const t0 = today(), sum = a => a.reduce((s,r)=>s+(+r.fee||0),0), done = list.filter(r=>r.date && r.date<t0);
   const total = sum(done), paid = sum(list.filter(r=>r.paid)), due = sum(done.filter(r=>!r.paid));
@@ -751,6 +758,7 @@ function render(){
   }
   if(!list.length){ log.innerHTML = `<div class="empty"><strong>Κανένας αγώνας με αυτά τα φίλτρα</strong><button class="btn" type="button" data-act="clear">Καθαρισμός φίλτρων</button></div>`; return; }
   const payTitle = isAdmin ? "Αλλαγή κατάστασης πληρωμής" : "Μόνο ο διαχειριστής αλλάζει την πληρωμή";
+  const up = r => !!r.date && r.date >= today();   // not played yet: nothing owed
   const rowHtml = r=>{
      const lk = locked(r);
      return `<div class="row">
@@ -758,11 +766,11 @@ function render(){
      <div class="match c-match"><b class="tmw">${teamsHtml(r)}</b><div class="meta">${[r.comp,r.venue].filter(Boolean).map(esc).join(" · ")||"&nbsp;"}</div>${(r.notes||"").trim()?`<div class="rnote">${cmIcon("pen")} ${esc(r.notes.trim())}</div>`:""}</div>
      <div><span class="role ${r.role==="op"?"op":""}">${ROLE[r.role]||"—"}</span>${r.person?`<div class="who">με ${esc(r.person)}</div>`:""}</div>
      <div class="fee">${eur(r.fee)}</div>
-     <div><button class="pay ${r.paid?"yes":"no"}" type="button" data-act="toggle" data-id="${r.id}" ${isAdmin?"":"disabled"} title="${payTitle}">${r.paid?`${lk?cmIcon("lock"):"✓"} Πληρώθηκε${r.paidDate?` <small>${fmtDate(r.paidDate).slice(0,5)}</small>`:""}`:"● Εκκρεμεί"}</button></div>
+     <div><button class="pay ${r.paid?"yes":up(r)?"up":"no"}" type="button" data-act="toggle" data-id="${r.id}" ${isAdmin?"":"disabled"} title="${payTitle}">${r.paid?`${lk?cmIcon("lock"):"✓"} Πληρώθηκε${r.paidDate?` <small>${fmtDate(r.paidDate).slice(0,5)}</small>`:""}`:up(r)?"Προσεχής":"● Εκκρεμεί"}</button></div>
      <div><button class="more" type="button" data-act="edit" data-id="${r.id}" aria-label="${lk?"Κλειδωμένο – πληρώθηκε":"Επεξεργασία"}" title="${lk?"Πληρώθηκε – δεν αλλάζει":"Επεξεργασία"}" ${canWrite&&!lk?"":"disabled"}>${lk?cmIcon("lock"):"✎"}</button></div>
    </div>`;};
   log.innerHTML = COMPACT.matches
-    ? `<div class="drows">${list.map(r=>`<details class="drow ${r.paid?"done":"due"}" data-rid="${esc(r.id)}"${openRows.has(r.id)?" open":""}><summary><span class="dr-when">${dayName(r.date)} ${fmtDate(r.date)}${r.time?" · "+esc(r.time):""}</span><span class="dr-fee">${r.paid?"✓":"●"} ${eur(r.fee)}</span><span class="chev" aria-hidden="true">▾</span><span class="dr-teams">${esc([r.home,r.away].filter(Boolean).join(" – ")||"—")}</span></summary>${rowHtml(r)}</details>`).join("")}</div>`
+    ? `<div class="drows">${list.map(r=>`<details class="drow ${r.paid?"done":up(r)?"up":"due"}" data-rid="${esc(r.id)}"${openRows.has(r.id)?" open":""}><summary><span class="dr-when">${dayName(r.date)} ${fmtDate(r.date)}${r.time?" · "+esc(r.time):""}</span><span class="dr-fee">${r.paid?"✓ ":up(r)?"":"● "}${eur(r.fee)}</span><span class="chev" aria-hidden="true">▾</span><span class="dr-teams">${esc([r.home,r.away].filter(Boolean).join(" – ")||"—")}</span></summary>${rowHtml(r)}</details>`).join("")}</div>`
     : `<div class="row head"><div>Ημ/νία</div><div>Αγώνας</div><div>Θέση</div><div style="text-align:right">Αμοιβή</div><div>Πληρωμή</div><div></div></div>` + list.map(rowHtml).join("");
   log.querySelectorAll("details.drow").forEach(d=>d.addEventListener("toggle",()=>{ d.open ? openRows.add(d.dataset.rid) : openRows.delete(d.dataset.rid); }));
 }
@@ -856,6 +864,9 @@ $("fSeason").onchange = e => { st.season=e.target.value; st.month=""; render(); 
 $("fMonth").onchange = e => { st.month=e.target.value; render(); };
 $("fPerson").onchange = e => { st.person=e.target.value; render(); };
 $("fSearch").oninput = e => { st.q=e.target.value; render(); };
+/* phone: season, month, partner, role and payment fold behind the funnel button; the number shows how many are set */
+$("fTog").onclick = () => { const f=$("filters"), open=f.classList.toggle("fold")===false; $("fTog").setAttribute("aria-expanded", open); };
+function filtCount(){ const n=[st.season,st.month,st.person,st.role,st.paid].filter(Boolean).length, b=$("fTog").querySelector(".n"); b.hidden=!n; b.textContent=n; $("fTog").setAttribute("aria-label", "Φίλτρα"+(n?` (${n} ενεργά)`:"")); }
 function syncSeg(){
   const ob=$("fOrder"), asc=st.order==="asc"; ob.classList.toggle("asc",asc);
   ob.title = asc ? "Παλαιότεροι πρώτα (πάτα για νεότερους πρώτα)" : "Νεότεροι πρώτα (πάτα για παλαιότερους πρώτα)"; ob.setAttribute("aria-label", ob.title);
