@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
 <meta charset="utf-8">
-<meta name="app-build" content="dd34186acf3b">
+<meta name="app-build" content="e7016feb6481">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <title>Check Mate Challenge</title>
@@ -3921,7 +3921,9 @@ function renderUser(){
   const t=today();
   const items = allMyItems().slice().sort((a,b)=>((a.date||"")+(a.time||"")).localeCompare((b.date||"")+(b.time||"")));
   const upcoming = items.filter(i=>i.date>=t), past = items.filter(i=>i.date<t);   // oldest first (calendar order)
-  const total=items.reduce((a,i)=>a+(+i.fee||0),0), paid=items.filter(i=>i.paid).reduce((a,i)=>a+(+i.fee||0),0);
+  /* the summary counts the matches already played (upcoming ones are not owed yet); a match paid in advance still counts as paid */
+  const fee = a => a.reduce((s,i)=>s+(+i.fee||0),0);
+  const total=fee(past), paid=fee(items.filter(i=>i.paid)), due=fee(past.filter(i=>!i.paid));
   const seen = ls.get("cm.seen", {});
   const isChg = i => i.changedAt && (seen[i.id]||0) < i.changedAt && i.date >= t;
   const card=(i,first)=>`<article class="card ${i.role} ${i.date<t?"past "+(i.paid?"done":"due"):""} ${isChg(i)?"changed":""}">
@@ -3952,9 +3954,9 @@ function renderUser(){
     ${nudge}
     <section class="board four" aria-label="Σύνοψη">
       <div class="cell"><div class="k">Επόμενες</div><div class="v">${upcoming.length}</div></div>
-      <div class="cell"><div class="k">Σύνολο αμοιβών</div><div class="v">${eur(total)}</div></div>
+      <div class="cell"><div class="k">Σύνολο (έγιναν)</div><div class="v">${eur(total)}</div></div>
       <div class="cell"><div class="k">Πληρώθηκαν</div><div class="v">${eur(paid)}</div></div>
-      <div class="cell"><div class="k">Εκκρεμούν</div><div class="v or">${eur(total-paid)}</div></div>
+      <div class="cell"><div class="k">Εκκρεμούν</div><div class="v or">${eur(due)}</div></div>
     </section>
     <div class="sechead"><div><div class="hi">${greet}</div><h2 class="sec">Επόμενες αναθέσεις</h2></div></div>
     ${upcoming.length?`<div class="cards">${upcoming.map((i,k)=>card(i,k===0)).join("")}</div>`:`<div class="panel"><div class="empty">${EART.cal}<strong>Δεν έχεις αγώνες για την ώρα</strong><div>Μόλις σε ορίσει ο διαχειριστής σε αγώνα, θα εμφανιστεί εδώ.</div></div></div>`}
