@@ -156,6 +156,7 @@ function setupBackup() {
 function backupWeekly() {
   try { backupNow(); }
   catch (err) {
+    backupStatus_(false, String(err && err.message || err).slice(0, 300));
     MailApp.sendEmail(Session.getEffectiveUser().getEmail(), "Check Mate: το αυτόματο αντίγραφο απέτυχε",
       "Το εβδομαδιαίο αντίγραφο της βάσης δεν ολοκληρώθηκε.\n\nΣφάλμα: " + String(err && err.message || err) +
       "\n\nΔοκιμάστε ξανά από το Apps Script «Check Mate - email»: επιλέξτε backupNow και πατήστε Run.");
@@ -201,7 +202,17 @@ function backupNow() {
   const files = []; const it = folder.getFiles();
   while (it.hasNext()) { const f = it.next(); if (/^CheckMate_Backup_.*\.json$/.test(f.getName())) files.push(f); }
   files.sort((a, b) => b.getDateCreated() - a.getDateCreated()).slice(BACKUP_KEEP).forEach(f => f.setTrashed(true));
+  backupStatus_(true, name + " · " + n + " έγγραφα");
   return name + " · " + n + " έγγραφα";
+}
+
+/* the result of the last backup, shown to the admins in Check Mate → Βάση (Firestore config/backup, admins only) */
+function backupStatus_(ok, info) {
+  try {
+    UrlFetchApp.fetch(FS_ROOT + "/config/backup", { method: "patch", contentType: "application/json", muteHttpExceptions: true,
+      headers: { Authorization: "Bearer " + ScriptApp.getOAuthToken() },
+      payload: JSON.stringify({ fields: { at: { integerValue: String(Date.now()) }, ok: { booleanValue: !!ok }, info: { stringValue: String(info || "") } } }) });
+  } catch (e) {}
 }
 
 function backupFolder_() {
