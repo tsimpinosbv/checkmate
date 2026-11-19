@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
 <meta charset="utf-8">
-<meta name="app-build" content="e7016feb6481">
+<meta name="app-build" content="6b5f9e7d56c4">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <title>Check Mate Challenge</title>
@@ -580,6 +580,8 @@ dialog{border:0;padding:0;border-radius:14px;background:var(--surface);color:var
 dialog.wide{width:min(980px,calc(100vw - 32px))}
 dialog::backdrop{background:rgba(8,12,22,.55)}
 .form{display:flex;flex-direction:column;gap:14px;padding:20px}
+.fsec{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-top:1px solid var(--line);padding-top:10px;margin-top:2px}
+.fsec:first-of-type{border-top:0;padding-top:0}
 .form h2{font-family:var(--f-display);font-weight:800;text-transform:uppercase;font-size:24px;margin:0;letter-spacing:.02em}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
@@ -623,6 +625,8 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
 .unk{color:var(--warn);font-weight:600}
 .progress{height:6px;background:var(--sq);border-radius:999px;overflow:hidden}
 .progress i{display:block;height:100%;background:var(--accent);width:0;transition:width .2s}
+.toast.undo{display:flex;align-items:center;gap:14px;padding:8px 8px 8px 16px}
+.toast.undo button{border:0;background:var(--accent);color:#fff;font-weight:700;border-radius:8px;padding:7px 12px;cursor:pointer}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:10;max-width:calc(100vw - 32px)}
 @media (prefers-reduced-motion:no-preference){.toast{animation:up .2s ease-out}@keyframes up{from{transform:translate(-50%,8px);opacity:0}}}
 /* ---------- weekly unavailability (κωλύματα) ---------- */
@@ -792,6 +796,11 @@ table.grid select.gsel{width:100%;border:0;background:transparent;font:inherit;c
 .dbsteps{margin:0;padding:14px 18px 14px 38px;display:flex;flex-direction:column;gap:7px;font-size:14px;line-height:1.45}
 .dbsteps b{color:var(--ink)}
 .banner.dbwarn{background:var(--warn-bg);color:var(--warn)}
+.bkst{display:flex;align-items:flex-start;gap:8px;margin:12px 16px 0;padding:8px 12px;border-radius:10px;background:var(--sq);font-size:14px}
+.bkst .dot{width:10px;height:10px;border-radius:50%;background:var(--muted);flex:none;margin-top:5px}
+.bkst.ok{background:var(--good-bg);color:var(--good)}.bkst.ok .dot{background:var(--good)}
+.bkst.bad{background:var(--warn-bg);color:var(--warn)}.bkst.bad .dot{background:var(--warn)}
+.bkst small{display:block;opacity:.85}
 /* tabs as pills with an icon */
 .tabs{border-bottom:0;gap:6px}
 .tabs button{display:inline-flex;align-items:center;gap:7px;border:1px solid transparent;border-radius:999px;padding:8px 15px;margin:0;cursor:pointer;transition:background .15s,color .15s}
@@ -852,6 +861,7 @@ details.unav .pbody{padding-top:0}
 <dialog id="dlg" lang="el">
   <form class="form" id="frm" novalidate>
     <h2 id="frmTitle">Νέα ανάθεση</h2>
+    <div class="fsec">Αγώνας</div>
     <div class="grid2">
       <div class="f"><label for="iDate">Ημερομηνία</label><input id="iDate" type="date" required></div>
       <div class="f"><label for="iTime">Ώρα</label><input id="iTime" type="time"></div>
@@ -867,6 +877,7 @@ details.unav .pbody{padding-top:0}
       <div class="f"><label for="iTv">Κάλυψη</label><input id="iTv" list="dlTv" autocomplete="off" placeholder="ΕΡΤ / ΥΤ"></div>
       <div class="f"><label for="iVc">VAR</label><input id="iVc" autocomplete="off" placeholder="VC17"></div>
     </div>
+    <div class="fsec">Συνεργάτες &amp; αμοιβές</div>
     <div class="grid2">
       <div class="box"><span class="lbl">Χειριστής</span>
         <div class="f"><label for="iOp">Άτομο</label><div class="combo"><input id="iOp" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="iOpList" placeholder="Διάλεξε ή γράψε όνομα"><button type="button" class="combo-btn" tabindex="-1" aria-label="Λίστα ατόμων">▾</button><ul class="combo-list" id="iOpList" role="listbox" hidden></ul></div></div>
@@ -880,6 +891,7 @@ details.unav .pbody{padding-top:0}
       </div>
     </div>
     <div class="f" style="max-width:260px"><label for="iPay">Τρόπος πληρωμής (το βλέπουν τα άτομα της ανάθεσης)</label><select id="iPay"><option value="">—</option><option value="credit">Πίστωση</option><option value="cash">Μετρητά</option></select></div>
+    <div class="fsec">Ορατότητα &amp; σημειώσεις</div>
     <label class="check"><input type="checkbox" id="iVisible"> Ορατή στους χρήστες (τη βλέπουν ο χειριστής και ο βοηθός της)</label>
     <div class="f"><label for="iNotes">Σημειώσεις (τις βλέπουν τα άτομα της ανάθεσης)</label><textarea id="iNotes" placeholder="Ώρα προσέλευσης, παραλαβή εξοπλισμού…"></textarea></div>
     <div class="err" id="frmErr" hidden></div>
@@ -1240,6 +1252,39 @@ details.unav .pbody{padding-top:0}
       return null;
     }
   };
+})();
+
+/* «📵 Χωρίς σύνδεση»: a small label at the top while there is no internet (e.g. data off at the venue),
+   with the time the app last had a connection, so it is clear the information may not be the latest */
+(function(){
+  const K = "cm.lastOnline";
+  const mark = () => { if(navigator.onLine) try{ localStorage.setItem(K, String(Date.now())); }catch{} };
+  const pad = n => String(n).padStart(2, "0"), DAYS = ["Κυρ","Δευ","Τρι","Τετ","Πεμ","Παρ","Σαβ"];
+  function label(){
+    let t = 0; try{ t = +localStorage.getItem(K) || 0; }catch{}
+    if(!t) return "📵 Χωρίς σύνδεση";
+    const d = new Date(t), now = new Date(), hm = pad(d.getHours()) + ":" + pad(d.getMinutes());
+    const same = d.toDateString() === now.toDateString();
+    return "📵 Χωρίς σύνδεση · ενημέρωση " + (same ? hm : DAYS[d.getDay()] + " " + pad(d.getDate()) + "/" + pad(d.getMonth()+1) + " " + hm);
+  }
+  function show(){
+    let el = document.getElementById("cm-off");
+    if(navigator.onLine){ if(el) el.remove(); mark(); return; }
+    if(!document.body) return;
+    if(!document.getElementById("cm-off-css")){
+      const st = document.createElement("style"); st.id = "cm-off-css";
+      st.textContent = "#cm-off{position:fixed;left:50%;top:calc(6px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:2147482000;" +
+        "background:rgba(20,33,58,.92);color:#fff;border-radius:999px;padding:5px 12px;font:600 12.5px/1.3 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;" +
+        "white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.25);pointer-events:none;max-width:calc(100vw - 24px);overflow:hidden;text-overflow:ellipsis}" +
+        "@media print{#cm-off{display:none}}";
+      document.head.appendChild(st);
+    }
+    if(!el){ el = document.createElement("div"); el.id = "cm-off"; el.setAttribute("role", "status"); document.body.appendChild(el); }
+    el.textContent = label();
+  }
+  addEventListener("online", show); addEventListener("offline", show);
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", show); else show();
+  setInterval(mark, 60000);
 })();
 
 </script>
@@ -1777,6 +1822,20 @@ const whenMain = m => esc(m.dateText || niceDate(m.date));
 const whenSub = m => [m.time||m.timeText||"", m.dateTbc?"ημ. αγωνιστικής":""].filter(Boolean).map(esc).join(" · ");
 const ls = {get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch{return d}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
 function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3000); }
+/* «Αναίρεση» for a few seconds after deleting an assignment: puts it back exactly as it was and
+   drops the cancellation emails it queued (they are held back until the time is up) */
+function undoToast(m, box){
+  const t=document.createElement("div"); t.className="toast undo"; t.innerHTML=`<span>Η ανάθεση διαγράφηκε</span><button type="button">Αναίρεση</button>`;
+  document.body.appendChild(t);
+  clearTimeout(outboxTimer); outboxTimer = setTimeout(flushNotes, 9000);
+  const end = setTimeout(()=>t.remove(), 8000);
+  t.querySelector("button").onclick = async ()=>{
+    clearTimeout(end); t.remove();
+    try{ outbox = JSON.parse(box)||{}; saveOutbox(); await syncAndSave({...m}, {...m}); toast("Η ανάθεση επανήλθε"); }
+    catch(e){ console.warn(e); toast("Η αναίρεση απέτυχε"); }
+    clearTimeout(outboxTimer); if(Object.keys(outbox).length) outboxTimer = setTimeout(flushNotes, 4000);
+  };
+}
 function toastLong(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; t.style.maxWidth="min(520px,calc(100vw - 32px))"; document.body.appendChild(t); setTimeout(()=>t.remove(),7000); }
 async function w(fn){ for(let i=0;;i++){ try{ return await fn(); }catch(e){ if(i<5 && (e?.code==="resource_exhausted"||e?.code==="unavailable")){ await sleep(400*2**i); continue; } throw e; } } }
 
@@ -1859,6 +1918,7 @@ function startAdmin(){
   db.doc("config/notify").onSnapshot(s=>{ notify={email:false, endpoint:"", ...(s.exists?s.data():{})}; if(tab==="people") renderAdmin(); }, ()=>{});
   syncPublic();
   db.doc("config/archive").onSnapshot(s=>{ archNotice = s.exists ? s.data() : null; if(tab==="db") renderAdmin(); }, ()=>{});
+  db.doc("config/backup").onSnapshot(s=>{ backupInfo = s.exists ? s.data() : null; if(tab==="db" && !document.querySelector("#seasonForm :focus")) renderAdmin(); }, ()=>{});
   db.doc("config/season").onSnapshot(s=>{ seasonCfg = s.exists ? s.data() : null; if(tab==="db" && !document.querySelector("#seasonForm :focus")) renderAdmin(); }, ()=>{});
   claude.use("mail").then(x=>{ mail=x; if(Object.keys(outbox).length) outboxTimer = setTimeout(flushNotes, 4000); }).catch(()=>{});
   db.doc("config/fees").onSnapshot(s=>{ if(s.exists) fees={op:80,as:40,...s.data()}; }, ()=>{});
@@ -2250,7 +2310,7 @@ function personStats(slots){
   return [...groupBy(slots,x=>norm(x.name)).values()].map(v=>({name:v[0].name, ...statTotals(v)}));
 }
 /* ---------- tab: «Βάση» (space used, season archive, active / inactive people) ---------- */
-let archNotice = null, seasonCfg = null;   // config/season = {end, to}: the Apps Script emails a reminder on that day   // config/archive = {season, until, at}: users are told this season will be removed
+let archNotice = null, seasonCfg = null, backupInfo = null;   // config/backup = {at, ok, info}: written by the Apps Script after each automatic backup   // config/season = {end, to}: the Apps Script emails a reminder on that day   // config/archive = {season, until, at}: users are told this season will be removed
 const DB_MAX_MATCHES = 2000;   // the programme loads at most this many matches
 const DB_BYTES = 1024**3;      // free Firestore storage
 const fmtMB = b => b < 1048576 ? Math.max(1,Math.round(b/1024))+" KB" : (b/1048576).toFixed(1).replace(".",",")+" MB";
@@ -2285,6 +2345,10 @@ function renderDb(){
       </form>
       <p class="note" style="margin:0;padding:0 16px 12px">${saved ? `Στις <b>${fmtDate(saved)}</b> θα σταλεί email με τα βήματα για τα αντίγραφα ασφαλείας και την παλιά σεζόν.` : `<b>Δεν έχει οριστεί.</b> Βάλε την ημερομηνία που τελειώνει η σεζόν και πάτα Αποθήκευση.`} Αν αλλάξει το τέλος της σεζόν, άλλαξε την ημερομηνία εδώ.</p></section>`; })()}
     <section class="panel"><div class="st-h">Αυτόματο πλήρες αντίγραφο</div>
+      ${(()=>{ const b = backupInfo; if(!b?.at) return `<div class="bkst"><span class="dot"></span>Δεν έχει γίνει ακόμα αυτόματο αντίγραφο από αυτή την έκδοση· θα φανεί εδώ μετά την επόμενη Κυριακή.</div>`;
+        const d = new Date(+b.at), when = `${DAYS[d.getDay()]} ${fmtDate(ymd(d))}, ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+        const old = Date.now() - b.at > 8*864e5;   // more than a week: the Sunday run did not happen
+        return `<div class="bkst ${b.ok && !old ? "ok" : "bad"}"><span class="dot"></span><span>Τελευταίο αυτόματο αντίγραφο: <b>${when}</b> ${b.ok ? (old ? "· πάνω από μία εβδομάδα πριν" : "✓") : "· απέτυχε"}${b.ok ? "" : `<small>${esc(b.info||"")}</small>`}</span></div>`; })()}
       <p class="note" style="margin:0;padding:12px 16px">Κάθε <b>Κυριακή στις 23:00</b> όλη η βάση (αγώνες, άτομα, συνδέσεις, ομάδες με σήματα, γήπεδα, ρυθμίσεις) αποθηκεύεται αυτόματα στο <a href="https://drive.google.com/drive/my-drive?authuser=videochallengemate@gmail.com" target="_blank" rel="noopener">Drive του videochallengemate</a> → <b>Check Mate Backup → Αυτόματα αντίγραφα</b>. Κρατούνται τα 12 πιο πρόσφατα (3 μήνες). Αν κάποιο αποτύχει, έρχεται email στον videochallengemate. Δεν χρειάζεται να κάνεις τίποτα.</p>
       <div class="prow"><div class="who"><b>Επαναφορά από πλήρες αντίγραφο</b><span class="note">Κατέβασε από το Drive το αρχείο της ημερομηνίας που θέλεις και διάλεξέ το εδώ. Η βάση γυρίζει όπως ήταν εκείνη τη μέρα.</span></div>
         <div class="actions"><label class="btn small danger">${cmIcon("ul")} Επιλογή αρχείου<input type="file" id="fullRestore" accept=".json,application/json" hidden></label></div></div>
@@ -3337,7 +3401,8 @@ $("delWrap").addEventListener("click", async e=>{
   const a=e.target.closest("[data-del]")?.dataset.del;
   if(a==="ask") $("delWrap").innerHTML=`<span class="confirm">Οριστικά; <button type="button" class="btn danger" data-del="yes">Ναι, διαγραφή</button><button type="button" class="btn" data-del="no">Όχι</button></span>`;
   if(a==="no") $("delWrap").innerHTML=`<button type="button" class="btn danger" data-del="ask">Διαγραφή</button>`;
-  if(a==="yes"){ try{ await deleteMatch(editing); $("dlg").close(); toast("Η ανάθεση διαγράφηκε"); }catch{ $("frmErr").hidden=false; $("frmErr").textContent="Η διαγραφή απέτυχε."; } }
+  if(a==="yes"){ try{ const copy = JSON.parse(JSON.stringify(editing)), box = JSON.stringify(outbox);
+      await deleteMatch(editing); $("dlg").close(); undoToast(copy, box); }catch{ $("frmErr").hidden=false; $("frmErr").textContent="Η διαγραφή απέτυχε."; } }
 });
 $("frm").addEventListener("submit", async e=>{
   e.preventDefault();
@@ -3434,6 +3499,17 @@ const drop=$("drop");
 ["dragover","dragenter"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over");}));
 ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,()=>drop.classList.remove("over")));
 drop.addEventListener("drop",e=>{e.preventDefault(); const f=e.dataTransfer.files[0]; if(f) readFile(f);});
+/* closest existing name to a new one from the import (typo, missing letter, words swapped), or "" */
+function nearName(x, known){
+  const lev=(a,b)=>{ const d=[...Array(b.length+1).keys()]; for(let i=1;i<=a.length;i++){ let p=d[0]; d[0]=i; for(let j=1;j<=b.length;j++){ const t=d[j]; d[j]=Math.min(d[j]+1,d[j-1]+1,p+(a[i-1]===b[j-1]?0:1)); p=t; } } return d[b.length]; };
+  const k=s=>norm(s).replace(/[^A-ZΑ-Ω0-9 ]/g," ").split(/\s+/).filter(Boolean), a=k(x), as=[...a].sort().join(" ");
+  let best="", bd=99;
+  for(const v of Object.values(known)){ const nm=v?.name||v; if(typeof nm!=="string") continue; const b=k(nm);
+    const d = [...b].sort().join(" ")===as ? 0 : lev(a.join(" "), b.join(" "));
+    const lim = Math.max(1, Math.min(3, Math.floor(Math.min(a.join(" ").length, b.join(" ").length)/6)));
+    if(d<=lim && d<bd){ bd=d; best=nm; } }
+  return best;
+}
 $("impFile").onchange=e=>{ const f=e.target.files[0]; if(f) readFile(f); };
 /* «Πρότυπο Excel»: an empty sheet with the columns the import reads (one sheet only: the import reads every sheet).
    The header cells carry a note with an example; ΓΗΠΕΔΟ and ΚΑΛΥΨΗ offer the known values as a list. */
@@ -3484,15 +3560,16 @@ async function readFile(file){
     });
     const n = s=>impRows.filter(r=>r.status===s).length;
     const unknown = uniq(impRows.flatMap(r=>[r.op,r.as]).filter(x=>x && !known[norm(x)]));
+    const near = Object.fromEntries(unknown.map(x=>[x, nearName(x, known)]).filter(e=>e[1]));
     $("impSummary").innerHTML = `<b style="color:var(--ink)">${impRows.length}</b> αγώνες στο αρχείο: <span class="st new">${n("new")} νέοι</span> · <span class="st upd">${n("upd")} με αλλαγές</span> · <span class="st same">${n("same")} ίδιοι</span>${n("dup")?` · ${n("dup")} διπλές γραμμές (παραλείπονται)`:""}`
       + (impRows.some(r=>r.warn)?`<br><span class="err">⚠ ${impRows.filter(r=>r.warn).length} αγώνες με ύποπτη ημερομηνία (π.χ. γρ. ${impRows.find(r=>r.warn).line}: ${fmtDate(impRows.find(r=>r.warn).date)}) – διόρθωσέ τες στο Excel ή μετά την εισαγωγή.</span>`:"")
-      + (unknown.length?`<br><span class="unk">Νέα ονόματα που θα προστεθούν: ${unknown.map(esc).join(", ")}</span>`:"")
+      + (unknown.length?`<br><span class="unk">Νέα ονόματα που θα προστεθούν: ${unknown.map(x=>esc(x)+(near[x]?` <b>(μήπως «${esc(near[x])}»;)</b>`:"")).join(", ")}</span>${Object.keys(near).length?`<br><span class="note">Αν είναι το ίδιο άτομο, διόρθωσε το όνομα στο Excel και φόρτωσέ το ξανά.</span>`:""}`:"")
       + (parsed.skipped.length?`<br><span class="err">Παραλείφθηκαν ${parsed.skipped.length} γραμμές: ${parsed.skipped.slice(0,3).map(s=>`γρ. ${s.line}`).join(", ")}${parsed.skipped.length>3?"…":""}</span>`:"");
     const lab={new:"ΝΕΟΣ",upd:"ΑΛΛΑΓΗ",same:"ΙΔΙΟΣ",dup:"ΔΙΠΛΟΣ"};
     let lastComp=null;
     $("impBody").innerHTML = impRows.map(r=>{
       const head = r.comp!==lastComp ? (lastComp=r.comp, `<tr><td colspan="9" style="background:var(--blue-bg);color:var(--blue);font-weight:600">${esc(r.comp||"—")}</td></tr>`) : "";
-      const nm = x => x ? `<span class="${known[norm(x)]?"":"unk"}">${esc(x)}</span>` : `<span class="note">—</span>`;
+      const nm = x => x ? `<span class="${known[norm(x)]?"":"unk"}"${near[x]?` title="Μήπως «${esc(near[x])}»;"`:""}>${esc(x)}${near[x]?" ⚠":""}</span>` : `<span class="note">—</span>`;
       return head+`<tr><td><span class="st ${r.status}">${lab[r.status]}</span></td><td${r.warn?` class="err" title="${esc(r.warn)}"`:""}>${r.warn?"⚠ ":""}${esc(r.dateText||fmtDate(r.date))}${r.dateTbc?` <span class="note" title="Ημερομηνία αγωνιστικής">~</span>`:""}</td><td>${esc(r.time||r.timeText)}</td><td>${teams(r)}</td><td>${esc(r.venue)}</td><td>${esc(r.tv)}</td><td>${esc(r.vc)}</td><td>${nm(r.op)}</td><td>${nm(r.as)}</td></tr>`;
     }).join("");
     $("impStep1").hidden=true; $("impStep2").hidden=false;
