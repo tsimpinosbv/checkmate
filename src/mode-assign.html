@@ -93,6 +93,10 @@ table.grid td input.unav{color:var(--bad);font-weight:600}
 table.grid td.ck{text-align:center}
 table.grid td.dd{position:relative}
 table.grid td.dd input{padding-right:24px!important}
+table.grid td.dt{position:relative}table.grid td.dt input[type=text]{padding-right:28px;font-variant-numeric:tabular-nums}
+table.grid .gcal{position:absolute;right:2px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--muted);width:26px;height:28px;border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+table.grid .gcal:hover{background:var(--sq);color:var(--ink)}table.grid .gcal svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+table.grid .gcalpick{position:absolute;left:0;bottom:0;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0}
 table.grid .gdd{position:absolute;right:2px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--muted);width:22px;height:26px;border-radius:5px;font-size:12px;cursor:pointer}
 table.grid .gdd:hover{background:var(--sq);color:var(--ink)}
 .combo-list.gdrop{position:fixed;left:0;right:auto;top:auto;z-index:60;max-height:260px;overflow:auto;max-width:min(360px,calc(100vw - 8px))}
@@ -1050,7 +1054,7 @@ function renderSched(months, people, seasons=[]){
    Each cell saves itself when you leave it (change event), through the same syncAndSave as the form:
    users' copies, «Άλλαξε», emails and «Το είδε» work exactly the same. */
 const GCOLS = [
-  ["date","Ημ/νία","date",128],["time","Ώρα","text",66],["comp","Διοργάνωση","text",128,1],["home","Γηπεδούχος","text",132,1],["away","Φιλοξενούμενη","text",132,1],
+  ["date","Ημ/νία","date",104],["time","Ώρα","text",66],["comp","Διοργάνωση","text",152,1],["home","Γηπεδούχος","text",132,1],["away","Φιλοξενούμενη","text",132,1],
   ["venue","Γήπεδο","text",118,1],["tv","Κάλυψη","text",74,1],["vc","VAR","text",66,1],
   ["op","Χειριστής","text",170,1],["fee_op","€","num",58],["paid_op","Πλ.","check",40],
   ["as","Βοηθός","text",170,1],["fee_as","€","num",58],["paid_as","Πλ.","check",40],
@@ -1062,6 +1066,8 @@ function gridHtml(list){
     if(t==="check"){ const on = f==="visible" ? !m.hidden : !!m[f]; return `<td class="ck"><input type="checkbox" ${base} ${on?"checked":""} ${f.startsWith("paid_")&&!m[f.slice(5)]?"disabled":""}></td>`; }
     const v = t==="num" ? (m[f]??"") : f==="date" ? (m.date||"") : f==="time" ? (m.time||m.timeText||"") : (m[f]??"");
     const flag = (f==="op"||f==="as") && m[f] && (unavailOn(m[f], m.date) || clashOf(m, f)) ? " unav" : "";
+    /* date as dd/mm/yy (the browser's own date field follows the computer's language, e.g. 11/21/2026); 📅 opens the calendar */
+    if(t==="date") return `<td class="dt"><input ${base} type="text" inputmode="numeric" placeholder="ηη/μμ/εε" value="${esc(dmy(m.date))}" autocomplete="off" title="${esc(m.date?dayName(m.date)+" "+fmtDate(m.date):"")}"><button type="button" class="gcal" tabindex="-1" data-cal="${id}" aria-label="Ημερολόγιο"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></button><input type="date" class="gcalpick" tabindex="-1" aria-hidden="true" data-pick="${id}" value="${esc(m.date||"")}"></td>`;
     return `<td${dl?' class="dd"':""}><input ${base} class="${flag.trim()}" type="${t==="date"?"date":t==="num"?"number":"text"}" ${t==="num"?'inputmode="decimal" min="0" step="1"':""} value="${esc(v)}" autocomplete="off"${dl?' role="combobox" aria-autocomplete="list" aria-expanded="false"':""}>${dl?`<button type="button" class="gdd" tabindex="-1" data-dd="${id}" aria-label="Όλες οι επιλογές">▾</button>`:""}</td>`;
   };
   return `<div class="gwrap" id="gwrap"><table class="grid"><colgroup>${GCOLS.map(c=>`<col style="width:${c[3]}px">`).join("")}<col style="width:40px"></colgroup>
@@ -1115,6 +1121,14 @@ document.addEventListener("mousedown", e=>{ if(e.target.closest(".gdd")) e.preve
 document.addEventListener("click", e=>{ const b=e.target.closest(".gdd"); if(!b) return; const inp=$(b.dataset.dd); if(!inp) return;
   if(gd.id===inp.id && !$("gdrop").hidden) gdClose(); else { inp.focus(); gd.active=-1; gdOpen(inp,""); } });
 window.addEventListener("scroll", ()=>{ if(gd.id && $(gd.id)) gdOpen($(gd.id), $(gd.id).value===sched.find(x=>x.id===$(gd.id).dataset.id)?.[$(gd.id).dataset.g] ? "" : $(gd.id).value); }, true);
+/* dd/mm/yy for the table; reads back 21/11/26, 21/11/2026, 21.11, 21-11 (no year = this year) */
+const dmy = d => d ? `${d.slice(8,10)}/${d.slice(5,7)}/${d.slice(2,4)}` : "";
+function parseDmy(v){ const m=/^(\d{1,2})[\/.\-\s](\d{1,2})(?:[\/.\-\s](\d{2}|\d{4}))?$/.exec(String(v).trim()); if(!m) return "";
+  const y = m[3] ? (m[3].length===2 ? 2000 + +m[3] : +m[3]) : new Date().getFullYear(), mo = +m[2], da = +m[1], t = new Date(y, mo-1, da);
+  return t.getFullYear()===y && t.getMonth()===mo-1 && t.getDate()===da ? `${y}-${String(mo).padStart(2,"0")}-${String(da).padStart(2,"0")}` : ""; }
+document.addEventListener("click", e=>{ const b=e.target.closest(".gcal"); if(!b) return; const p=document.querySelector(`[data-pick="${b.dataset.cal}"]`); if(!p) return;
+  try{ p.showPicker(); }catch{ p.style.pointerEvents="auto"; p.focus(); p.click(); } });
+document.addEventListener("change", e=>{ const p=e.target.closest?.(".gcalpick"); if(!p || !p.value) return; const inp=$(p.dataset.pick); if(!inp) return; inp.value=dmy(p.value); saveCell(inp); });
 async function saveCell(el){
   await new Promise(r=>setTimeout(r,0));   // let the focus move to the next cell first, so a refresh keeps it there
   const m = sched.find(x=>x.id===el.dataset.id); if(!m) return;
@@ -1125,7 +1139,7 @@ async function saveCell(el){
   else if(f==="paid_op"||f==="paid_as"){ const r=f.slice(5); d[f]=!!v; d["paidDate_"+r] = v ? (m[f] ? m["paidDate_"+r] : today()) : ""; }
   else if(f==="fee_op"||f==="fee_as") d[f] = +String(v).replace(",",".") || 0;
   else d[f] = v;
-  if(f==="date"){ if(!v){ toast("Η ημερομηνία χρειάζεται"); return back(); } d.dateText = ""; }
+  if(f==="date"){ if(!v){ toast("Η ημερομηνία χρειάζεται"); return back(); } const iso = /^\d{4}-\d\d-\d\d$/.test(v) ? v : parseDmy(v); if(!iso){ toast("Γράψε την ημερομηνία π.χ. 21/11/26"); return back(); } d.date = iso; d.dateText = ""; }
   if(f==="home" && !v){ toast("Ο γηπεδούχος χρειάζεται"); return back(); }
   if(f==="time"){ if(v && !/^\d{1,2}[:.]\d{2}$/.test(v)){ toast("Γράψε την ώρα π.χ. 18:30"); return back(); } d.time = v.replace(".",":"); d.timeText = ""; }
   if(f==="op"||f==="as"){
