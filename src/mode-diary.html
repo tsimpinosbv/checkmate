@@ -191,7 +191,7 @@ dialog::backdrop{background:rgba(8,12,22,.55)}
   <section class="board" aria-label="Σύνολα φιλτραρισμένων αγώνων">
     <div class="cell"><div class="k">Αγώνες</div><div class="v" id="sMatches">0</div></div>
     <div class="cell"><div class="k">Χειριστής / Βοηθός</div><div class="v" id="sRoles">0 / 0</div></div>
-    <div class="cell"><div class="k">Σύνολο αμοιβών</div><div class="v" id="sTotal">0 €</div></div>
+    <div class="cell"><div class="k">Σύνολο (έγιναν)</div><div class="v" id="sTotal">0 €</div></div>
     <div class="cell"><div class="k">Πληρώθηκαν</div><div class="v" id="sPaid">0 €</div></div>
     <div class="cell"><div class="k">Εκκρεμούν</div><div class="v or" id="sDue">0 €</div></div>
   </section>
@@ -341,11 +341,12 @@ const teamsHtml = r => { if(!tlogo(r.home) && !tlogo(r.away)) return `${esc(r.ho
 function render(){
   refreshOptions();
   const list = filtered();
-  const total = list.reduce((s,r)=>s+(+r.fee||0),0);
-  const paid = list.filter(r=>r.paid).reduce((s,r)=>s+(+r.fee||0),0);
+  /* amounts count the matches already played (upcoming ones are not owed yet); a match paid in advance still counts as paid */
+  const t0 = today(), sum = a => a.reduce((s,r)=>s+(+r.fee||0),0), done = list.filter(r=>r.date && r.date<t0);
+  const total = sum(done), paid = sum(list.filter(r=>r.paid)), due = sum(done.filter(r=>!r.paid));
   $("sMatches").textContent = list.length;
   $("sRoles").textContent = `${list.filter(r=>r.role==="op").length} / ${list.filter(r=>r.role==="as").length}`;
-  $("sTotal").textContent = eur(total); $("sPaid").textContent = eur(paid); $("sDue").textContent = eur(total-paid);
+  $("sTotal").textContent = eur(total); $("sPaid").textContent = eur(paid); $("sDue").textContent = eur(due);
 
   const log = $("log");
   if(!loaded()){ return; }
