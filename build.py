@@ -23,6 +23,13 @@ out=f'''<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t)}}catch(e){{}}</script>
+<script>/* the phone's copy opens at once; if the service worker finds a newer version while the page is still opening
+   (nothing touched yet, first 20 s), reload at once so the new version is used (at most twice a minute) */
+(function(){{var used=false,sw=navigator.serviceWorker;if(!sw)return;
+["pointerdown","keydown","touchstart","wheel"].forEach(function(e){{addEventListener(e,function(){{used=true}},{{capture:true,passive:true}})}});
+sw.addEventListener("message",function(e){{if(!e.data||e.data.type!=="cm-update"||used||performance.now()>20000)return;
+try{{var k="cm.updReload",n=JSON.parse(sessionStorage.getItem(k)||"[]").filter(function(t){{return Date.now()-t<60000}});if(n.length>=2)return;n.push(Date.now());sessionStorage.setItem(k,JSON.stringify(n))}}catch(x){{}}
+location.reload()}});if(sw.startMessages)sw.startMessages()}})();</script>
 <title>Check Mate Challenge</title>
 <meta name="theme-color" content="#14213a">
 <meta name="description" content="Αγώνες, αναθέσεις και πληρωμές Video Check.">
@@ -142,6 +149,13 @@ diary=f'''<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t)}}catch(e){{}}</script>
+<script>/* the phone's copy opens at once; if the service worker finds a newer version while the page is still opening
+   (nothing touched yet, first 20 s), reload at once so the new version is used (at most twice a minute) */
+(function(){{var used=false,sw=navigator.serviceWorker;if(!sw)return;
+["pointerdown","keydown","touchstart","wheel"].forEach(function(e){{addEventListener(e,function(){{used=true}},{{capture:true,passive:true}})}});
+sw.addEventListener("message",function(e){{if(!e.data||e.data.type!=="cm-update"||used||performance.now()>20000)return;
+try{{var k="cm.updReload",n=JSON.parse(sessionStorage.getItem(k)||"[]").filter(function(t){{return Date.now()-t<60000}});if(n.length>=2)return;n.push(Date.now());sessionStorage.setItem(k,JSON.stringify(n))}}catch(x){{}}
+location.reload()}});if(sw.startMessages)sw.startMessages()}})();</script>
 <title>Check Mate · Ημερολόγιο</title>
 <meta name="theme-color" content="#1d6b47">
 <meta name="description" content="Προσωπικό ημερολόγιο αγώνων και πληρωμών.">
