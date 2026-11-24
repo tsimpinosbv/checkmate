@@ -2,9 +2,9 @@
 <html lang="el">
 <head>
 <meta charset="utf-8">
-<meta name="app-version" content="116">
-<meta name="app-date" content="2026-11-24T22:10">
-<meta name="app-build" content="ecc74f9dd41f">
+<meta name="app-version" content="117">
+<meta name="app-date" content="2026-11-24T22:34">
+<meta name="app-build" content="c8cae1fee81a">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <script>/* the phone's copy opens at once; if the service worker finds a newer version while the page is still opening
@@ -1838,15 +1838,22 @@ function statCharts(slots, ppl, all){
       <section class="panel"><div class="st-h">Αναθέσεις ανά άτομο</div><div class="chart">${leg}<div class="pchart">${people}</div></div></section>
     </div>`;
 }
-/* statistics per competition: all rounds together («5Η ΑΓΩΝΙΣΤΙΚΗ NOVIBET V.L.» → «NOVIBET V.L.»),
-   and «VOLLEY LEAGUE» written as «V.L.» so both spellings count as one */
+/* statistics per competition (category): all rounds together («5Η ΑΓΩΝΙΣΤΙΚΗ NOVIBET V.L.» → «NOVIBET V.L.»),
+   «ΠΡΟΚΡΙΜΑΤΙΚΑ» merged into the competition, «VOLLEY LEAGUE» written as «V.L.». Greek and Latin look-alike letters
+   typed by mistake (Η/H, Β/B…) count as the same, e.g. «NOVIΒET» with a Greek Β = «NOVIBET». */
+const LOOK = {"Α":"A","Β":"B","Ε":"E","Ζ":"Z","Η":"H","Ι":"I","Κ":"K","Μ":"M","Ν":"N","Ο":"O","Ρ":"P","Τ":"T","Υ":"Y","Χ":"X"};
+const toLatin = w => w.replace(/[ΑΒΕΖΗΙΚΜΝΟΡΤΥΧ]/g, c=>LOOK[c]);
+/* one word: Latin if it is written in Latin (with stray Greek look-alikes), else as it is */
+const fixWord = w => /[A-Z]/.test(w) && !/[ΓΔΘΛΞΠΣΦΨΩ]/.test(w) ? toLatin(w) : w;
 function compGroup(c){
-  const s = String(c||"").trim().replace(/\s+/g," ");
+  let s = String(c||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/\s+/g," ").trim();
   if(!s) return "—";
-  const t = s.replace(/^\d+\s*(?:[ηΗήΉ]|ος|ΟΣ|ης|ΗΣ|η\.|Η\.)?\s*(?:αγωνιστικ[ηή]|ΑΓΩΝΙΣΤΙΚ[ΗΉ]|γ[υύ]ρος|ΓΥΡΟΣ|ROUND)\s*[-–:·.]?\s*/,"")
-             .replace(/^(?:αγωνιστικ[ηή]|ΑΓΩΝΙΣΤΙΚ[ΗΉ]|ROUND)\s*\d+\s*[-–:·.]?\s*/,"")
-             .replace(/\bVOLLEY\s+LEAGUE\b/gi,"V.L.").trim();
-  return t || s;
+  const f = toLatin(s);   // same length, look-alikes folded: easier to find the round words
+  const m = /^\d+\s*(?:H|OΣ|HΣ)?\s*\.?\s*(?:AΓΩNIΣTIKH|ΓYPOΣ|ROUND)\s*[-–:·.]?\s*/.exec(f) || /^(?:AΓΩNIΣTIKH|ROUND)\s*\d+\s*[-–:·.]?\s*/.exec(f);
+  if(m) s = s.slice(m[0].length);
+  s = s.replace(/^ΠΡΟΚΡΙΜΑΤΙΚ(?:Α|ΟΙ|ΟΣ)\s+/,"").replace(/\bVOLLEY\s+LEAGUE\b/g,"V.L.");
+  s = s.split(" ").map(fixWord).join(" ").trim();
+  return s || "—";
 }
 function statTables(slots){   // per month + per competition, used by both admin and user views
   const byM=[...groupBy(slots,x=>(x.date||"").slice(0,7)).entries()].filter(([k])=>k).sort((a,b)=>a[0].localeCompare(b[0]));
@@ -2424,7 +2431,7 @@ function renderUnav(){
 /* ---------- tab: statistics ---------- */
 const sst = {season:null, month:"", comp:"", sort:"n", dir:-1};
 function statSlots(){
-  return slotsOf(sched).filter(x=>(!sst.season||seasonOf(x.m.date)===sst.season) && (!sst.month||(x.m.date||"").slice(0,7)===sst.month) && (!sst.comp||(x.m.comp||"")===sst.comp))
+  return slotsOf(sched).filter(x=>(!sst.season||seasonOf(x.m.date)===sst.season) && (!sst.month||(x.m.date||"").slice(0,7)===sst.month) && (!sst.comp||compGroup(x.m.comp)===sst.comp))
     .map(x=>({name:x.name, date:x.m.date, comp:x.m.comp||"", role:x.role, fee:x.fee, paid:x.paid}));
 }
 function personStats(slots){
@@ -2580,7 +2587,7 @@ document.addEventListener("change", async e=>{
 function renderStats(seasons){
   if(sst.season===null) sst.season = seasons.includes(curSeason()) ? curSeason() : (seasons[0]||"");
   const inSeason = sched.filter(m=>!sst.season||seasonOf(m.date)===sst.season);
-  const months = uniq(inSeason.map(m=>(m.date||"").slice(0,7))), comps = uniq(inSeason.map(m=>m.comp));
+  const months = uniq(inSeason.map(m=>(m.date||"").slice(0,7))), comps = uniq(inSeason.map(m=>compGroup(m.comp))).filter(c=>c!=="—").sort((a,b)=>a.localeCompare(b,"el"));
   if(sst.month && !months.includes(sst.month)) sst.month=""; if(sst.comp && !comps.includes(sst.comp)) sst.comp="";
   const slots = statSlots(), ppl = personStats(slots), all = statTotals(slots);
   const k=sst.sort; ppl.sort((a,b)=> (k==="name" ? a.name.localeCompare(b.name,"el") : (a[k]>b[k]?1:a[k]<b[k]?-1:0)) * sst.dir || a.name.localeCompare(b.name,"el"));
@@ -2618,7 +2625,7 @@ function renderStats(seasons){
 /* «Εκκαθαριστικό»: one page per person for the season / month / competition chosen in the statistics */
 function statement(name){
   const pn=norm(name);
-  const list=slotsOf(sched).filter(x=>norm(x.name)===pn && (!sst.season||seasonOf(x.m.date)===sst.season) && (!sst.month||(x.m.date||"").slice(0,7)===sst.month) && (!sst.comp||(x.m.comp||"")===sst.comp))
+  const list=slotsOf(sched).filter(x=>norm(x.name)===pn && (!sst.season||seasonOf(x.m.date)===sst.season) && (!sst.month||(x.m.date||"").slice(0,7)===sst.month) && (!sst.comp||compGroup(x.m.comp)===sst.comp))
     .sort((a,b)=>(a.m.date||"").localeCompare(b.m.date||"")||(a.m.time||"").localeCompare(b.m.time||""));
   if(!list.length){ toast("Δεν υπάρχουν αναθέσεις για αυτό το άτομο"); return; }
   const tot=list.reduce((a,x)=>a+x.fee,0), paid=list.filter(x=>x.paid).reduce((a,x)=>a+x.fee,0);
@@ -2683,7 +2690,7 @@ async function exportStats(){
     const sec = (key,label,fmt)=>[[label,"Αναθέσεις","Χειριστής","Βοηθός","Αμοιβές (€)","Πληρώθηκαν (€)","Εκκρεμούν (€)"],
       ...[...groupBy(slots,key).entries()].sort((a,b)=>String(a[0]).localeCompare(String(b[0]),"el")).map(([k,v])=>{ const t=statTotals(v); return [fmt(k),t.n,t.op,t.as,t.fee,t.paid,t.due]; })];
     add("Ανά μήνας", sec(x=>(x.date||"").slice(0,7),"Μήνας",monthLabel), [18,11,11,9,12,14,13]);
-    add("Ανά διοργάνωση", sec(x=>x.comp||"—","Διοργάνωση",k=>k), [34,11,11,9,12,14,13]);
+    add("Ανά διοργάνωση", sec(x=>compGroup(x.comp),"Διοργάνωση",k=>k), [34,11,11,9,12,14,13]);
     X.writeFile(wb, `CheckMate_Statistika_${(sst.season||"ola").replace("/","-")}${sst.month?"_"+sst.month:""}_${today()}.xlsx`);
     toast("Το Excel στατιστικών κατέβηκε");
   }catch(err){ console.warn(err); toast(err?.message==="load"?"Δεν φορτώθηκε η βιβλιοθήκη Excel. Έλεγξε τη σύνδεση.":"Η εξαγωγή απέτυχε"); }
@@ -3800,8 +3807,8 @@ $("btnXlsx").onclick = async ()=>{
     groupSheet("Ανά άτομο","Άτομο","K",people,k=>k,s=>s.name);
     const months=[...new Set(slots.map(s=>(s.m.date||"").slice(0,7)))].sort();
     groupSheet("Ανά μήνα","Μήνας","D",months.map(monthLabel),k=>k,s=>monthLabel((s.m.date||"").slice(0,7)));
-    const comps=uniq(slots.map(s=>s.m.comp||"")).filter(Boolean).sort((a,b)=>a.localeCompare(b,"el"));
-    if(comps.length) groupSheet("Ανά διοργάνωση","Διοργάνωση","E",comps,k=>k,s=>s.m.comp||"");
+    const comps=uniq(slots.map(s=>compGroup(s.m.comp))).filter(c=>c!=="—").sort((a,b)=>a.localeCompare(b,"el"));
+    if(comps.length) groupSheet("Ανά διοργάνωση","Διοργάνωση","E",comps,k=>k,s=>compGroup(s.m.comp));
 
     /* --- summary sheet (first tab) --- */
     S.columns=[{width:30},{width:18}];
