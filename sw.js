@@ -25,6 +25,8 @@ self.addEventListener("activate", e => {
 
 /* keeps a copy on the phone; the promise ends when the copy is stored */
 const store = (req, res) => (res && (res.ok || res.type === "opaque")) ? caches.open(CACHE).then(c => c.put(req, res.clone())).catch(() => {}) : Promise.resolve();
+/* only this app's own copies: other apps of the site (e.g. V.C. Tips) keep their own caches, with older pages */
+const mine = (req, opt) => caches.open(CACHE).then(c => c.match(req, opt));
 const save = (req, res) => { store(req, res); return res; };
 /* tells the page that is opening (and any open window) that a newer copy is now on the phone; the page may not
    exist yet when the check ends, so it is looked for a few times */
@@ -45,19 +47,19 @@ self.addEventListener("fetch", e => {
   /* libraries and fonts (fixed versions): from the phone, from the internet only the first time */
   if(url.origin !== self.location.origin){
     if(!KEEP.test(req.url)) return;
-    e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => save(req, res))));
+    e.respondWith(mine(req).then(hit => hit || fetch(req).then(res => save(req, res))));
     return;
   }
   /* the version check and the «Νέα έκδοση» button: always the server (the button also refreshes the phone's copy) */
   if(req.cache === "no-store" || req.cache === "reload"){
     e.respondWith(fetch(req).then(res => req.cache === "reload" ? store(new Request(url.origin + url.pathname), res).then(() => res) : res)
-      .catch(() => caches.match(req, {ignoreSearch: true})));
+      .catch(() => mine(req, {ignoreSearch: true})));
     return;
   }
   /* the app page and its own files: the phone's copy at once; the server's copy is fetched in the background and,
      if it differs, kept and announced to the open pages (they reload while still opening). No copy yet: the server. */
   const key = new Request(url.origin + url.pathname);
-  e.respondWith(caches.match(key, {ignoreSearch: true}).then(hit => {
+  e.respondWith(mine(key, {ignoreSearch: true}).then(hit => {
     const old = hit ? hit.clone().text() : null;   // read before the page uses the copy
     /* «no-cache»: the browser checks with the server (a cheap «not modified» answer when nothing changed) instead of
        reusing its own short-lived copy, so a new version is noticed at once */
@@ -71,6 +73,6 @@ self.addEventListener("fetch", e => {
       return res;
     });
     if(hit){ e.waitUntil(net.catch(() => {})); return hit; }
-    return net.catch(() => null).then(res => res || (req.mode === "navigate" ? caches.match(page(req.url)) : null)).then(r => r || Response.error());
+    return net.catch(() => null).then(res => res || (req.mode === "navigate" ? mine(page(req.url)) : null)).then(r => r || Response.error());
   }));
 });
