@@ -73,6 +73,47 @@
   const DIARY = window.CM_APP === "diary";
   function rootEl(){ return document.getElementById("root") || document.body; }
 
+  /* ---------- instant view: the last screen of this app on this device is shown at once while the app opens
+     (on mobile the sign-in check and the data take a moment) and is swapped for the live screen as soon as it is
+     ready. It cannot be tapped meanwhile; a thin line at the top shows it is updating. Kept per account on this
+     device only, removed on sign-out. ---------- */
+  const SNAP = "cm.snap." + (DIARY ? "di" : "cm"), LASTU = "cm.lastUid";
+  const snapClear = () => { try{ localStorage.removeItem("cm.snap.cm"); localStorage.removeItem("cm.snap.di"); localStorage.removeItem(LASTU); }catch{} };
+  const liveReady = () => { const r = document.getElementById("root"); if(!r) return false;
+    if(r.querySelector("#cm-auth")) return "auth";
+    return !r.querySelector("#boot,.skel,[aria-busy=true]") && r.children.length > 0 && !/Φόρτωση[^\n]*…/.test(r.innerText || ""); };
+  function snapSave(){
+    try{
+      const r = document.getElementById("root"), uid = localStorage.getItem(LASTU);
+      if(!r || !uid || document.getElementById("cm-snap") || liveReady() !== true) return;
+      const html = r.innerHTML.replace(/<dialog([^>]*?)\sopen(="[^"]*")?/g, "<dialog$1");
+      if(html.length < 1500000) localStorage.setItem(SNAP, JSON.stringify({uid, at: Date.now(), y: scrollY, html}));
+    }catch{}
+  }
+  (function snapShow(){
+    let s = null; try{ s = JSON.parse(localStorage.getItem(SNAP) || "null"); if(s && s.uid !== localStorage.getItem(LASTU)) s = null; }catch{}
+    const r = document.getElementById("root");
+    if(!s || !s.html || !r) return;
+    const st = document.createElement("style"); st.id = "cm-snap-css";
+    st.textContent = "html.cm-snapping #root{display:none!important}#cm-snap{pointer-events:none;user-select:none}" +
+      "#cm-snap-bar{position:fixed;left:0;top:0;height:3px;width:100%;z-index:2147482500;background:linear-gradient(90deg,transparent,#f0821e,transparent);" +
+      "background-size:40% 100%;background-repeat:no-repeat;animation:cmsnap 1.1s linear infinite}@keyframes cmsnap{from{background-position:-40% 0}to{background-position:140% 0}}" +
+      "@media (prefers-reduced-motion:reduce){#cm-snap-bar{animation:none;background:#f0821e;opacity:.5}}";
+    document.head.appendChild(st);
+    const v = document.createElement("div"); v.id = "cm-snap"; v.setAttribute("aria-hidden", "true"); v.innerHTML = s.html;
+    const bar = document.createElement("div"); bar.id = "cm-snap-bar";
+    r.after(v); document.body.appendChild(bar);   // after #root, so the app's own elements are always found first
+    document.documentElement.classList.add("cm-snapping");
+    let gone = false;
+    const done = () => { if(gone) return; gone = true; mo.disconnect(); clearTimeout(tm); v.remove(); bar.remove(); document.documentElement.classList.remove("cm-snapping"); };
+    const mo = new MutationObserver(() => { const k = liveReady(); if(k === "auth"){ done(); try{ localStorage.removeItem(SNAP); }catch{} } else if(k) requestAnimationFrame(done); });
+    mo.observe(r, {childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["aria-busy", "class"]});
+    const tm = setTimeout(done, 12000);   // never longer than this
+  })();
+  addEventListener("pagehide", snapSave);
+  document.addEventListener("visibilitychange", () => { if(document.visibilityState === "hidden") snapSave(); });
+  setTimeout(function first(){ if(liveReady() === true) snapSave(); else setTimeout(first, 2000); }, 4000);
+
   /* ---------- install on phone / computer ---------- */
   const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
   const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -95,7 +136,7 @@
         if(deferredPrompt){ deferredPrompt.prompt(); try{ await deferredPrompt.userChoice; }catch{} deferredPrompt = null; updateDock(); }
         else if(isIOS()) tip.hidden = !tip.hidden;
       };
-      document.getElementById("cm-signout").onclick = async () => { await auth.signOut(); location.reload(); };
+      document.getElementById("cm-signout").onclick = async () => { snapClear(); await auth.signOut(); location.reload(); };
     }
     return d;
   }
@@ -222,7 +263,8 @@
     auth.languageCode = "el";   // password-reset emails in Greek
     let done = false;
     auth.onAuthStateChanged(async u => {
-      if(!u){ if(done) location.reload(); else showAuth(); return; }
+      if(!u){ snapClear(); if(done) location.reload(); else showAuth(); return; }
+      try{ localStorage.setItem(LASTU, u.uid); }catch{}
       if(done) return;
       if(pendingSignup) await pendingSignup;   // wait for the name to be saved on sign-up
       done = true;
