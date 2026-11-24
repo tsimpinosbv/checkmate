@@ -529,10 +529,12 @@ table.grid select.gsel{width:100%;border:0;background:transparent;font:inherit;c
 .us-mc b{font-size:12px}.us-mc .stk{flex:1;width:70%;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;margin:3px 0}
 .us-mc .stk span{display:block;border-radius:4px;min-height:0}.us-mc small{color:var(--ink);font-weight:600}.us-mc i{font-style:normal;color:var(--muted);font-size:10.5px;white-space:nowrap}
 .us-mc.fut .stk{opacity:.45}
-.us-row{display:grid;grid-template-columns:minmax(0,38%) 1fr auto;align-items:center;gap:8px;padding:4px 0;font-size:13px}
-.us-row .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
-.us-row .b{height:8px;border-radius:4px;background:var(--sq);overflow:hidden}.us-row .b span{display:block;height:100%;border-radius:4px;background:var(--blue)}
-.us-row .c{color:var(--muted);white-space:nowrap;font-size:12.5px}
+.us-row{display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:12px;row-gap:4px;padding:8px 0;font-size:14px;border-top:1px solid var(--line)}
+.us-row:first-of-type{border-top:0;padding-top:2px}
+.us-row .n{grid-column:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.us-row .m{grid-column:2;font:700 15px var(--f-mono,monospace);color:var(--ink);white-space:nowrap;text-align:right}
+.us-row .b{grid-column:1;height:8px;border-radius:4px;background:var(--sq);overflow:hidden}.us-row .b span{display:block;height:100%;border-radius:4px;background:var(--blue)}
+.us-row .c{grid-column:2;color:var(--muted);white-space:nowrap;font-size:13px;text-align:right}.us-row .c b{color:var(--ink);font-size:14px}
 .us-facts{display:grid;gap:6px;margin-top:10px}
 .us-fact{display:flex;align-items:center;gap:10px;background:var(--sq);border-radius:10px;padding:8px 12px;font-size:13px;min-width:0}
 .us-fact .ic{color:var(--blue);flex:none}.us-fact span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.us-fact small{display:block;color:var(--muted);font-size:11px}
@@ -755,9 +757,19 @@ function statCharts(slots, ppl, all){
       <section class="panel"><div class="st-h">Αναθέσεις ανά άτομο</div><div class="chart">${leg}<div class="pchart">${people}</div></div></section>
     </div>`;
 }
+/* statistics per competition: all rounds together («5Η ΑΓΩΝΙΣΤΙΚΗ NOVIBET V.L.» → «NOVIBET V.L.»),
+   and «VOLLEY LEAGUE» written as «V.L.» so both spellings count as one */
+function compGroup(c){
+  const s = String(c||"").trim().replace(/\s+/g," ");
+  if(!s) return "—";
+  const t = s.replace(/^\d+\s*(?:[ηΗήΉ]|ος|ΟΣ|ης|ΗΣ|η\.|Η\.)?\s*(?:αγωνιστικ[ηή]|ΑΓΩΝΙΣΤΙΚ[ΗΉ]|γ[υύ]ρος|ΓΥΡΟΣ|ROUND)\s*[-–:·.]?\s*/,"")
+             .replace(/^(?:αγωνιστικ[ηή]|ΑΓΩΝΙΣΤΙΚ[ΗΉ]|ROUND)\s*\d+\s*[-–:·.]?\s*/,"")
+             .replace(/\bVOLLEY\s+LEAGUE\b/gi,"V.L.").trim();
+  return t || s;
+}
 function statTables(slots){   // per month + per competition, used by both admin and user views
   const byM=[...groupBy(slots,x=>(x.date||"").slice(0,7)).entries()].filter(([k])=>k).sort((a,b)=>a[0].localeCompare(b[0]));
-  const byC=[...groupBy(slots,x=>x.comp||"—").entries()].sort((a,b)=>b[1].length-a[1].length||a[0].localeCompare(b[0],"el"));
+  const byC=[...groupBy(slots,x=>compGroup(x.comp)).entries()].sort((a,b)=>b[1].length-a[1].length||a[0].localeCompare(b[0],"el"));
   const max=Math.max(1,...byM.map(([,v])=>v.length));
   const row=(label,v,bar)=>{ const t=statTotals(v); return `<tr><td${bar?' class="nw"':""}>${bar?`<span class="bar" style="width:${Math.round(60*v.length/max)}px"></span>`:""}${esc(label)}</td><td>${t.n}</td><td class="hm">${t.op}</td><td class="hm">${t.as}</td><td>${eur(t.fee)}</td><td class="${t.due?"or":""}">${eur(t.due)}</td></tr>`; };
   const head=first=>`<thead><tr><th>${first}</th><th>Αναθ.</th><th class="hm">Χειρ.</th><th class="hm">Βοηθ.</th><th>Αμοιβές</th><th>Εκκρεμούν</th></tr></thead>`;
@@ -2957,8 +2969,10 @@ function myStatsBody(list){
   const mx = Math.max(1, ...byM.map(([,v])=>v.length));
   const months = byM.map(([k,v])=>{ const op=v.filter(i=>i.role==="op").length, as=v.length-op, fut = k > t0.slice(0,7);
     return `<div class="us-mc${fut?" fut":""}" title="${esc(monthLabel(k))}: ${v.length} · ${eur(sum(v))}"><b>${v.length}</b><div class="stk"><span class="c-as" style="height:${Math.round(100*as/mx)}%"></span><span class="c-op" style="height:${Math.round(100*op/mx)}%"></span></div><small>${MON_SHORT[+k.slice(5)-1]}</small><i>${eur(sum(v)).replace(/\s?€/,"")}€</i></div>`; }).join("");
-  const bars = (groups, max, lbl) => groups.map(([k,v])=>`<div class="us-row"><span class="n" title="${esc(k)}">${esc(k)}</span><span class="b"><span style="width:${Math.max(4,Math.round(100*v.length/max))}%"></span></span><span class="c">${lbl(v)}</span></div>`).join("");
-  const byC = [...groupBy(list, i=>i.comp||"—").entries()].sort((a,b)=>b[1].length-a[1].length||a[0].localeCompare(b[0],"el"));
+  /* one row per group: name and amount on top, bar and number of matches below */
+  const games = n => `<b>${n}</b> ${n===1?"αγώνας":"αγώνες"}`;
+  const bars = (groups, max, money) => groups.map(([k,v])=>`<div class="us-row"><span class="n" title="${esc(k)}">${esc(k)}</span>${money?`<span class="m">${eur(sum(v))}</span>`:""}<span class="b"><span style="width:${Math.max(4,Math.round(100*v.length/max))}%"></span></span><span class="c">${games(v.length)}</span></div>`).join("");
+  const byC = [...groupBy(list, i=>compGroup(i.comp)).entries()].sort((a,b)=>b[1].length-a[1].length||a[0].localeCompare(b[0],"el"));
   const byP = [...groupBy(list.filter(i=>i.partner), i=>i.partner).entries()].sort((a,b)=>b[1].length-a[1].length||a[0].localeCompare(b[0],"el")).slice(0,6);
   const byV = [...groupBy(list.filter(i=>i.venue), i=>i.venue).entries()].sort((a,b)=>b[1].length-a[1].length)[0];
   const last = done.slice().sort((a,b)=>b.date.localeCompare(a.date))[0], nx = next.slice().sort((a,b)=>a.date.localeCompare(b.date))[0];
@@ -2966,8 +2980,8 @@ function myStatsBody(list){
   const tm = i => esc([i.home,i.away].filter(Boolean).join(" – "));
   return `${hero}${tiles}
     <section class="us-card"><h3>Ανά μήνα</h3><div class="us-leg"><span><i class="c-op"></i>Χειριστής</span><span><i class="c-as"></i>Βοηθός</span></div><div class="us-months">${months||"—"}</div></section>
-    <section class="us-card"><h3>Ανά διοργάνωση</h3>${bars(byC, Math.max(1,...byC.map(([,v])=>v.length)), v=>`${v.length} · ${eur(sum(v))}`)||"—"}</section>
-    ${byP.length?`<section class="us-card"><h3>Συνεργάτες</h3>${bars(byP, byP[0][1].length, v=>`${v.length} ${v.length===1?"αγώνας":"αγώνες"}`)}</section>`:""}
+    <section class="us-card"><h3>Ανά διοργάνωση</h3>${bars(byC, Math.max(1,...byC.map(([,v])=>v.length)), true)||"—"}</section>
+    ${byP.length?`<section class="us-card"><h3>Συνεργάτες</h3>${bars(byP, byP[0][1].length, false)}</section>`:""}
     <div class="us-facts">
       ${byV?fact("pin","Συχνότερο γήπεδο",`<b>${esc(byV[0])}</b> · ${byV[1].length}`):""}
       ${last?fact("cal","Τελευταίος αγώνας",`<b>${fmtDate(last.date)}</b> · ${tm(last)}`):""}
