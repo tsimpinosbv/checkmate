@@ -2,9 +2,9 @@
 <html lang="el">
 <head>
 <meta charset="utf-8">
-<meta name="app-version" content="115">
-<meta name="app-date" content="2026-11-24T21:40">
-<meta name="app-build" content="1773d24baf72">
+<meta name="app-version" content="118">
+<meta name="app-date" content="2026-11-25T15:00">
+<meta name="app-build" content="93de479cc8eb">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{var t=localStorage.getItem("cm-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <script>/* the phone's copy opens at once; if the service worker finds a newer version while the page is still opening
@@ -1031,7 +1031,7 @@ async function syncFromCm(){
     const items = cmItems.filter(i=>i.date && i.home && !skip.has(i.id)), byId = new Map(cmItems.map(i=>[i.id,i]));
     const key = r => [r.date, (r.home||"").trim().toLowerCase(), (r.away||"").trim().toLowerCase(), r.role].join("|");
     const have = new Set([...rows.map(r=>r.fromCm).filter(Boolean), ...cmAdded]), haveKey = new Set(rows.map(key));
-    const fields = i => ({date:i.date, time:i.time||"", home:i.home||"", away:i.away||"", comp:i.comp||"", venue:i.venue||"", person:i.partner||"", role:i.role==="as"?"as":"op"});
+    const fields = i => ({date:i.date, time:i.time||"", home:i.home||"", away:i.away||"", comp:i.comp||"", venue:i.venue||"", person:i.partner||"", role:i.role==="op"?"op":"as"});   // the third person of Check Mate counts as Βοηθός here
     let added=0, changed=0, removed=0;
     for(const i of items.filter(i=>!have.has(i.id) && !haveKey.has(key(i)))){
       await col.add({...fields(i), fee:(+i.fee || FEES[i.role] || 0), paid:false, paidDate:"", notes:"", fromCm:i.id, createdAt:Date.now()}); cmAdded.add(i.id); added++;
