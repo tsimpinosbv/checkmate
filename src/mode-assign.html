@@ -130,6 +130,9 @@ table.grid tr.past td input:not([type=checkbox]){color:var(--muted)}
 .slot .ln{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .role{display:inline-flex;align-items:center;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
 .role.op{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.role.x{background:var(--good-bg);color:var(--good);border-color:transparent}
+details.xbox>summary{cursor:pointer;color:var(--blue);font-weight:600;font-size:14px;padding:4px 0;list-style:none}details.xbox>summary::-webkit-details-marker{display:none}
+details.xbox>summary small{color:var(--muted);font-weight:400}details.xbox[open]>summary{margin-bottom:8px}
 .fee{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:13px}
 .pay{border:1px solid transparent;border-radius:999px;padding:3px 9px;font-size:12.5px;font-weight:600;display:inline-flex;gap:5px;align-items:center}
 .pay.yes{background:var(--good-bg);color:var(--good)}
@@ -239,7 +242,7 @@ table.grid tr.due td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
 /* user cards */
 .cards{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;border-left:5px solid var(--blue)}
-.card.op{border-left-color:var(--accent)}
+.card.op{border-left-color:var(--accent)}.card.x{border-left-color:var(--good)}
 .card.past{opacity:.85}
 /* finished assignments: waiting for payment (stand out) / paid (quiet) */
 .card.past.due{opacity:1;background:color-mix(in srgb,var(--warn-bg) 25%,var(--surface));border-top-color:color-mix(in srgb,var(--warn) 15%,var(--line));border-right-color:color-mix(in srgb,var(--warn) 15%,var(--line));border-bottom-color:color-mix(in srgb,var(--warn) 15%,var(--line))}
@@ -654,6 +657,19 @@ details.unav .pbody{padding-top:0}
         <label class="check"><input type="checkbox" id="iPaidAs"> Πληρώθηκε</label>
       </div>
     </div>
+    <details class="xbox" id="xBox"><summary>+ Τρίτο άτομο <small>(κατά περίπτωση)</small></summary>
+      <div class="box"><span class="lbl">Τρίτο άτομο</span>
+        <div class="grid2">
+          <div class="f"><label for="iXr">Ρόλος</label><input id="iXr" list="dlXr" autocomplete="off" placeholder="π.χ. Εκπαιδευόμενος"></div>
+          <div class="f"><label for="iX">Άτομο</label><div class="combo"><input id="iX" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="iXList" placeholder="Διάλεξε ή γράψε όνομα"><button type="button" class="combo-btn" tabindex="-1" aria-label="Λίστα ατόμων">▾</button><ul class="combo-list" id="iXList" role="listbox" hidden></ul></div></div>
+        </div>
+        <div class="grid2">
+          <div class="f"><label for="iFeeX">Αμοιβή (€)</label><input id="iFeeX" type="number" min="0" step="0.5" inputmode="decimal"></div>
+          <label class="check" style="align-self:end"><input type="checkbox" id="iPaidX"> Πληρώθηκε</label>
+        </div>
+        <datalist id="dlXr"></datalist>
+      </div>
+    </details>
     <div class="f" style="max-width:260px"><label for="iPay">Τρόπος πληρωμής (το βλέπουν τα άτομα της ανάθεσης)</label><select id="iPay"><option value="">—</option><option value="credit">Πίστωση</option><option value="cash">Μετρητά</option></select></div>
     <div class="fsec">Ορατότητα &amp; σημειώσεις</div>
     <label class="check"><input type="checkbox" id="iVisible"> Ορατή στους χρήστες (τη βλέπουν ο χειριστής και ο βοηθός της)</label>
@@ -712,7 +728,10 @@ details.unav .pbody{padding-top:0}
 (() => {
 const $ = id => document.getElementById(id);
 const P = window.CMParse, norm = P.norm;
-const ROLE = {op:"Χειριστής", as:"Βοηθός"};
+const ROLE = {op:"Χειριστής", as:"Βοηθός", x:"Τρίτο άτομο"};
+/* the roles of an assignment: Χειριστής, Βοηθός and, when needed, a third person whose role the admin names */
+const RS = ["op","as","x"];
+const rl = (m, r) => r==="x" ? (String(m?.xr||"").trim() || ROLE.x) : ROLE[r];
 const MONTHS_FULL = ["Ιανουάριος","Φεβρουάριος","Μάρτιος","Απρίλιος","Μάιος","Ιούνιος","Ιούλιος","Αύγουστος","Σεπτέμβριος","Οκτώβριος","Νοέμβριος","Δεκέμβριος"];
 const DAYS = ["Κυρ","Δευ","Τρι","Τετ","Πεμ","Παρ","Σαβ"];
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -737,7 +756,7 @@ const monthLabel = ym => ym ? `${MONTHS_FULL[+ym.slice(5)-1]} ${ym.slice(0,4)}` 
 const curSeason = () => { const d=today(); const [y,m]=d.split("-").map(Number); return m>=7?`${y}-${y+1}`:`${y-1}-${y}`; };
 /* slots: [{date, comp, role:"op"|"as", fee, paid}] -> totals */
 function statTotals(slots){
-  const t={n:slots.length, op:0, as:0, fee:0, paid:0, last:""};
+  const t={n:slots.length, op:0, as:0, x:0, fee:0, paid:0, last:""};
   slots.forEach(x=>{ t[x.role]++; t.fee+=+x.fee||0; if(x.paid) t.paid+=+x.fee||0; if(x.date && x.date<=today() && x.date>t.last) t.last=x.date; });
   t.due=t.fee-t.paid; return t;
 }
@@ -968,9 +987,9 @@ async function syncPublic(){
 }
 function loadErr(){ $("app").innerHTML = `<div class="panel"><div class="empty"><strong>Δεν φορτώθηκαν τα δεδομένα</strong><div>Ανανέωσε τη σελίδα.</div></div></div>`; }
 
-function slotsOf(list){ const s=[]; list.forEach(m=>["op","as"].forEach(r=>{ if(m[r]) s.push({m, role:r, name:m[r], fee:+m["fee_"+r]||0, paid:!!m["paid_"+r]}); })); return s; }
+function slotsOf(list){ const s=[]; list.forEach(m=>RS.forEach(r=>{ if(m[r]) s.push({m, role:r, name:m[r], fee:+m["fee_"+r]||0, paid:!!m["paid_"+r]}); })); return s; }
 /* a match that has already been played and someone assigned to it is not marked paid */
-const isDue = m => ["op","as"].some(r=>m[r] && !m["paid_"+r] && (+m["fee_"+r]||0)>0);
+const isDue = m => RS.some(r=>m[r] && !m["paid_"+r] && (+m["fee_"+r]||0)>0);
 function filteredSched(){
   const q=st.q.trim().toLowerCase(), pn=st.person?norm(st.person):"";
   const wkDays = st.week ? new Set(weekDays(st.week)) : null;
@@ -979,7 +998,7 @@ function filteredSched(){
     (wkDays || !st.season || seasonOf(m.date)===st.season) &&
     (wkDays || !st.month || (m.date||"").slice(0,7)===st.month) &&
     (!pn || norm(m.op)===pn || norm(m.as)===pn) &&
-    (!st.paid || ["op","as"].some(r=>m[r] && (!pn||norm(m[r])===pn) && (st.paid==="yes")===!!m["paid_"+r])) &&
+    (!st.paid || RS.some(r=>m[r] && (!pn||norm(m[r])===pn) && (st.paid==="yes")===!!m["paid_"+r])) &&
     (!st.vis || (st.vis==="hidden")===!!m.hidden) &&
     (!q || [m.home,m.away,m.comp,m.venue,m.op,m.as,m.tv,m.vc].join(" ").toLowerCase().includes(q))
   );
@@ -1086,7 +1105,7 @@ function renderSched(months, people, seasons=[]){
       html += `<div class="row${m.hidden?" is-hidden":""}${past?" is-past":""}${past&&isDue(m)?" is-due":""}${m.date===today()?" is-today":""}">
         <div class="date c-date">${esc(m.time||m.timeText||"—")}<small>${[m.dateText||"", m.dateTbc?"ημ. αγωνιστικής":""].filter(Boolean).map(esc).join(" · ")}</small><button type="button" class="vis eyeb${m.hidden?" off":""}" data-act="vis" data-id="${m.id}" aria-label="${m.hidden?"Κρυφή":"Ορατή"}" title="${m.hidden?"Κρυφή: οι χρήστες δεν τη βλέπουν. Πάτα για εμφάνιση.":"Ορατή: τη βλέπουν τα άτομα της ανάθεσης. Πάτα για απόκρυψη."}">${m.hidden?IC.eyeOff:IC.eye}</button>${paySwitch(m)}</div>
         <div class="match c-match"><b class="tmw">${teamsL(m)}</b>${(teamVar(m.home)||teamVar(m.away))?`<div class="meta tfull">VAR: ${esc([teamVar(m.home)||"—", m.away?(teamVar(m.away)||"—"):""].filter(Boolean).join(" – "))}</div>`:""}<div class="meta">${[m.venue?(mapUrl(m.venue)?`<a class="mlink" href="${esc(mapUrl(m.venue))}" target="_blank" rel="noopener" title="${esc(venueOf(m.venue)?.full||"Χάρτης")}">📍 ${esc(m.venue)}</a>`:esc(m.venue)):"",esc(m.tv||""),esc(m.vc||"")].filter(Boolean).join(" · ")||"&nbsp;"}</div></div>
-        ${slotHtml(m,"op")}${slotHtml(m,"as")}
+        ${slotHtml(m,"op")}${slotHtml(m,"as")}${m.x?slotHtml(m,"x"):""}
         <div class="c-edit"><button class="more" data-act="edit" data-id="${m.id}" aria-label="Επεξεργασία">✎</button></div>
       </div>`;
     });
@@ -1212,7 +1231,7 @@ async function saveCell(el){
 function unpaidOf(list){
   if(!st.person) return [];
   const pn=norm(st.person), t=today();
-  return list.filter(m=>m.date && m.date<=t).flatMap(m=>["op","as"].filter(r=>m[r] && norm(m[r])===pn && !m["paid_"+r]).map(r=>({m,r})));
+  return list.filter(m=>m.date && m.date<=t).flatMap(m=>RS.filter(r=>m[r] && norm(m[r])===pn && !m["paid_"+r]).map(r=>({m,r})));
 }
 function bulkIdle(list){
   const shown=list.filter(m=>!m.hidden).length, hid=list.length-shown;
@@ -1232,7 +1251,7 @@ function seenTag(m, r){   // → {cls, tip} for the dot before the name, or null
 /* ---------- who is free that day / two matches at the same time ---------- */
 const CLASH_MIN = 120;   // two matches less than 2 hours apart cannot both be covered
 const tmin = t => { const x=/^(\d{1,2})[:.](\d{2})/.exec(t||""); return x ? +x[1]*60 + +x[2] : null; };
-function otherGames(name, date, exceptId){ const k=norm(name); if(!k || !date) return []; return sched.filter(x=>x.id!==exceptId && x.date===date && (norm(x.op)===k||norm(x.as)===k)); }
+function otherGames(name, date, exceptId){ const k=norm(name); if(!k || !date) return []; return sched.filter(x=>x.id!==exceptId && x.date===date && (norm(x.op)===k||norm(x.as)===k||norm(x.x)===k)); }
 function clashIn(games, time){ const a=tmin(time); return a==null ? null : games.find(x=>{ const b=tmin(x.time); return b!=null && Math.abs(a-b)<CLASH_MIN; }) || null; }
 function clashOf(m, r){ if(!m[r] || !m.date || m.date<today()) return null; return clashIn(otherGames(m[r], m.date, m.id), m.time); }
 function clashFlag(m, r){ const x=clashOf(m, r); if(!x) return "";
@@ -1241,10 +1260,10 @@ function clashFlag(m, r){ const x=clashOf(m, r); if(!x) return "";
 /* hint next to a name in the person pickers; c = {date, time, id, other (name in the other role), m (the match)} */
 function personHint(n, r, c){
   const k=norm(n); if(!k) return "";
-  const other = r==="op" ? "as" : "op";
-  if(c.other && norm(c.other)===k) return `⚠ ήδη ${ROLE[other]}`;
+  const others = Array.isArray(c.other) ? c.other : [[r==="op"?ROLE.as:ROLE.op, c.other]];
+  const dupe = others.find(([,v])=>v && norm(v)===k); if(dupe) return `⚠ ήδη ${dupe[0]}`;
   if(!c.date) return "";
-  if(c.m && c.m.date===c.date && ["op","as"].some(x=>norm(c.m[x])===k && cantOf(c.m, x))) return "✋ δεν μπορεί";
+  if(c.m && c.m.date===c.date && RS.some(x=>norm(c.m[x])===k && cantOf(c.m, x))) return "✋ δεν μπορεί";
   if(unavailOn(n, c.date)) return "⚠ κώλυμα";
   const o=otherGames(n, c.date, c.id); if(!o.length) return "✓ ελεύθερος";
   const cl=clashIn(o, c.time); if(cl) return `⚠ ίδια ώρα · ${cl.time}`;
@@ -1260,15 +1279,15 @@ function cantFlag(m, r){ const c = cantOf(m, r); if(!c) return "";
   const d = new Date(c.at||0);
   return `<div class="cant-flag${c.ack?" ack":""}" title="Δήλωση στις ${fmtDate(ymd(d)).slice(0,5)} ${pad(d.getHours())}:${pad(d.getMinutes())}">${IC.hand} Δεν μπορεί${c.note?`: «${esc(c.note)}»`:""}</div>`; }
 function cantList(){
-  const out=[]; sched.forEach(m=>["op","as"].forEach(r=>{ const c=cantOf(m,r); if(c && m[r] && !c.ack) out.push({m,r,c}); }));
+  const out=[]; sched.forEach(m=>RS.forEach(r=>{ const c=cantOf(m,r); if(c && m[r] && !c.ack) out.push({m,r,c}); }));
   return out.sort((a,b)=>(a.m.date+(a.m.time||"")).localeCompare(b.m.date+(b.m.time||"")));
 }
 function slotHtml(m, r){
-  if(!m[r]) return `<div class="slot"><button type="button" class="add-slot" data-act="edit" data-id="${m.id}" title="Πάτα για να ορίσεις ${ROLE[r]}">${IC.plus} ${ROLE[r]}</button></div>`;
+  if(!m[r]) return `<div class="slot"><button type="button" class="add-slot" data-act="edit" data-id="${m.id}" title="Πάτα για να ορίσεις ${esc(rl(m,r))}">${IC.plus} ${esc(rl(m,r))}</button></div>`;
   const linked = !!uidForName(m[r]); const paid=!!m["paid_"+r];
   return `<div class="slot">
     ${cantFlag(m, r)}${clashFlag(m, r)}<div class="nm">${(()=>{ const cn=cantOf(m, r), sv=cn ? {cls:"seen-cant", tip:`Δεν μπορεί${cn.note?": «"+esc(cn.note)+"»":""}`} : seenTag(m, r), tip = sv ? sv.tip : linked ? "Συνδεδεμένος λογαριασμός – βλέπει την ανάθεση" : "Δεν έχει συνδεθεί λογαριασμός"; return sv ? `<span class="seenic ${sv.cls}" data-tip="${tip}" title="${tip}" role="img" aria-label="${tip}">${sv.cls==="seen-ok"?IC.thumb:sv.cls==="seen-cant"?IC.hand:IC.wait}</span>` : `<span class="dot ${linked?"on":""}" title="${tip}"></span>`; })()}${esc(m[r])}${(()=>{ const u=unavailOn(m[r], m.date); return u?`<span class="unav-flag" title="${esc(u.note?"Κώλυμα: "+u.note:"Έχει δηλώσει κώλυμα αυτή τη μέρα")}">${cmIcon("warn")} Κώλυμα</span>`:""; })()}</div>
-    <div class="ln"><span class="role ${r}">${ROLE[r]}</span><span class="fee${paid?" paid":""}">${eur(m["fee_"+r])}</span>
+    <div class="ln"><span class="role ${r}">${esc(rl(m,r))}</span><span class="fee${paid?" paid":""}">${eur(m["fee_"+r])}</span>
     <button class="pay ${paid?"yes mini":(m.date&&m.date>=today())?"up":"no"}" data-act="pay" data-id="${m.id}" data-role="${r}" ${paid?`aria-label="Πληρώθηκε" title="Πληρώθηκε${m["paidDate_"+r]?" "+fmtDate(m["paidDate_"+r]).slice(0,5):""} · πάτα για αλλαγή"`:`title="${(m.date&&m.date>=today())?"Δεν έχει γίνει ακόμα · πάτα αν πληρώθηκε προκαταβολικά":"Αλλαγή κατάστασης πληρωμής"}"`}>${paid?"✓":(m.date&&m.date>=today())?"Προσεχής":"● Εκκρεμεί"}</button></div>
   </div>`;
 }
@@ -1324,7 +1343,7 @@ function renderUnav(){
   const off = r => r.e && (r.e.days||[]).length;
   rows.sort((a,b)=>(off(b)?2:b.e?1:0)-(off(a)?2:a.e?1:0) || a.name.localeCompare(b.name,"el"));
   const nOff=rows.filter(off).length, nOk=rows.filter(r=>r.e&&!off(r)).length, nNa=rows.length-nOff-nOk;
-  const conf = sched.filter(m=>days.includes(m.date)).flatMap(m=>["op","as"].map(r=>({m,r,u:unavailOn(m[r],m.date)}))).filter(x=>x.u)
+  const conf = sched.filter(m=>days.includes(m.date)).flatMap(m=>RS.map(r=>({m,r,u:unavailOn(m[r],m.date)}))).filter(x=>x.u)
     .sort((a,b)=>(a.m.date+(a.m.time||"")).localeCompare(b.m.date+(b.m.time||"")));
   $("tabBody").innerHTML = `
   <div style="display:flex;flex-direction:column;gap:12px">
@@ -1364,7 +1383,7 @@ const fmtMB = b => b < 1048576 ? Math.max(1,Math.round(b/1024))+" KB" : (b/10485
 function dbUsage(){
   const len = x => { try{ return JSON.stringify(x).length; }catch{ return 0; } };
   let bytes = len(sched) + len(teamList) + len(venues) + len(roster) + len(profilesAll);
-  sched.forEach(m=>["op","as"].forEach(r=>{ if(m.sync?.[r]) bytes += 700 + (teamLogo(m.home)||"").length + (teamLogo(m.away)||"").length; }));   // the users' own copies
+  sched.forEach(m=>RS.forEach(r=>{ if(m.sync?.[r]) bytes += 700 + (teamLogo(m.home)||"").length + (teamLogo(m.away)||"").length; }));   // the users' own copies
   const pct = Math.min(100, Math.round(100*Math.max(sched.length/DB_MAX_MATCHES, bytes/DB_BYTES)));
   return {n:sched.length, bytes, pct};
 }
@@ -1372,7 +1391,7 @@ function renderDb(){
   const u = dbUsage(), lvl = u.pct>=90 ? "bad" : u.pct>=75 ? "warn" : "ok", cs = curSeason();
   const seasons = [...groupBy(sched.filter(m=>m.date), m=>seasonOf(m.date)).entries()].sort((a,b)=>b[0].localeCompare(a[0]));
   const cnt = {}, last = {};
-  sched.forEach(m=>["op","as"].forEach(r=>{ if(!m[r]) return; const k=norm(m[r]); cnt[k]=(cnt[k]||0)+1; if(m.date && (!last[k] || m.date>last[k])) last[k]=m.date; }));
+  sched.forEach(m=>RS.forEach(r=>{ if(!m[r]) return; const k=norm(m[r]); cnt[k]=(cnt[k]||0)+1; if(m.date && (!last[k] || m.date>last[k])) last[k]=m.date; }));
   const prow = (r, off) => `<div class="prow${off?" off":""}"><div class="who"><b>${esc(r.name)}</b><span class="note">${cnt[norm(r.name)]||0} αναθέσεις${last[norm(r.name)]?` · τελευταίος αγώνας ${fmtDate(last[norm(r.name)])}`:""}${links[r.id]?" · έχει λογαριασμό":""}</span></div>
     <div class="actions"><button class="btn small${off?" primary":""}" type="button" data-act="${off?"pon":"poff"}" data-rid="${r.id}">${off?"Ενεργοποίηση":"Απενεργοποίηση"}</button></div></div>`;
   const act = activeRoster(), ina = roster.filter(r=>r.inactive);
@@ -1482,7 +1501,7 @@ async function archiveDelete(s, btn){
   try{
     for(let i=0;i<list.length;i+=10){
       await Promise.all(list.slice(i,i+10).map(async m=>{
-        for(const r of ["op","as"]) if(m.sync?.[r]) await w(()=>db.doc(`mine/${m.sync[r]}/items/${m.id}_${r}`).delete()).catch(()=>{});
+        for(const r of RS) if(m.sync?.[r]) await w(()=>db.doc(`mine/${m.sync[r]}/items/${m.id}_${r}`).delete()).catch(()=>{});
         await w(()=>db.doc(`sched/${m.id}`).delete()); k++;
       }));
       toast(`Αφαίρεση… ${k}/${list.length}`);
@@ -1712,7 +1731,7 @@ document.addEventListener("change", async e => {
 });
 
 async function renderPeople(pending){
-  const counts={}; sched.forEach(m=>["op","as"].forEach(r=>{ if(m[r]){ const k=norm(m[r]); counts[k]=(counts[k]||0)+1; } }));
+  const counts={}; sched.forEach(m=>RS.forEach(r=>{ if(m[r]){ const k=norm(m[r]); counts[k]=(counts[k]||0)+1; } }));
   const ids = [...new Set([...Object.values(links), ...pending.map(c=>c.uid)])];
   const profs = (user && ids.length) ? await user.profiles(ids) : {};
   const pname = uid => profs[uid]?.name || "Λογαριασμός χωρίς όνομα";
@@ -1876,7 +1895,7 @@ function nameForKey(key){ const r = rosterByNorm()[key]; const uid = r && links[
 function noteChanges(prev, m){
   /* games that have already been played: only payment changes are worth an email */
   const played = ((m||prev)?.date||"9999") < today() && ((prev||m)?.date||"9999") < today();
-  for(const r of ["op","as"]){
+  for(const r of RS){
     const o = prev && !prev.hidden && prev[r] ? norm(prev[r]) : null, n = m && !m.hidden && m[r] ? norm(m[r]) : null;
     const oi = o ? itemFor(prev, r) : null, ni = n ? itemFor(m, r) : null;
     if(o && o !== n && !played) queueNote(o, {type:"removed", item:oi});
@@ -1904,7 +1923,7 @@ function mailHtml(p, evs){
     if(ev.type==="test") return `<p style="margin:0 0 12px">Οι ειδοποιήσεις email του Check Mate λειτουργούν σωστά.</p>`;
     const i = ev.item || {};
     const when = `${i.dateText || (i.date ? dayName(i.date)+" "+fmtDate(i.date) : "")}${i.time||i.timeText ? " · "+(i.time||i.timeText) : ""}`;
-    const rows = [["Αγώνας", evMatch(i)], ["Διοργάνωση", i.comp], ["Ημερομηνία", when], ["Γήπεδο", i.venue], ["Θέση", ROLE[i.role]], ["Συνεργάτης", i.partner], ["Αμοιβή", eur(i.fee)], ["Κάλυψη / VAR", [i.tv,i.vc].filter(Boolean).join(" · ")], ["Σημειώσεις", i.notes]]
+    const rows = [["Αγώνας", evMatch(i)], ["Διοργάνωση", i.comp], ["Ημερομηνία", when], ["Γήπεδο", i.venue], ["Θέση", (i.roleName||ROLE[i.role])], ["Συνεργάτης", i.partner], ["Αμοιβή", eur(i.fee)], ["Κάλυψη / VAR", [i.tv,i.vc].filter(Boolean).join(" · ")], ["Σημειώσεις", i.notes]]
       .filter(([,v]) => v).map(([k,v]) => `<tr><td style="padding:3px 12px 3px 0;color:#5d6b84;white-space:nowrap;vertical-align:top">${k}</td><td style="padding:3px 0">${k==="Γήπεδο" ? venueMailHtml(v) : h(v)}</td></tr>`).join("");
     const diff = ev.ch ? `<div style="margin:8px 0 0;padding:8px 10px;background:#fdeedd;border-radius:8px"><b>Τι άλλαξε:</b><br>${ev.ch.map(c => `${c.l}: <s style="color:#8a94a6">${h(fmtVal(c.k,c.from))}</s> → <b>${h(fmtVal(c.k,c.to))}</b>`).join("<br>")}</div>` : "";
     return `<div style="border:1px solid #d9dfea;border-left:4px solid ${EV_COLOR[ev.type]};border-radius:10px;padding:12px 14px;margin:0 0 12px">
@@ -1948,8 +1967,10 @@ document.addEventListener("visibilitychange", () => { if(document.visibilityStat
 /* ---------- sync: copy each assignment into the assigned person's private list ---------- */
 function itemFor(m, r){
   const o = r==="op"?"as":"op";
+  /* everyone else on the match (Χειριστής, Βοηθός and the third person), shown on the user's card */
+  const crew = RS.filter(k=>k!==r && m[k]).map(k=>({role:rl(m,k), name:m[k], phone:phoneOf(m[k])}));
   return {match:m.id, date:m.date||"", time:m.time||"", dateText:m.dateText||"", timeText:m.timeText||"", dateTbc:!!m.dateTbc, comp:m.comp||"", venue:m.venue||"", home:m.home||"", away:m.away||"",
-    tv:m.tv||"", vc:m.vc||"", role:r, partner:m[o]||"", partnerPhone:phoneOf(m[o]), fee:+m["fee_"+r]||0, paid:!!m["paid_"+r], paidDate:m["paidDate_"+r]||"", notes:m.notes||"", pay:m.pay||"",
+    tv:m.tv||"", vc:m.vc||"", role:r, roleName:rl(m,r), crew, partner:m[o]||"", partnerPhone:phoneOf(m[o]), fee:+m["fee_"+r]||0, paid:!!m["paid_"+r], paidDate:m["paidDate_"+r]||"", notes:m.notes||"", pay:m.pay||"",
     ...venueExtra(m.venue), homeVar:teamVar(m.home), awayVar:teamVar(m.away), homeLogo:teamLogo(m.home), awayLogo:teamLogo(m.away)};
 }
 /* a person's phone, only if they chose (in their app) to show it to their partners */
@@ -1959,7 +1980,7 @@ let phoneBusy=false, phoneTimer=0;
 function checkPhones(){ clearTimeout(phoneTimer); phoneTimer=setTimeout(async ()=>{
   if(phoneBusy || !ready.sched || !ready.roster || !ready.links || !ready.profiles) return;
   const t=today();
-  const list=sched.filter(m=>!m.hidden && (m.date||"")>=t && (m.sync?.op||m.sync?.as) && ["op","as"].some(r=>String(m.ph?.[r]||"")!==phoneOf(m[r])));
+  const list=sched.filter(m=>!m.hidden && (m.date||"")>=t && (m.sync?.op||m.sync?.as||m.sync?.x) && RS.some(r=>String(m.ph?.[r]||"")!==phoneOf(m[r])));
   if(!list.length) return;
   phoneBusy=true; muteNotes++;
   try{ for(const m of list){ try{ await syncAndSave(m, m); }catch{} } } finally { muteNotes--; phoneBusy=false; }
@@ -1986,8 +2007,8 @@ async function resyncVenues(names){
   return list.length;
 }
 async function syncAndSave(m, prev){
-  const sync = m.hidden ? {op:null, as:null} : {op:uidForName(m.op), as:uidForName(m.as)};
-  for(const r of ["op","as"]){
+  const sync = m.hidden ? {op:null, as:null, x:null} : {op:uidForName(m.op), as:uidForName(m.as), x:uidForName(m.x)};
+  for(const r of RS){
     const old = prev?.sync?.[r];
     if(old && old!==sync[r]) await w(()=>db.doc(`mine/${old}/items/${m.id}_${r}`).delete());
     if(sync[r]){
@@ -2003,13 +2024,13 @@ async function syncAndSave(m, prev){
       await w(()=>db.doc(`mine/${sync[r]}/items/${m.id}_${r}`).set({...ni, changedAt:chg?.at||0, changed:chg?.f||[]}));
     }
   }
-  if(!m.hidden && ready.profiles) m.ph = {op:phoneOf(m.op), as:phoneOf(m.as)};   // remembered, to notice later phone changes
+  if(!m.hidden && ready.profiles) m.ph = {op:phoneOf(m.op), as:phoneOf(m.as), x:phoneOf(m.x)};   // remembered, to notice later phone changes
   const {id, ...body} = m;
   await w(()=>db.doc(`sched/${m.id}`).set({...body, sync}));
   noteChanges(prev, m);
 }
 async function deleteMatch(m){
-  for(const r of ["op","as"]) if(m.sync?.[r]) await w(()=>db.doc(`mine/${m.sync[r]}/items/${m.id}_${r}`).delete());
+  for(const r of RS) if(m.sync?.[r]) await w(()=>db.doc(`mine/${m.sync[r]}/items/${m.id}_${r}`).delete());
   await w(()=>db.doc(`sched/${m.id}`).delete());
   noteChanges(m, null);
 }
@@ -2121,13 +2142,13 @@ async function mergePerson(src, dst, keepUid){
   // notification email of src, if dst has none
   if(contacts[src.id] && !contacts[dst.id]){ await w(()=>db.doc(`contacts/${dst.id}`).set({email:contacts[src.id]})); contacts[dst.id]=contacts[src.id]; }
   // assignments
-  const list = sched.filter(m=>norm(m.op)===sk || norm(m.as)===sk || ["op","as"].some(r=>m.sync?.[r] && involved.has(m.sync[r])) || norm(m.op)===norm(dst.name) || norm(m.as)===norm(dst.name));
+  const list = sched.filter(m=>norm(m.op)===sk || norm(m.as)===sk || norm(m.x)===sk || RS.some(r=>m.sync?.[r] && involved.has(m.sync[r])) || norm(m.op)===norm(dst.name) || norm(m.as)===norm(dst.name));
   let n=0;
   muteNotes++;
   try{
     for(const m of list){
       const upd={...m}; let ch=false;
-      for(const r of ["op","as"]) if(norm(m[r])===sk){ upd[r]=dst.name; ch=true; }
+      for(const r of RS) if(norm(m[r])===sk){ upd[r]=dst.name; ch=true; }
       if(ch){ upd.updatedAt=Date.now(); n++; }
       await syncAndSave(upd, m);
     }
@@ -2414,7 +2435,9 @@ function setupCombo(inp, o){
   return {close};
 }
 function busyPerson(name, r){   // free / κώλυμα / another match that day, for the form's pickers
-  return personHint(name, r, {date:$("iDate").value, time:$("iTime").value, id:editing?.id, other:$(r==="op"?"iAs":"iOp").value, m:editing});
+  const box = {op:["iOp",ROLE.op], as:["iAs",ROLE.as], x:["iX",($("iXr")?.value||"").trim()||ROLE.x]};
+  const other = RS.filter(k=>k!==r).map(k=>[box[k][1], $(box[k][0])?.value||""]);
+  return personHint(name, r, {date:$("iDate").value, time:$("iTime").value, id:editing?.id, other, m:editing});
 }
 function homeVenueOf(team){
   const k=norm(team); if(!k) return "";
@@ -2424,7 +2447,7 @@ function homeVenueOf(team){
 }
 const personOpts = r => ({source:()=>byFree(activeRoster().map(x=>x.name).sort((a,b)=>a.localeCompare(b,"el")), n=>busyPerson(n,r)), hint:n=>busyPerson(n,r), noneLabel:"— Κανένα άτομο —", emptyLabel:"Κανένα άτομο ακόμα — γράψε ένα όνομα"});
 const combos=[
-  setupCombo($("iOp"), personOpts("op")), setupCombo($("iAs"), personOpts("as")),
+  setupCombo($("iOp"), personOpts("op")), setupCombo($("iAs"), personOpts("as")), setupCombo($("iX"), personOpts("x")),
   setupCombo($("iHome"), {source:teamNames, hint:n=>homeVenueOf(n), noneLabel:"— Καμία —",
     onPick:(v,before)=>{ const cur=$("iVenue").value.trim(), hv=homeVenueOf(v); if(hv && (!cur || norm(cur)===norm(homeVenueOf(before)))) $("iVenue").value=hv; }}),
   setupCombo($("iAway"), {source:teamNames, noneLabel:"— Καμία —"}),
@@ -2439,6 +2462,8 @@ function openForm(m){
   v("iDate",m?.date||today()); v("iTime",m?.time); v("iComp",m?.comp??ls.get("cm.comp","")); v("iHome",m?.home); v("iAway",m?.away);
   v("iVenue",m?.venue); v("iTv",m?.tv); v("iVc",m?.vc); v("iOp",m?.op); v("iAs",m?.as);
   v("iFeeOp", m?m.fee_op:(fees.op||"")); v("iFeeAs", m?m.fee_as:(fees.as||""));
+  v("iX",m?.x); v("iXr",m?.xr); v("iFeeX", m?.x ? m.fee_x : ""); $("iPaidX").checked=!!m?.paid_x; $("xBox").open=!!m?.x;
+  $("dlXr").innerHTML = uniq(sched.map(x=>String(x.xr||"").trim()).filter(Boolean)).map(x=>`<option value="${esc(x)}">`).join("");
   $("iTbc").checked=!!m?.dateTbc; $("iVisible").checked=!m?.hidden; $("iPaidOp").checked=!!m?.paid_op; $("iPaidAs").checked=!!m?.paid_as; v("iNotes",m?.notes); $("iPay").value = PAYM[m?.pay] ? m.pay : "";
   $("frmErr").hidden=true;
   $("delWrap").innerHTML = m?`<button type="button" class="btn danger" data-del="ask">Διαγραφή</button>`:"";
@@ -2456,9 +2481,9 @@ $("frm").addEventListener("submit", async e=>{
   e.preventDefault();
   const g=id=>$(id).value.trim();
   const d={date:g("iDate"), time:g("iTime"), comp:g("iComp"), home:g("iHome"), away:g("iAway"), venue:g("iVenue"), tv:g("iTv"), vc:g("iVc"),
-    op:g("iOp"), as:g("iAs"), fee_op:+g("iFeeOp")||0, fee_as:+g("iFeeAs")||0, notes:g("iNotes"), pay:$("iPay").value, dateTbc:$("iTbc").checked, hidden:!$("iVisible").checked,
+    op:g("iOp"), as:g("iAs"), fee_op:+g("iFeeOp")||0, fee_as:+g("iFeeAs")||0, x:g("iX"), xr:g("iX")?g("iXr"):"", fee_x:g("iX")?(+g("iFeeX")||0):0, notes:g("iNotes"), pay:$("iPay").value, dateTbc:$("iTbc").checked, hidden:!$("iVisible").checked,
     dateText: editing && editing.date===g("iDate") ? (editing.dateText||"") : "", timeText: g("iTime") ? "" : (editing?.timeText||"")};
-  for(const r of ["op","as"]){ const p=$(r==="op"?"iPaidOp":"iPaidAs").checked; d["paid_"+r]=p && !!d[r]; d["paidDate_"+r]=p&&d[r]?(editing?.["paid_"+r]?editing["paidDate_"+r]:today()):""; }
+  for(const r of RS){ const p=$({op:"iPaidOp",as:"iPaidAs",x:"iPaidX"}[r]).checked; d["paid_"+r]=p && !!d[r]; d["paidDate_"+r]=p&&d[r]?(editing?.["paid_"+r]?editing["paidDate_"+r]:today()):""; }
   if(!d.date||!d.home){ $("frmErr").hidden=false; $("frmErr").textContent="Συμπλήρωσε ημερομηνία και αγώνα."; return; }
   d.key = matchKey(d);
   // the same pairing may be played again (play-offs), so only the same pairing on the same day counts as a duplicate
@@ -2466,7 +2491,7 @@ $("frm").addEventListener("submit", async e=>{
   if(dup){ $("frmErr").hidden=false; $("frmErr").textContent="Υπάρχει ήδη ο ίδιος αγώνας την ίδια μέρα."; return; }
   $("btnSave").disabled=true;
   try{
-    await ensureRoster([d.op,d.as]);
+    await ensureRoster([d.op,d.as,d.x]);
     try{ await ensureLists([d.home,d.away],[d.venue], d.home&&d.venue?{[norm(d.home)]:d.venue}:null); }catch{}
     const id = editing?.id || db.collection("sched").doc().id;
     await syncAndSave({...(editing||{}), ...d, id, createdAt:editing?.createdAt||Date.now(), updatedAt:Date.now()}, editing);
@@ -2687,7 +2712,7 @@ $("btnXlsx").onclick = async ()=>{
     head(A,A.getRow(1));
     slots.forEach(s=>{ const m=s.m;
       const r=A.addRow({date:dateOf(m.date), day:m.dateTbc?"~ αγωνιστική":dayName(m.date), time:m.time||m.timeText||"", month:monthLabel((m.date||"").slice(0,7)),
-        comp:m.comp||"", home:m.home||"", away:m.away||"", venue:m.venue||"", tv:m.tv||"", vc:m.vc||"", person:s.name, role:ROLE[s.role],
+        comp:m.comp||"", home:m.home||"", away:m.away||"", venue:m.venue||"", tv:m.tv||"", vc:m.vc||"", person:s.name, role:rl(s.m, s.role),
         fee:+s.fee||0, paid:s.paid?"ΝΑΙ":"ΟΧΙ", paidDate:dateOf(m["paidDate_"+s.role]), vis:m.hidden?"ΟΧΙ":"ΝΑΙ"});
       r.getCell("paid").font={bold:true,color:{argb:s.paid?GOOD:ORANGE}};
     });
@@ -2843,7 +2868,7 @@ async function cantMail(it, note, undo){
     if(!n.endpoint || !n.cant) return;
     const m = await claude.use("mail"); if(!m) return;
     const rn = uRoster.find(r=>r.id===myClaim?.rid)?.name || me?.name || me?.email || "";
-    await m.send(n.endpoint, [], {senderName:n.senderName, extra:{kind:"cant", item:{name:rn, email:me?.email||"", role:ROLE[it.role]||"", date:it.date?`${dayName(it.date)} ${fmtDate(it.date)}`:"", time:it.time||"", home:it.home||"", away:it.away||"", venue:it.venue||"", note:note||"", undo:!!undo}}});
+    await m.send(n.endpoint, [], {senderName:n.senderName, extra:{kind:"cant", item:{name:rn, email:me?.email||"", role:it.roleName||ROLE[it.role]||"", date:it.date?`${dayName(it.date)} ${fmtDate(it.date)}`:"", time:it.time||"", home:it.home||"", away:it.away||"", venue:it.venue||"", note:note||"", undo:!!undo}}});
   }catch(e){ console.warn("cant mail", e); }
 }
 function cantHtml(i){
@@ -2893,7 +2918,7 @@ async function myExcel(season){
     const ws = wb.addWorksheet("Αγώνες", {views:[{state:"frozen",ySplit:1}]});
     ws.columns = UX_COLS.map((h,k)=>({header:h, width:[12,7,7,26,20,20,16,11,22,11,11,13][k]}));
     ws.getRow(1).eachCell(c=>{ c.font={bold:true,color:{argb:"FFFFFFFF"}}; c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF14213A"}}; });
-    items.forEach(i=>ws.addRow([fmtDate(i.date), dayName(i.date), i.time||i.timeText||"", i.comp||"", i.home||"", i.away||"", i.venue||"", ROLE[i.role]||"", i.partner||"", +i.fee||0, i.paid?"ΝΑΙ":"ΟΧΙ", i.paidDate?fmtDate(i.paidDate):""]));
+    items.forEach(i=>ws.addRow([fmtDate(i.date), dayName(i.date), i.time||i.timeText||"", i.comp||"", i.home||"", i.away||"", i.venue||"", (i.roleName||ROLE[i.role])||"", i.partner||"", +i.fee||0, i.paid?"ΝΑΙ":"ΟΧΙ", i.paidDate?fmtDate(i.paidDate):""]));
     const t = statTotals(items.map(i=>({date:i.date, comp:i.comp||"", role:i.role, fee:+i.fee||0, paid:!!i.paid})));
     const r = ws.addRow(["Σύνολο","","","","","","","","",t.fee,`${eur(t.paid)} πληρωμένα`,""]); r.font={bold:true};
     const buf = await wb.xlsx.writeBuffer();
@@ -2958,7 +2983,7 @@ function myStatsBody(list){
   const sum = a => a.reduce((s,i)=>s+(+i.fee||0),0);
   const feeDone = sum(done), paid = sum(list.filter(i=>i.paid)), paidDone = sum(done.filter(i=>i.paid)), due = feeDone - paidDone, feeNext = sum(next.filter(i=>!i.paid));
   const pct = feeDone ? Math.round(100*paidDone/feeDone) : 0, R = 40, C = 2*Math.PI*R;
-  const nOp = list.filter(i=>i.role==="op").length, nAs = list.length - nOp;
+  const nOp = list.filter(i=>i.role==="op").length, nAs = list.filter(i=>i.role==="as").length;
   const ring = `<svg class="us-ring" viewBox="0 0 100 100" role="img" aria-label="Πληρώθηκε το ${pct}%"><circle cx="50" cy="50" r="${R}" class="trk"/><circle cx="50" cy="50" r="${R}" class="val" stroke-dasharray="${(C*pct/100).toFixed(1)} ${C.toFixed(1)}"/><text x="50" y="50">${pct}%</text><text x="50" y="66" class="s">πληρώθηκαν</text></svg>`;
   const hero = `<div class="us-hero">${ring}<div class="us-ht">
       <div class="k">Πληρώθηκαν</div><div class="big">${eur(paid)}</div>
@@ -3094,8 +3119,8 @@ function renderUser(){
     ${isChg(i)?`<button type="button" class="chg" data-seen="${esc(i.id)}" title="Πάτα για να το σημειώσεις ως ενημερωμένο">${cmIcon("warn")} Άλλαξε: ${esc((i.changed||[]).join(", ").toLowerCase()||"λεπτομέρειες")} <small>· ΟΚ</small></button>`:""}
     <div class="teams">${teamsL(i,true)}</div>${(i.homeVar||i.awayVar)?`<div class="tfull"><span class="vtag">VAR</span> ${esc([i.homeVar||"—", i.away?(i.awayVar||"—"):""].filter(Boolean).join(" – "))}</div>`:""}
     ${venueCard(i)}
-    <dl>${i.comp?`<dt>Διοργάνωση</dt><dd>${esc(i.comp)}</dd>`:""}<dt>Θέση</dt><dd><span class="role ${i.role}">${ROLE[i.role]}</span></dd>
-      ${i.partner?`<dt>${i.role==="op"?"Βοηθός":"Χειριστής"}</dt><dd>${esc(i.partner)}${i.partnerPhone && i.date>=t?` <a class="tel" href="tel:${esc(i.partnerPhone.replace(/[^\d+]/g,""))}" aria-label="Κλήση ${esc(i.partner)}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>${esc(i.partnerPhone)}</a>`:""}</dd>`:""}${i.vc?`<dt>VAR</dt><dd>${esc(i.vc)}</dd>`:""}${i.tv?`<dt>Κάλυψη</dt><dd>${esc(i.tv)}</dd>`:""}${i.dateTbc?`<dt>Σημ.</dt><dd>Η ημέρα/ώρα θα επιβεβαιωθεί</dd>`:""}
+    <dl>${i.comp?`<dt>Διοργάνωση</dt><dd>${esc(i.comp)}</dd>`:""}<dt>Θέση</dt><dd><span class="role ${i.role}">${esc(i.roleName||ROLE[i.role])}</span></dd>
+      ${(i.crew ? i.crew : (i.partner ? [{role:i.role==="op"?"Βοηθός":"Χειριστής", name:i.partner, phone:i.partnerPhone}] : [])).map(c=>`<dt>${esc(c.role)}</dt><dd>${esc(c.name)}${c.phone && i.date>=t?` <a class="tel" href="tel:${esc(c.phone.replace(/[^\d+]/g,""))}" aria-label="Κλήση ${esc(c.name)}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>${esc(c.phone)}</a>`:""}</dd>`).join("")}${i.vc?`<dt>VAR</dt><dd>${esc(i.vc)}</dd>`:""}${i.tv?`<dt>Κάλυψη</dt><dd>${esc(i.tv)}</dd>`:""}${i.dateTbc?`<dt>Σημ.</dt><dd>Η ημέρα/ώρα θα επιβεβαιωθεί</dd>`:""}
       ${i.notes?`<dt>Σημειώσεις</dt><dd>${esc(i.notes)}</dd>`:""}</dl>
     ${i.date>=t ? cantHtml(i) : ""}
     <div class="bottom"><span class="fee">${eur(i.fee)} ${i.paid?"":payTag(i.pay)}</span><span class="pay ${i.paid?"yes":i.date>=t?"up":"no"}">${i.paid?`✓ Πληρώθηκε${i.paidDate?" "+fmtDate(i.paidDate).slice(0,5):""}`:i.date>=t?"Προσεχής":"● Εκκρεμεί"}</span></div>
